@@ -680,7 +680,10 @@ const threadIdOf = p => p.reply_thread_id || p.thread_id;
 const fromThem = (p, m) => !!p.email && String(m.sender || '').toLowerCase().includes(p.email.toLowerCase());
 // Gmail's snippets come HTML-encoded ("I&#39;m"); plain-text bodies don't.
 const unentity = t => String(t || '').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-const msgText = m => String(m.plaintextBody ?? m.plaintext_body ?? unentity(m.snippet));
+// Gmail wraps links in a google.com/url redirect when a message is read back;
+// show the real address instead.
+const unwrapLinks = s => s.replace(/https?:\/\/www\.google\.com\/url\?q=([^&\s]+)[^\s]*/g, (_, u) => { try { return decodeURIComponent(u); } catch { return u; } });
+const msgText = m => unwrapLinks(String(m.plaintextBody ?? m.plaintext_body ?? unentity(m.snippet)));
 // Drop the quoted history Gmail appends under "On Tue, ... wrote:".
 function freshPart(text) {
   const lines = String(text || '').replace(/\r/g, '').split('\n');
