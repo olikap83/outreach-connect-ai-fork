@@ -3,7 +3,7 @@
 // A name we can't point back to a source is dropped; if it was the contact,
 // the draft's greeting falls back to the people on the filing, or the team.
 //
-//   node scripts/outreach-sources.js --docs <dir of prospect JSON files> --out out
+//   node scripts/outreach-sources.js --docs <dir of prospect JSON files> --out out [--restore names.json]
 //
 // Writes out/sources.json: [{ id, data }] updates to apply.
 
@@ -67,9 +67,15 @@ async function pagesFor(doc) {
   return out;
 }
 
-async function source(doc) {
+async function source(doc, restore) {
   const facts = doc.facts || {};
   const people = (facts.people || []).map(x => ({ ...x }));
+  // Names an earlier run dropped by mistake come back and are checked again.
+  const back = restore && restore[doc.id];
+  if (back) {
+    for (const x of back.people) if (!people.some(y => samePerson(y.name, x.name))) people.push({ ...x });
+    if (!doc.contact_name && back.contact_name && UNSENT.has(doc.status)) doc = { ...doc, contact_name: back.contact_name, contact_title: back.contact_title, _restored: true };
+  }
   if (doc.contact_name && !people.some(x => samePerson(x.name, doc.contact_name))) {
     people.unshift({ name: doc.contact_name, role: (doc.contact_title || '').toLowerCase() || null, how: 'site text' });
   }
@@ -99,6 +105,7 @@ async function source(doc) {
   if (filing && filing.id !== doc.registry_id) data.registry_id = filing.id;
   let contact = doc.contact_name || null;
   if (contact && !kept.some(x => samePerson(x.name, contact))) contact = null;
+  if (doc._restored && contact) { data.contact_name = doc.contact_name; data.contact_title = doc.contact_title; }
   if (contact !== (doc.contact_name || null) && UNSENT.has(doc.status)) {
     const owner = kept.find(x => /owner|founder|president|proprietor|ceo|principal|member|manager|partner/i.test(x.role || '')) || kept[0] || null;
     data.contact_name = owner ? owner.name : null;
@@ -120,7 +127,8 @@ async function source(doc) {
     if (osm) data.source_ref = osm;
   }
 
-  const next = { ...doc, ...data };
+  const { _restored, ...plain } = doc;
+  const next = { ...plain, ...data };
   if (UNSENT.has(doc.status) && /^Hi [^\n]*,\n/.test(doc.body || '')) {
     const hi = greeting(next);
     const body = doc.body.replace(/^Hi [^\n]*,\n/, `${hi}\n`);
@@ -145,12 +153,13 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
   const docs = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
     .map(f => { const j = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); return { id: f.replace(/\.json$/, ''), ...(j.data || j) }; });
+  const restore = arg('restore') ? JSON.parse(fs.readFileSync(arg('restore'), 'utf8')) : null;
   const todo = docs.filter(d => d.contact_name || ((d.facts || {}).people || []).length || d.phone || d.email);
   console.log(`Checking names, emails and phone numbers on ${todo.length} businesses`);
   let i = 0;
   const updates = (await mapLimit(todo, 4, async d => {
     try {
-      const u = await source(d);
+      const u = await source(d, restore);
       console.log(`  [${++i}/${todo.length}] ${d.name}: ${u ? (u.dropped.length ? `dropped ${u.dropped.join(', ')}` : 'sources added') : 'already sourced'}`);
       return u;
     } catch (err) {
