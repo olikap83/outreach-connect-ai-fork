@@ -664,7 +664,7 @@ async function sendInitial(p, vals) {
 async function sendFollowup(p) {
   if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails.`);
   const greet = (/^Hi [^\n]+,/.exec(p.body || '') || ['Hi there,'])[0];
-  const body = `${greet}\n\nJust bumping this in case it got buried. Even a 10-minute call would help me a lot; I'm trying to learn how businesses like yours actually run, whether or not we ever work together.\n\nIf you'd rather, the form is at connect-ai.world/apply (about 3 minutes, with a free AI-readiness report). And if now isn't a good time, no problem at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
+  const body = `${greet}\n\nJust bumping this in case it got buried. Even a 10-minute call would help me a lot; I'm trying to learn how businesses like yours actually run, whether or not we ever work together.\n\nIf you'd rather, the form is at connect-ai.world/apply (about 3 minutes, with a free AI-readiness report). And if now isn't a good time, no worries at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
   const subject = /^re:/i.test(p.subject || '') ? p.subject : `Re: ${p.subject || p.name}`;
   await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, body, ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
   await patch(p.id, { status: 'followed_up', followup_at: nowIso(), followup_body: body }, `Followed up with ${p.email}`);
@@ -793,6 +793,38 @@ Under 300 words. No markdown symbols other than "- ". No intro or sign-off.`;
 async function saveGmailDraft(p, vals) {
   const res = await S.mcp.callTool(GMAIL, 'create_draft', { to: [vals.email], ...ccList(), subject: vals.subject, body: vals.body });
   await patch(p.id, { email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body, gmail_draft_url: (res.payload || {}).viewUrl || null }, 'Saved as a Gmail draft');
+}
+
+// ---------- one-time update of waiting drafts ----------
+// Subjects now name the business and say UConn, and the closing line ends
+// warm instead of on "bother you". Only drafts still worded the old way
+// change; anything Soham edited stays as he wrote it.
+const OLD_CLOSE = 'And if now isn\'t a good time, just tell me and I won\'t bother you again.';
+const NEW_CLOSE = 'I appreciate you reading this. If now isn\'t a good time, no worries at all, just let me know.';
+function newSubject(p) {
+  const biz = shortName(p.name);
+  const options = [`Question about ${biz} from a UConn student`, `UConn student question about ${biz}`, `${biz}: quick question from a UConn student`];
+  let h = 0; for (const c of String(p.id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const pick = options[h % options.length];
+  if (pick.length <= 60) return pick;
+  return options[1].length <= 60 ? options[1] : 'A question from a UConn student';
+}
+let migrating = false;
+async function migrateDrafts() {
+  if (migrating || !S.db || !S.loaded || !S.metaLoaded || (S.meta.migrations || {}).subjects_v2) return;
+  migrating = true;
+  try {
+    const oldSubjects = p => ['A question from a UConn student', `Question about ${p.name}`, `UConn student hoping to learn from ${p.name}`];
+    let n = 0;
+    for (const p of S.prospects.filter(x => ['ready', 'queued', 'no_email'].includes(x.status))) {
+      const fields = {};
+      if (oldSubjects(p).includes(p.subject)) fields.subject = newSubject(p);
+      if ((p.body || '').includes(OLD_CLOSE)) fields.body = p.body.replace(OLD_CLOSE, NEW_CLOSE);
+      if (Object.keys(fields).length) { await patch(p.id, fields).catch(() => {}); n++; }
+    }
+    await S.db.doc('meta/status').update({ migrations: { ...(S.meta.migrations || {}), subjects_v2: nowIso() } });
+    if (n) toast(`Updated ${n} waiting drafts to the new subject lines and closing.`);
+  } finally { migrating = false; }
 }
 
 // ---------- what goes into the class CRM ----------
@@ -1237,14 +1269,38 @@ function renderList() {
   </table></div>`;
 }
 
+// Which subject wording gets replies. The business's name is swapped out so
+// the same wording groups together.
+function subjectWording(p) {
+  let s = String(p.subject || '');
+  for (const n of [p.name, shortName(p.name)]) if (n) s = s.split(n).join('[business]');
+  return s;
+}
+function subjectStatsHtml() {
+  const rows = {};
+  for (const p of S.prospects) {
+    if (!p.sent_at || !p.subject) continue;
+    const r = rows[subjectWording(p)] || (rows[subjectWording(p)] = { sent: 0, replied: 0 });
+    r.sent++;
+    if (p.replied_at || p.status === 'replied' || p.status === 'not_interested') r.replied++;
+  }
+  const list = Object.entries(rows).sort((a, b) => b[1].sent - a[1].sent);
+  if (!list.length) return '';
+  return `<div class="table-wrap" style="margin-bottom:14px"><table class="list" style="min-width:0">
+    <thead><tr><th style="cursor:default">Subject line</th><th class="num" style="cursor:default">Sent</th><th class="num" style="cursor:default">Replied</th><th class="num" style="cursor:default">Reply rate</th></tr></thead>
+    <tbody>${list.map(([w, r]) => `<tr style="cursor:default"><td>${esc(w)}</td><td class="num">${r.sent}</td><td class="num">${r.replied}</td><td class="num">${Math.round((r.replied / r.sent) * 100)}%</td></tr>`).join('')}</tbody>
+  </table></div><p class="help">Reply rates mean more after 20 or so emails per subject line.</p>`;
+}
+
 function renderActivity() {
   const ev = [];
   for (const p of S.prospects) for (const l of (p.log || [])) ev.push({ ...l, p });
   for (const r of (S.meta.runs || [])) ev.push({ at: r.at, what: r.summary, run: true });
   ev.sort((a, b) => String(b.at).localeCompare(String(a.at)));
   if (!ev.length) return emptyView('No activity yet.', 'Research runs, emails sent, replies and CRM updates all show up here.');
+  const stats = subjectStatsHtml();
   const kind = w => /^answered/i.test(w) ? ['Email', 'info'] : /prep sheet/i.test(w) ? ['Update', 'gray'] : /replied|wrote back/i.test(w) ? ['Replied', 'ok'] : /no thanks|bounced|couldn't/i.test(w) ? ['Heads up', 'red'] : /^emailed|followed up/i.test(w) ? ['Email', 'info'] : /crm/i.test(w) ? ['CRM', 'gray'] : ['Update', 'gray'];
-  return `<ul class="feed">${ev.slice(0, 200).map(e => {
+  return `${stats}<ul class="feed">${ev.slice(0, 200).map(e => {
     const [lab, cls] = e.run ? ['Research', 'gray'] : kind(e.what || '');
     return `<li><span class="t">${ago(e.at)}</span><span><span class="badge ${cls}">${lab}</span></span>
       <span>${e.p ? `<span class="who" data-id="${esc(e.p.id)}">${esc(e.p.name)}</span> · ` : ''}<span class="body">${esc(e.what || '')}</span></span></li>`;
@@ -1736,9 +1792,9 @@ render();
     db.collection('prospects').onSnapshot(snap => {
       S.prospects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       S.loaded = true; S.dbState = 'ok';
-      render(); watchReplies(); syncLeads(); autoSend();
+      render(); watchReplies(); syncLeads(); autoSend(); migrateDrafts();
     }, () => { S.dbState = 'bad'; S.loaded = true; render(); });
-    db.doc('meta/status').onSnapshot(snap => { S.meta = snap.exists ? (snap.data() || {}) : {}; render(); }, () => {});
+    db.doc('meta/status').onSnapshot(snap => { S.meta = snap.exists ? (snap.data() || {}) : {}; S.metaLoaded = true; render(); migrateDrafts(); }, () => {});
   }
   if (!mcp) { S.crmState = 'bad'; S.gmailState = 'bad'; S.crmError = 'Connectors aren\'t available in this view. Open the page on claude.ai.'; render(); return; }
   const crmHandler = which => ev => {

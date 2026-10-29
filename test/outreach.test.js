@@ -210,7 +210,9 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.match(body, /start my own/);
   assert.match(body, /15-minute call/);
   assert.match(body, /come by Mansfield in person/);
-  assert.match(body, /won't bother you again/);
+  assert.match(body, /no worries at all, just let me know/);
+  assert.match(subject, /UConn/);
+  assert.match(subject, /Willow Creek Family Dentistry/);
   assert.match(body, /I'm curious how a practice your size/);
   assert.doesNotMatch(body, /\{|\}|undefined|null/);
   const words = body.split(/\s+/).length;
