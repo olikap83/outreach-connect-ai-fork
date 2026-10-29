@@ -364,6 +364,12 @@ h1,h2,h3{font-weight:600; letter-spacing:-.01em;}
 .hero{display:flex; flex-direction:column; gap:22px; padding-bottom:26px; border-bottom:1px solid var(--line);}
 .hero-row{display:flex; gap:24px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap;}
 .hero-text{min-width:0; flex:1 1 520px; display:flex; flex-direction:column; gap:12px;}
+.brandline{display:inline-flex; align-items:center; gap:12px; align-self:flex-start; text-decoration:none; color:var(--ink);}
+.brandline .logo-tile{width:48px; height:48px; border-radius:12px; background:#FFFFFF; display:grid; place-items:center; box-shadow:0 0 0 1px var(--line);}
+.brandline .logo-tile img{width:40px; height:40px; display:block;}
+.brandline b{display:block; font-family:var(--serif); font-size:19px; font-weight:700; line-height:1.1;}
+.brandline .eyebrow{display:block; margin-top:2px;}
+.brandline:hover b{color:var(--signal);}
 .hero h1{font-family:var(--serif); font-weight:800; font-size:clamp(42px,7vw,84px); line-height:.95; letter-spacing:-.035em;}
 .hero h1 .acc{color:var(--signal); font-style:normal;}
 .lead{margin:0; font-size:18px; color:var(--ink-2); max-width:60ch;}
@@ -472,7 +478,10 @@ footer{font-size:11px;}
   <header class="hero">
     <div class="hero-row">
       <div class="hero-text">
-        <div class="eyebrow">Connect.AI · small-business outreach</div>
+        <a class="brandline" href="https://connect-ai.world/" target="_blank" rel="noopener" title="Connect.AI at UConn">
+          <span class="logo-tile"><img src="connectai.png" alt="Connect.AI logo" width="40" height="40"></span>
+          <span><b>Connect.AI</b><span class="eyebrow">UConn · small-business outreach</span></span>
+        </a>
         <h1>Main Street <span class="acc">Radar</span></h1>
         <p class="lead">Small businesses across Connecticut, the rest of New England and New York that could use a hand with AI. Every one here was found, checked and lined up for a conversation.</p>
       </div>
@@ -903,7 +912,7 @@ Write Soham's reply to their latest message:
 - Only if they asked about Connect.AI, asked how it works, or said they'd like help: add that the easiest next step is a short form at connect-ai.world/apply (about 3 minutes, and they get a free AI-readiness report), and that the call still comes first. Otherwise don't mention the form.` : ''}
 - If they said not now, thank them warmly, say no problem, and leave the door open in one line. Don't push.
 - If they pointed him to someone else, thank them and ask for the best way to reach that person.
-Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi" and the first name they signed their email with, or the first name in their From line if they didn't sign it; if there's no name at all, "Hi ${shortName(p.name)} team,". Never "Hi there". If they're a doctor, dentist, orthodontist, oral surgeon, chiropractor, optometrist or vet${/dent|orthodont|oral|surg|chiropract|optometr|physician|medical|vet|m\.?d\b|dds|dmd/i.test(`${p.name} ${p.category || ''}`) ? ' (this business is a practice like that)' : ''}, greet them as "Dr." and their last name, never their first name, unless they signed with their first name. Don't assume any other name. End with "Thanks,\\nSoham". Reply with only the email body.`;
+Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi" and the first name they signed their email with, or the first name in their From line if they didn't sign it; if there's no name at all, "Hi ${shortName(p.name)} team,". Never "Hi there". Use "Dr." and their last name only if they signed as Dr. or with a doctor's degree (DMD, DDS, MD, DO, DC, OD, DVM)${((p.facts || {}).people || []).some(x => x.doctor_url) ? `, or if they are ${((p.facts || {}).people || []).filter(x => x.doctor_url).map(x => x.name).join(' or ')}, whose website shows them as a doctor` : ''}; never guess it from the kind of business. Don't assume any other name. End with "Thanks,\\nSoham". Reply with only the email body.`;
   ta.value = '';
   const out = await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
   const text = (out && out.text) || ta.value;
@@ -1789,7 +1798,7 @@ function detailHtml(id) {
         ${reasons.length ? `<div class="section"><span class="eyebrow">Why this fit score</span>
           <ul class="reasons">${reasons.map(r => `<li><span class="p ${r.pts > 0 ? 'pos' : r.pts < 0 ? 'neg' : ''}">${r.pts > 0 ? '+' : ''}${r.pts}</span><span>${srcA(r.url, `${esc(r.why)} ↗`)}</span></li>`).join('')}</ul></div>` : ''}
         ${factChips(p).length ? `<div class="section"><span class="eyebrow">What we noticed</span><div class="chips">${factChips(p).map(c => `<a class="chip" href="${esc(c.url)}" target="_blank" rel="noopener" style="text-decoration:none" title="Open where this was found">${esc(c.text)} ↗</a>`).join('')}</div></div>` : ''}
-        ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} ${sourceLink(x.name, p)}</span>`).join('')}</div></div>` : ''}
+        ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${x.doctor_url ? 'Dr. ' : ''}${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} ${sourceLink(x.name, p)}${x.doctor_url ? ` ${srcA(x.doctor_url, '(shown as a doctor ↗)')}` : ''}</span>`).join('')}</div></div>` : ''}
         ${f.description && factUrl(p, 'description') ? `<div class="section"><span class="eyebrow">How they describe themselves</span><div class="kv"><span>${esc(f.description)} ${srcA(factUrl(p, 'description'), '(their website ↗)')}</span></div></div>` : ''}
         ${(f.pages_read || []).length ? `<div class="section"><span class="eyebrow">Pages read</span><div class="kv">${f.pages_read.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(String(u).replace(/^https?:\/\/(www\.)?/, ''))}</a>`).join('')}</div></div>` : ''}
         ${(f.enrich_notes || []).length ? `<div class="section"><span class="eyebrow">Notes</span><div class="kv">${f.enrich_notes.map(n => `<span>${esc(n)}</span>`).join('')}</div></div>` : ''}

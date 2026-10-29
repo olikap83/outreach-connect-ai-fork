@@ -192,7 +192,8 @@ test('fit score rewards reachable, nearby, manual-heavy small businesses', () =>
 
 const settings = mergeSettings({});
 const dentist = { id: 'abc', name: 'Willow Creek Family Dentistry', town: 'Mansfield', bucket: 'health', category: 'Dentist', contact_name: 'Karen Whitfield', contact_title: 'Owner', email: 'karen@willowcreekdental.com', miles_from_storrs: 3,
-  facts: { founded: 1998, family_owned: true, phone_first: true, booking_tools: [] } };
+  facts: { founded: 1998, family_owned: true, phone_first: true, booking_tools: [],
+    people: [{ name: 'Karen Whitfield', role: 'owner', how: 'site text', url: 'https://willowcreekdental.com/about', doctor_url: 'https://willowcreekdental.com/about' }] } };
 
 test('initial email is personal, honest, short, and has an easy no', () => {
   const { subject, body } = composeInitial(dentist, settings);
@@ -598,11 +599,19 @@ test('every fact read off a website keeps the page it came from; facts with no p
   assert.equal(kept.family_owned, true);
 });
 
-test('doctors, dentists and other practitioners are greeted as Dr. Lastname', () => {
+test('Dr. is used only when a source shows the person is a doctor; otherwise a practice gets the team greeting', () => {
   const { greeting } = require('../lib/outreach/compose');
-  const filed = (...names) => ({ people: names.map(name => ({ name, how: 'state filing', role: 'principal', business_id: 'x' })) });
-  assert.equal(greeting({ name: 'Mansfield Orthodontics PLLC', category: 'Dentist', email: 'info@mansfieldorthodonticsct.com', facts: filed('Susan Davis') }), 'Hi Dr. Davis,');
-  assert.equal(greeting({ name: 'Ralph J Laguardia M.D.', email: 'r@gmail.com', facts: filed('Ralph Laguardia') }), 'Hi Dr. Laguardia,');
-  assert.equal(greeting({ name: 'Eastside Family Dental', email: 'office@eastside.com', facts: filed('Ann Lee', 'Raj Patel') }), 'Hi Dr. Lee and Dr. Patel,');
+  const { doctorEvidence } = require('../lib/outreach/enrich');
+  const filed = (...people) => ({ people: people.map(x => ({ how: 'state filing', role: 'principal', business_id: 'x', ...(typeof x === 'string' ? { name: x } : x) })) });
+  const ortho = { name: 'Mansfield Orthodontics PLLC', category: 'Dentist', email: 'info@mansfieldorthodonticsct.com' };
+  assert.equal(greeting({ ...ortho, facts: filed('Susan Davis') }), 'Hi Mansfield Orthodontics team,', 'no source says she is the doctor');
+  assert.equal(greeting({ ...ortho, facts: filed({ name: 'Susan Davis', doctor_url: 'https://mansfieldorthodonticsct.com/about' }) }), 'Hi Dr. Davis,');
+  assert.equal(greeting({ name: 'Ralph J Laguardia M.D.', email: 'r@gmail.com', facts: filed('Ralph Laguardia') }), 'Hi Dr. Laguardia,', 'the registered business name says M.D.');
+  assert.equal(greeting({ name: 'Eastside Family Dental', email: 'office@eastside.com', facts: filed({ name: 'Ann Lee', doctor_url: 'u' }, { name: 'Raj Patel', doctor_url: 'u' }) }), 'Hi Dr. Lee and Dr. Patel,');
   assert.equal(greeting({ name: 'Air Control Mechanical LLC', email: 'office@aircontrolmech.com', facts: filed('Antonio Melendez', 'Jordan Vallee') }), 'Hi Antonio and Jordan,', 'everyone else keeps first names');
+  const page = text => [{ url: 'https://x.com/team', text }];
+  assert.equal(doctorEvidence('Susan Davis', page('Meet Dr. Susan Davis, our orthodontist')), 'https://x.com/team');
+  assert.equal(doctorEvidence('Susan Davis', page('Susan M. Davis, D.M.D.')), 'https://x.com/team');
+  assert.equal(doctorEvidence('Susan Davis', page('Susan Davis, office manager')), null);
+  assert.equal(doctorEvidence('Susan Davis', page('Dr. Smith and Susan Davis')), null);
 });

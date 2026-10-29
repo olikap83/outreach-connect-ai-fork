@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { fetchPage, extractPage, phoneOnPages, factSources, keepSourced } = require('../lib/outreach/enrich');
+const { fetchPage, extractPage, phoneOnPages, factSources, keepSourced, doctorEvidence } = require('../lib/outreach/enrich');
 const { scoreProspect } = require('../lib/outreach/score');
 const { buildCrmNotes } = require('../lib/outreach/crmnotes');
 const { registryLookup, registryPrincipals, runOverpass } = require('../lib/outreach/sources');
@@ -101,6 +101,14 @@ async function source(doc, restore) {
     if (!x.url && onFiling) { x.how = 'state filing'; x.business_id = filing.id; }
   }
   const kept = people.filter(x => (x.how === 'state filing' ? x.business_id : x.url));
+  // "Dr." only with a page that shows it ("Dr. Susan Davis", "Susan Davis, DMD").
+  if (kept.length && doc.website && doc.website_verified !== false) {
+    const read = await getPages();
+    for (const x of kept) {
+      const dr = doctorEvidence(x.name, read);
+      if (dr) x.doctor_url = dr; else delete x.doctor_url;
+    }
+  }
   const dropped = people.filter(x => !kept.includes(x)).map(x => x.name);
 
   const data = { facts: { ...facts, people: kept } };
