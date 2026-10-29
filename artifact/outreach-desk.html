@@ -1,45 +1,55 @@
-<title>Soham's Outreach Desk</title>
+<title>Main Street Radar</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: CRM-style board on white paper — navy ink, one crimson accent, Times headlines, mono labels. */
+/* Layout: a radar console. Storrs (and Soham) sit at the center of a live sweep of
+   every business found; the work area below is a roomy, high-contrast desk.
+   Husky navy ground, signal cyan for the sweep and sent mail, coral for replies. */
 :root{
-  --paper:#FFFFFF;
-  --wash:#F2F4F8;
-  --wash-2:#E8ECF3;
-  --line:#DCE1EA;
-  --line-strong:#C3CAD8;
-  --ink:#0B1533;
-  --ink-2:#3B4560;
-  --muted:#6B7488;
-  --navy:#000E2F;
-  --crimson:#D0103A;
-  --crimson-soft:#FBE7EC;
-  --ok:#1F7A4D; --ok-soft:#E3F2EA;
-  --warn:#8A6A12; --warn-soft:#F7EED5;
-  --info:#2F5BA8; --info-soft:#E4ECF8;
-  --series-sent:#3A62B0;
-  --series-reply:#D0103A;
-  --shadow:0 1px 2px rgba(11,21,51,.05), 0 4px 14px -6px rgba(11,21,51,.12);
-  --serif:"Times New Roman", Times, "Liberation Serif", Georgia, serif;
-  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
-  --sans:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --paper:#F6F9FC;
+  --wash:#EAF0F7;
+  --wash-2:#DCE5F0;
+  --line:#CFDAE7;
+  --line-strong:#AEBDD0;
+  --ink:#0A1730;
+  --ink-2:#2D3E5C;
+  --muted:#5D6E89;
+  --navy:#0E2A5C;
+  --crimson:#E2493B;
+  --crimson-soft:#FCE6E2;
+  --signal:#0A93A8;
+  --signal-soft:#DDF4F7;
+  --ok:#17794A; --ok-soft:#DFF3E8;
+  --warn:#8A6206; --warn-soft:#FBEFCF;
+  --info:#1D5FC4; --info-soft:#E1EBFA;
+  --series-sent:#0A93A8;
+  --series-reply:#E2493B;
+  --radar-bg:#0B1A36; --radar-ink:#CFE9F2; --radar-line:rgba(120,210,230,.22); --radar-sweep:#3CE0F0;
+  --shadow:0 1px 2px rgba(10,23,48,.06), 0 10px 28px -12px rgba(10,23,48,.22);
+  --serif:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --sans:"Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --paper:#10141C; --wash:#171C26; --wash-2:#1E2532; --line:#2A3242; --line-strong:#3A4458;
-    --ink:#EEF1F7; --ink-2:#C2C9D6; --muted:#8C95A8; --navy:#DCE4F5; --crimson:#F0506B; --crimson-soft:#3A1820;
-    --ok:#6FCB98; --ok-soft:#173226; --warn:#E2C36A; --warn-soft:#352C14; --info:#8FB0EA; --info-soft:#1A2740;
-    --series-sent:#5E86D6; --series-reply:#E8475F;
-    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px -8px rgba(0,0,0,.6);
+    --paper:#081329; --wash:#0F1E3A; --wash-2:#172A4C; --line:#203559; --line-strong:#2F4A77;
+    --ink:#EEF5FF; --ink-2:#C4D3EA; --muted:#8EA2C2; --navy:#7FD8E8; --crimson:#FF7A66; --crimson-soft:#3A1A1C;
+    --signal:#3CE0F0; --signal-soft:#0D3340;
+    --ok:#6FDCA0; --ok-soft:#0F3326; --warn:#F2C766; --warn-soft:#3A2E10; --info:#8DB7FF; --info-soft:#14284A;
+    --series-sent:#3CE0F0; --series-reply:#FF7A66;
+    --radar-bg:#050E20; --radar-ink:#CFE9F2; --radar-line:rgba(120,210,230,.2); --radar-sweep:#3CE0F0;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -12px rgba(0,0,0,.7);
   }
 }
 :root[data-theme="dark"]{
-  --paper:#10141C; --wash:#171C26; --wash-2:#1E2532; --line:#2A3242; --line-strong:#3A4458;
-  --ink:#EEF1F7; --ink-2:#C2C9D6; --muted:#8C95A8; --navy:#DCE4F5; --crimson:#F0506B; --crimson-soft:#3A1820;
-  --ok:#6FCB98; --ok-soft:#173226; --warn:#E2C36A; --warn-soft:#352C14; --info:#8FB0EA; --info-soft:#1A2740;
-  --series-sent:#5E86D6; --series-reply:#E8475F;
-  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px -8px rgba(0,0,0,.6);
+  --paper:#081329; --wash:#0F1E3A; --wash-2:#172A4C; --line:#203559; --line-strong:#2F4A77;
+  --ink:#EEF5FF; --ink-2:#C4D3EA; --muted:#8EA2C2; --navy:#7FD8E8; --crimson:#FF7A66; --crimson-soft:#3A1A1C;
+  --signal:#3CE0F0; --signal-soft:#0D3340;
+  --ok:#6FDCA0; --ok-soft:#0F3326; --warn:#F2C766; --warn-soft:#3A2E10; --info:#8DB7FF; --info-soft:#14284A;
+  --series-sent:#3CE0F0; --series-reply:#FF7A66;
+  --radar-bg:#050E20; --radar-ink:#CFE9F2; --radar-line:rgba(120,210,230,.2); --radar-sweep:#3CE0F0;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -12px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box;}
 html{-webkit-text-size-adjust:100%;}
@@ -346,23 +356,135 @@ table.list a{color:var(--info); text-decoration:none;}
 .reply-box .field textarea{min-height:140px;}
 .prep{margin-top:18px;}
 .prep-text{white-space:pre-wrap; font-family:var(--sans); font-size:13px; line-height:1.55; color:var(--ink-2); background:var(--wash); border-radius:8px; padding:12px 14px; margin:0 0 10px; min-height:60px;}
+
+/* ---------- radar hero + bigger, easier type ---------- */
+body{font-size:15.5px; line-height:1.55;}
+.eyebrow,.mono{font-size:11.5px; letter-spacing:.12em;}
+h1,h2,h3{font-weight:600; letter-spacing:-.01em;}
+.hero{display:grid; grid-template-columns:minmax(0,380px) minmax(0,1fr); gap:clamp(20px,4vw,48px); align-items:center; padding-bottom:24px; border-bottom:1px solid var(--line);}
+@media (max-width:820px){ .hero{grid-template-columns:1fr;} .radar-wrap{max-width:380px; margin:0 auto; width:100%;} }
+.radar-wrap{position:relative; aspect-ratio:1; max-width:100%; border-radius:50%; background:var(--radar-bg); box-shadow:0 0 0 1px var(--line), 0 24px 60px -24px rgba(10,147,168,.55);}
+.radar-wrap canvas{display:block; width:100%; height:100%; border-radius:50%; cursor:crosshair;}
+.radar-wrap .me{position:absolute; left:50%; top:50%; width:17%; height:17%; transform:translate(-50%,-50%); border-radius:50%; object-fit:cover; box-shadow:0 0 0 3px var(--radar-sweep), 0 0 24px rgba(60,224,240,.6); pointer-events:none;}
+.radar-tip{position:absolute; pointer-events:none; background:var(--ink); color:var(--paper); border-radius:10px; padding:8px 12px; font-size:13.5px; line-height:1.35; white-space:nowrap; transform:translate(-50%, calc(-100% - 12px)); box-shadow:var(--shadow); z-index:3;}
+.radar-tip small{display:block; font-family:var(--mono); font-size:11px; opacity:.75;}
+.hero-text{min-width:0; display:flex; flex-direction:column; gap:14px;}
+.hero h1{font-family:var(--serif); font-weight:800; font-size:clamp(40px,6.4vw,76px); line-height:.95; letter-spacing:-.035em;}
+.hero h1 .acc{color:var(--signal); font-style:normal;}
+.lead{margin:0; font-size:17px; color:var(--ink-2); max-width:56ch;}
+.me-card{display:inline-flex; align-items:center; gap:12px; align-self:flex-start; border:1px solid var(--line); background:var(--wash); border-radius:999px; padding:6px 18px 6px 6px;}
+.me-card img{width:52px; height:52px; border-radius:50%; object-fit:cover;}
+.me-card b{display:block; font-family:var(--serif); font-size:18px; font-weight:600;}
+.me-card span{font-size:13.5px; color:var(--muted);}
+.radar-legend{display:flex; gap:8px 16px; flex-wrap:wrap; font-size:13.5px; color:var(--ink-2);}
+.radar-legend span{display:inline-flex; align-items:center; gap:7px;}
+.radar-legend i{width:11px; height:11px; border-radius:50%; display:inline-block;}
+.lg-ready{background:#F4F7FB; box-shadow:0 0 0 1px var(--line-strong);} .lg-sent{background:#3CE0F0;} .lg-reply{background:#FF7A66;} .lg-check{background:#F2C766;} .lg-other{background:#5F7396;}
+.hero-status{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+.live{font-size:11.5px;}
+.live i{background:var(--signal); animation:pulse2 2.4s infinite;}
+@keyframes pulse2{0%{box-shadow:0 0 0 0 rgba(60,224,240,.5);}70%{box-shadow:0 0 0 8px rgba(60,224,240,0);}100%{box-shadow:0 0 0 0 rgba(60,224,240,0);}}
+.cchip{font-size:11px; padding:6px 12px;}
+
+.btn{font-size:12px; padding:9px 17px; letter-spacing:.08em;}
+.btn.sm{font-size:11px; padding:6px 12px;}
+.btn.solid{background:var(--signal); border-color:var(--signal); color:var(--paper); font-weight:600;}
+.tab{font-size:12px; padding:10px 18px; letter-spacing:.1em;}
+.tab[aria-selected="true"]{background:var(--ink); border-color:var(--ink); color:var(--paper);}
+.seg button{font-size:12px; padding:9px 16px;}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--paper);}
+.filters input[type=search]{padding:12px 18px; font-size:15.5px;}
+.filters select{font-size:14.5px; padding:10px 34px 10px 16px;}
+.check{font-size:14.5px;}
+.stats{gap:12px; margin-top:24px;}
+.stat{border-radius:16px; padding:16px 18px 14px; background:var(--wash); border-color:transparent; transition:transform .15s, box-shadow .15s;}
+.stat:hover{transform:translateY(-2px); box-shadow:var(--shadow);}
+.stat .n{font-family:var(--serif); font-weight:800; font-size:42px; letter-spacing:-.03em;}
+.stat .n small{font-size:12px;}
+.stat .l{font-size:11.5px;}
+.stat.hot{border-color:var(--crimson); background:var(--crimson-soft);}
+.chart-card{border-radius:16px; padding:16px 18px; background:var(--wash); border-color:transparent;}
+.chart-card h3{font-size:22px;}
+.legend span{font-size:13.5px;}
+.card{border-radius:12px; padding:12px 14px 11px;}
+.card.sel{border-color:var(--signal); box-shadow:0 0 0 2px var(--signal);}
+.card .nm{font-size:18px; font-weight:600; line-height:1.2;}
+.card .mt{font-size:11px; color:var(--signal); opacity:1;}
+.card .who{font-size:12px;}
+.fit{font-size:12px; padding:3px 9px;}
+.review{grid-template-columns:360px minmax(0,1fr); gap:20px;}
+@media (max-width:900px){ .review{grid-template-columns:1fr;} }
+.review-hint{font-size:13.5px;}
+.detail{border-radius:18px;}
+.d-head{padding:22px 24px 18px;}
+.d-head h2{font-size:34px; font-weight:700; letter-spacing:-.02em;}
+.d-head .links{font-size:14.5px; gap:14px;}
+.d-head .links a{color:var(--info);}
+.fitbig .v{font-family:var(--serif); font-weight:800; font-size:52px;}
+.fitbig .bar{width:110px; height:6px;}
+.fitbig .bar i{background:var(--signal);}
+.d-main,.d-side{padding:20px 24px 24px;}
+.field label{font-size:11px;}
+.field input,.field textarea{border-radius:10px; padding:11px 13px; font-size:15.5px;}
+.field textarea{font-size:16px; line-height:1.65;}
+.badge{font-size:11px; padding:4px 10px;}
+.reasons li{font-size:14.5px; grid-template-columns:40px 1fr;}
+.reasons .p{font-size:13px;}
+.reasons a{text-decoration:none;} .reasons a:hover{text-decoration:underline;}
+.chip{font-size:14px; padding:5px 13px;}
+a.chip:hover{border-color:var(--signal); color:var(--signal);}
+.kv{font-size:14.5px; gap:6px;}
+.note{font-size:14.5px; padding:10px 13px; border-radius:10px;}
+.msg pre{font-size:15px;}
+.msg .sub{font-size:14.5px;}
+.timeline li{font-size:13.5px;}
+.timeline .t{font-size:11px;}
+.fchip{font-size:14px; padding:6px 14px;}
+.fchip[aria-pressed="true"]{background:var(--signal-soft); border-color:var(--signal); color:var(--ink);}
+.today{font-size:14.5px;}
+.today .bar{height:8px;}
+.today .bar i{background:var(--signal);}
+.band{font-size:11px;}
+table.list{font-size:14.5px;}
+table.list .nm{font-size:16px; font-weight:600;}
+table.list th{font-size:11px;}
+.feed li{font-size:14.5px;}
+.feed .who{font-size:16px; font-weight:600;}
+.banner p{font-size:15px;}
+.prep-text{font-size:15px;}
+.toast{font-size:14.5px; border-radius:12px;}
+footer{font-size:11px;}
 </style>
 
 <div class="wrap">
-  <header class="top">
-    <div class="brand">
-      <svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><path d="M68 8 A42 42 0 1 0 68 92 L68 62 A12 12 0 1 1 68 38 Z" fill="var(--navy)"/><circle cx="75" cy="30" r="7" fill="var(--crimson)"/><circle cx="68" cy="70" r="16" fill="var(--steel, #7B868C)"/></svg>
-      <div>
-        <div class="eyebrow">Connect.AI · Business outreach</div>
-        <h1>Who I've emailed, <em class="acc">and who wrote back.</em></h1>
-      </div>
+  <header class="hero">
+    <div class="radar-wrap">
+      <canvas id="radar" width="360" height="360" aria-label="Radar of every business found, by distance from Storrs" role="img"></canvas>
+      <img class="me" src="soham.jpg" alt="Soham Shah" width="64" height="64">
+      <div class="radar-tip" id="radarTip" hidden></div>
     </div>
-    <div class="top-right">
-      <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
-      <div class="conn-chips" id="conn">
-        <span class="cchip" id="cDb"><i></i>Dashboard data</span>
-        <span class="cchip" id="cCrm"><i></i>Class CRM</span>
-        <span class="cchip" id="cGmail"><i></i>Gmail</span>
+    <div class="hero-text">
+      <div class="eyebrow">Connect.AI · small-business outreach</div>
+      <h1>Main Street <span class="acc">Radar</span></h1>
+      <p class="lead">Every small business I've found, checked and emailed, plotted by how far it is from Storrs. Hover a dot to see who it is; click it to open it.</p>
+      <div class="me-card">
+        <img src="soham.jpg" alt="" width="52" height="52">
+        <div><b>Soham Shah</b><span>Accounting '28 · University of Connecticut</span></div>
+      </div>
+      <div class="radar-legend" id="radarLegend">
+        <span><i class="lg-ready"></i>Ready to review</span>
+        <span><i class="lg-sent"></i>Emailed</span>
+        <span><i class="lg-reply"></i>Wrote back</span>
+        <span><i class="lg-check"></i>Needs a look</span>
+        <span><i class="lg-other"></i>Other</span>
+      </div>
+      <div class="hero-status">
+        <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
+        <div class="conn-chips" id="conn">
+          <span class="cchip" id="cDb"><i></i>Dashboard data</span>
+          <span class="cchip" id="cCrm"><i></i>Class CRM</span>
+          <span class="cchip" id="cGmail"><i></i>Gmail</span>
+        </div>
       </div>
     </div>
   </header>
@@ -1674,6 +1796,7 @@ function isEditing() {
 }
 function render() {
   renderConn(); renderNotice(); renderStats(); renderChart(); renderTabs();
+  radarData(); radarInit();
   // While Claude is writing into a reply or prep sheet, leave the page as it is.
   const writing = Object.keys(S.working).length > 0;
   if (!isEditing() && !writing) renderView();
@@ -1694,6 +1817,140 @@ document.addEventListener('change', e => {
   }
 });
 setInterval(renderConn, 30000);
+
+
+// ---------- radar ----------
+// Every business on a sweep around Storrs: distance on a log scale (so the
+// towns next door and the far-off states both fit), bearing from its town.
+const STORRS = [41.8084, -72.2495];
+const TOWN_LL = {
+  mansfield: [41.79, -72.23], windham: [41.71, -72.16], coventry: [41.77, -72.33], tolland: [41.87, -72.37], vernon: [41.82, -72.48],
+  manchester: [41.78, -72.52], ellington: [41.90, -72.47], stafford: [41.99, -72.29], willington: [41.88, -72.26], ashford: [41.87, -72.12],
+  columbia: [41.70, -72.30], hebron: [41.66, -72.37], lebanon: [41.64, -72.21], bolton: [41.77, -72.43], andover: [41.74, -72.37],
+  glastonbury: [41.71, -72.61], 'east hartford': [41.78, -72.61], norwich: [41.52, -72.08], hartford: [41.76, -72.68], willimantic: [41.71, -72.21],
+  'cambridge, ma': [42.37, -71.11], 'somerville, ma': [42.39, -71.10], 'boston, ma': [42.36, -71.06], 'worcester, ma': [42.26, -71.80],
+  'springfield, ma': [42.10, -72.59], 'natick, ma': [42.28, -71.35], 'brookfield, ma': [42.21, -72.10], 'mansfield, ma': [42.03, -71.22],
+  'providence, ri': [41.82, -71.41], 'warwick, ri': [41.70, -71.42], 'cranston, ri': [41.78, -71.44], 'wakefield, ri': [41.44, -71.50],
+  'portsmouth, nh': [43.07, -70.76], 'salem, nh': [42.79, -71.20], 'whitefield, nh': [44.37, -71.61], 'portland, me': [43.66, -70.26],
+  'yarmouth, me': [43.80, -70.19], 'williston, vt': [44.44, -73.07], 'jacksonville, vt': [42.80, -72.82], 'manhattan, ny': [40.78, -73.97],
+};
+const STATE_LL = { AL: [32.8, -86.8], AK: [61.4, -152.3], AZ: [34.2, -111.7], AR: [34.9, -92.4], CA: [37.2, -119.5], CO: [39.0, -105.5], CT: [41.6, -72.7],
+  DE: [39.0, -75.5], DC: [38.9, -77.0], FL: [28.6, -82.4], GA: [32.7, -83.4], HI: [20.8, -156.3], ID: [44.4, -114.6], IL: [40.0, -89.2], IN: [39.9, -86.3],
+  IA: [42.1, -93.5], KS: [38.5, -98.4], KY: [37.5, -85.3], LA: [31.1, -92.0], ME: [45.4, -69.2], MD: [39.0, -76.8], MA: [42.3, -71.8], MI: [44.3, -85.4],
+  MN: [46.3, -94.3], MS: [32.7, -89.7], MO: [38.4, -92.5], MT: [47.0, -109.6], NE: [41.5, -99.8], NV: [39.3, -116.6], NH: [43.7, -71.6], NJ: [40.2, -74.7],
+  NM: [34.4, -106.1], NY: [42.9, -75.5], NC: [35.6, -79.4], ND: [47.5, -100.5], OH: [40.3, -82.8], OK: [35.6, -97.5], OR: [43.9, -120.6], PA: [40.9, -77.8],
+  RI: [41.7, -71.5], SC: [33.9, -80.9], SD: [44.4, -100.2], TN: [35.9, -86.4], TX: [31.5, -99.3], UT: [39.3, -111.7], VT: [44.1, -72.7], VA: [37.5, -78.9],
+  WA: [47.4, -120.5], WV: [38.6, -80.6], WI: [44.6, -89.9], WY: [43.0, -107.6] };
+const hashNum = str => { let h = 2166136261; for (const c of String(str)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; };
+function radarPlace(p) {
+  const st = stateOf(p) || 'CT';
+  const town = String(p.town || '').toLowerCase();
+  const ll = (p.lat != null && p.lon != null) ? [p.lat, p.lon] : TOWN_LL[st === 'CT' ? town : `${town}, ${st.toLowerCase()}`] || STATE_LL[st];
+  if (!ll) return null;
+  const toR = d => d * Math.PI / 180;
+  const [la1, lo1] = STORRS.map(toR), [la2, lo2] = ll.map(toR);
+  const y = Math.sin(lo2 - lo1) * Math.cos(la2), x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(lo2 - lo1);
+  let bearing = Math.atan2(y, x);
+  const a = Math.sin((la2 - la1) / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin((lo2 - lo1) / 2) ** 2;
+  let miles = p.miles_from_storrs != null ? Number(p.miles_from_storrs) : 3959 * 2 * Math.asin(Math.sqrt(a));
+  // Spread businesses in the same town so they don't sit on one pixel.
+  bearing += (hashNum(p.id) - .5) * (miles < 40 ? .5 : .12);
+  miles = Math.max(1.5, miles * (0.92 + hashNum(p.id + 'r') * .16));
+  return { bearing, miles };
+}
+const RADAR_MAX = 2600;
+const radarR = (mi, R) => R * Math.log1p(mi) / Math.log1p(RADAR_MAX);
+const RADAR_RINGS = [10, 30, 100, 400, 2000];
+function blipColor(p) {
+  if (p.status === 'replied') return '#FF7A66';
+  if (p.status === 'sent' || p.status === 'followed_up') return '#3CE0F0';
+  if (p.status === 'needs_check') return '#F2C766';
+  if (p.status === 'ready' || p.status === 'queued') return '#F4F7FB';
+  return '#5F7396';
+}
+const R_STATE = { blips: [], angle: 0, hover: null, raf: 0 };
+function radarData() {
+  R_STATE.blips = S.prospects.map(p => { const pl = radarPlace(p); return pl ? { p, ...pl, lit: 0 } : null; }).filter(Boolean);
+}
+function radarFrame(t) {
+  const cv = document.getElementById('radar');
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const size = cv.clientWidth;
+  if (!size) { R_STATE.raf = requestAnimationFrame(radarFrame); return; }
+  if (cv.width !== Math.round(size * dpr)) { cv.width = cv.height = Math.round(size * dpr); }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const c = size / 2, R = c - 14;
+  const css = getComputedStyle(document.documentElement);
+  const line = css.getPropertyValue('--radar-line').trim(), ink = css.getPropertyValue('--radar-ink').trim(), sweep = css.getPropertyValue('--radar-sweep').trim();
+  ctx.clearRect(0, 0, size, size);
+  // rings, labeled in real miles
+  ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.fillStyle = ink; ctx.font = `500 ${Math.max(9, size / 38)}px "JetBrains Mono", monospace`; ctx.textAlign = 'center';
+  for (const mi of RADAR_RINGS) {
+    const r = radarR(mi, R);
+    ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = .55; ctx.fillText(`${mi} mi`, c + r * .62, c - r * .78 + 4); ctx.globalAlpha = 1;
+  }
+  ctx.beginPath(); ctx.moveTo(c - R, c); ctx.lineTo(c + R, c); ctx.moveTo(c, c - R); ctx.lineTo(c, c + R); ctx.stroke();
+  // sweep
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) R_STATE.angle = (t / 4200 * Math.PI * 2) % (Math.PI * 2);
+  const ang = R_STATE.angle - Math.PI / 2;
+  if (!reduce) {
+    const g = ctx.createConicGradient ? ctx.createConicGradient(ang - .9, c, c) : null;
+    if (g) {
+      g.addColorStop(0, 'rgba(60,224,240,0)'); g.addColorStop(.143, 'rgba(60,224,240,.28)'); g.addColorStop(.1431, 'rgba(60,224,240,0)'); g.addColorStop(1, 'rgba(60,224,240,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(c, c); ctx.arc(c, c, R, ang - .9, ang); ctx.closePath(); ctx.fill();
+    }
+    ctx.strokeStyle = sweep; ctx.globalAlpha = .8; ctx.beginPath(); ctx.moveTo(c, c); ctx.lineTo(c + Math.cos(ang) * R, c + Math.sin(ang) * R); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  // blips: they flare as the sweep passes
+  for (const b of R_STATE.blips) {
+    const a = b.bearing - Math.PI / 2, r = radarR(b.miles, R);
+    b.x = c + Math.cos(a) * r; b.y = c + Math.sin(a) * r;
+    let d = (R_STATE.angle - ((b.bearing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) + Math.PI * 4) % (Math.PI * 2);
+    const glow = reduce ? .6 : Math.max(0, 1 - d / 2.2);
+    const col = blipColor(b.p);
+    const big = b.p.status === 'replied' ? 5 : b.p.status === 'sent' || b.p.status === 'followed_up' ? 4 : 3;
+    const hov = R_STATE.hover === b;
+    ctx.globalAlpha = .35 + .65 * glow;
+    if (glow > .4 || hov) { ctx.shadowColor = col; ctx.shadowBlur = hov ? 16 : 10 * glow; }
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(b.x, b.y, hov ? big + 3 : big, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    if (hov) { ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(b.x, b.y, big + 8, 0, Math.PI * 2); ctx.stroke(); }
+  }
+  ctx.globalAlpha = 1;
+  R_STATE.raf = reduce ? 0 : requestAnimationFrame(radarFrame);
+}
+function radarHit(e) {
+  const cv = document.getElementById('radar');
+  const r = cv.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  let best = null, bd = 14 * 14;
+  for (const b of R_STATE.blips) { const d = (b.x - x) ** 2 + (b.y - y) ** 2; if (d < bd) { bd = d; best = b; } }
+  return { best, x, y };
+}
+function radarInit() {
+  const cv = document.getElementById('radar');
+  if (!cv || cv.dataset.on) return;
+  cv.dataset.on = '1';
+  const tip = document.getElementById('radarTip');
+  const STATUS_WORD = { ready: 'Ready to review', queued: 'Approved', sent: 'Emailed', followed_up: 'Followed up', replied: 'Wrote back', needs_check: 'Needs a look', no_email: 'No email', skipped: 'Skipped' };
+  cv.addEventListener('mousemove', e => {
+    const { best } = radarHit(e);
+    R_STATE.hover = best;
+    if (best) {
+      tip.hidden = false; tip.style.left = `${best.x}px`; tip.style.top = `${best.y}px`;
+      tip.innerHTML = `${esc(best.p.name)}<small>${esc(placeLabel(best.p) || '')} · ${Math.round(best.miles)} mi · ${esc(STATUS_WORD[best.p.status] || best.p.status || '')}</small>`;
+      cv.style.cursor = 'pointer';
+    } else { tip.hidden = true; cv.style.cursor = 'crosshair'; }
+    if (!R_STATE.raf) radarFrame(performance.now());
+  });
+  cv.addEventListener('mouseleave', () => { R_STATE.hover = null; tip.hidden = true; });
+  cv.addEventListener('click', e => { const { best } = radarHit(e); if (best) openDrawer(best.p.id); });
+  R_STATE.raf = requestAnimationFrame(radarFrame);
+}
 
 // ---------- drawer ----------
 function openDrawer(id) {
