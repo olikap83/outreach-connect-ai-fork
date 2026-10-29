@@ -1,0 +1,1769 @@
+<title>Soham's Outreach Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: CRM-style board on white paper — navy ink, one crimson accent, Times headlines, mono labels. */
+:root{
+  --paper:#FFFFFF;
+  --wash:#F2F4F8;
+  --wash-2:#E8ECF3;
+  --line:#DCE1EA;
+  --line-strong:#C3CAD8;
+  --ink:#0B1533;
+  --ink-2:#3B4560;
+  --muted:#6B7488;
+  --navy:#000E2F;
+  --crimson:#D0103A;
+  --crimson-soft:#FBE7EC;
+  --ok:#1F7A4D; --ok-soft:#E3F2EA;
+  --warn:#8A6A12; --warn-soft:#F7EED5;
+  --info:#2F5BA8; --info-soft:#E4ECF8;
+  --series-sent:#3A62B0;
+  --series-reply:#D0103A;
+  --shadow:0 1px 2px rgba(11,21,51,.05), 0 4px 14px -6px rgba(11,21,51,.12);
+  --serif:"Times New Roman", Times, "Liberation Serif", Georgia, serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --sans:"IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#10141C; --wash:#171C26; --wash-2:#1E2532; --line:#2A3242; --line-strong:#3A4458;
+    --ink:#EEF1F7; --ink-2:#C2C9D6; --muted:#8C95A8; --navy:#DCE4F5; --crimson:#F0506B; --crimson-soft:#3A1820;
+    --ok:#6FCB98; --ok-soft:#173226; --warn:#E2C36A; --warn-soft:#352C14; --info:#8FB0EA; --info-soft:#1A2740;
+    --series-sent:#5E86D6; --series-reply:#E8475F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px -8px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10141C; --wash:#171C26; --wash-2:#1E2532; --line:#2A3242; --line-strong:#3A4458;
+  --ink:#EEF1F7; --ink-2:#C2C9D6; --muted:#8C95A8; --navy:#DCE4F5; --crimson:#F0506B; --crimson-soft:#3A1820;
+  --ok:#6FCB98; --ok-soft:#173226; --warn:#E2C36A; --warn-soft:#352C14; --info:#8FB0EA; --info-soft:#1A2740;
+  --series-sent:#5E86D6; --series-reply:#E8475F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px -8px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.45; overflow-x:hidden;}
+button,input,select,textarea{font:inherit; color:inherit;}
+a{color:inherit;}
+.wrap{max-width:1320px; margin:0 auto; padding:22px 24px 60px;}
+@media (max-width:640px){ .wrap{padding:16px 16px 50px;} }
+
+.eyebrow,.mono{font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+h1,h2,h3{font-family:var(--serif); font-weight:400; margin:0; color:var(--ink); text-wrap:balance;}
+em.acc{color:var(--crimson); font-style:italic;}
+
+/* ---------- header ---------- */
+.top{display:flex; gap:18px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; padding-bottom:18px; border-bottom:1px solid var(--line);}
+.brand{display:flex; gap:14px; align-items:center;}
+.brand h1{font-size:clamp(26px,3.6vw,38px); line-height:1.04; margin-top:4px;}
+.top-right{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.live{display:inline-flex; align-items:center; gap:7px; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-right:6px;}
+.live i{width:8px; height:8px; border-radius:50%; background:var(--crimson); box-shadow:0 0 0 0 var(--crimson); animation:pulse 2.4s infinite;}
+.live.stale i{background:var(--muted); animation:none;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(208,16,58,.45);}70%{box-shadow:0 0 0 7px rgba(208,16,58,0);}100%{box-shadow:0 0 0 0 rgba(208,16,58,0);}}
+@media (prefers-reduced-motion: reduce){ .live i{animation:none;} }
+
+.btn{text-decoration:none; display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line-strong); background:var(--paper); border-radius:999px; padding:7px 14px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; color:var(--ink-2); white-space:nowrap; transition:border-color .15s, background .15s, color .15s;}
+.btn:hover{border-color:var(--ink-2); color:var(--ink);}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+.btn.solid{background:var(--navy); border-color:var(--navy); color:var(--paper);}
+.btn.solid:hover{filter:brightness(1.15);}
+.btn.crimson{border-color:var(--crimson); color:var(--crimson);}
+.btn.crimson:hover{background:var(--crimson-soft);}
+.btn.dashed{border-style:dashed; border-color:var(--crimson); color:var(--crimson);}
+.btn.ghost{border-color:transparent; background:transparent;}
+.btn.ghost:hover{background:var(--wash);}
+.btn.sm{padding:5px 10px; font-size:10px;}
+:focus-visible{outline:2px solid var(--info); outline-offset:2px;}
+
+/* ---------- stats ---------- */
+.stats{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:10px; margin-top:20px;}
+@media (max-width:1100px){ .stats{grid-template-columns:repeat(4, minmax(0,1fr));} }
+@media (max-width:560px){ .stats{grid-template-columns:repeat(2, minmax(0,1fr));} }
+.stat{border:1px solid var(--line); border-radius:8px; padding:12px 14px 11px; background:var(--paper); min-width:0;}
+.stat .n{font-family:var(--serif); font-size:30px; line-height:1; font-variant-numeric:tabular-nums;}
+.stat .n small{font-family:var(--mono); font-size:11px; color:var(--muted); margin-left:4px; letter-spacing:.04em;}
+.stat .l{margin-top:7px;}
+.stat.hot{border-color:var(--crimson);}
+.stat.hot .n{color:var(--crimson);}
+
+.chart-card{margin-top:10px; border:1px solid var(--line); border-radius:8px; padding:12px 14px; display:grid; grid-template-columns:220px 1fr; gap:18px; align-items:center;}
+@media (max-width:760px){ .chart-card{grid-template-columns:1fr;} }
+.chart-card h3{font-size:19px;}
+.legend{display:flex; gap:14px; margin-top:8px; flex-wrap:wrap;}
+.legend span{display:inline-flex; gap:6px; align-items:center; font-size:12px; color:var(--ink-2);}
+.legend i{width:10px; height:10px; border-radius:3px; display:inline-block;}
+.chart{position:relative; min-width:0;}
+.chart svg{display:block; width:100%; height:96px; overflow:visible;}
+.chart .tip{position:absolute; pointer-events:none; background:var(--ink); color:var(--paper); border-radius:6px; padding:6px 9px; font-size:12px; white-space:nowrap; transform:translate(-50%,-110%); opacity:0; transition:opacity .1s;}
+.chart .tip.on{opacity:1;}
+.chart details{margin-top:4px;}
+.chart summary{cursor:pointer; font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);}
+.chart table{border-collapse:collapse; font-size:12px; margin-top:6px;}
+.chart td,.chart th{padding:2px 10px 2px 0; text-align:left; font-variant-numeric:tabular-nums;}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:22px;}
+.tabs{display:flex; gap:6px; flex-wrap:wrap;}
+.tab{border:1px solid var(--line-strong); background:var(--paper); border-radius:999px; padding:8px 15px; cursor:pointer;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2);}
+.tab b{font-weight:500; color:var(--muted); margin-left:5px;}
+.tab[aria-selected="true"]{background:var(--navy); border-color:var(--navy); color:var(--paper);}
+.tab[aria-selected="true"] b{color:var(--paper); opacity:.7;}
+.filters{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;}
+.filters input[type=search]{flex:1 1 280px; min-width:0; border:1px solid var(--line-strong); border-radius:999px; padding:9px 16px; background:var(--paper);}
+.filters select{border:1px solid var(--line-strong); border-radius:999px; padding:8px 30px 8px 14px; background:var(--paper); font-size:13px; appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size:5px 5px; background-repeat:no-repeat;}
+.check{display:inline-flex; gap:7px; align-items:center; font-size:13px; color:var(--ink-2); cursor:pointer;}
+.check input{width:15px; height:15px; accent-color:var(--navy);}
+
+.view{margin-top:16px;}
+.hidden{display:none !important;}
+
+/* ---------- board ---------- */
+.board{display:grid; grid-auto-flow:column; grid-auto-columns:minmax(196px, 1fr); gap:10px; overflow-x:auto; padding-bottom:8px; scroll-snap-type:x proximity;}
+.col{background:var(--wash); border-radius:8px; padding:9px; min-height:140px; scroll-snap-align:start;}
+.col-h{display:flex; justify-content:space-between; align-items:center; padding:2px 3px 9px;}
+.col-h .eyebrow{display:flex; gap:7px; align-items:center; color:var(--ink-2);}
+.dot{width:9px; height:9px; border-radius:50%; border:1.5px solid var(--muted); display:inline-block; flex-shrink:0;}
+.dot.f{background:var(--muted);}
+.dot.navy{border-color:var(--navy); background:var(--navy);}
+.dot.red{border-color:var(--crimson); background:var(--crimson);}
+.dot.redo{border-color:var(--crimson);}
+.dot.ok{border-color:var(--ok); background:var(--ok);}
+.cards{display:flex; flex-direction:column; gap:7px;}
+.card{background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:9px 10px 8px; cursor:pointer; text-align:left; width:100%; transition:border-color .12s, box-shadow .12s, transform .12s;}
+.card:hover{border-color:var(--line-strong); box-shadow:var(--shadow); transform:translateY(-1px);}
+.card.sel{border-color:var(--navy); box-shadow:0 0 0 1px var(--navy);}
+.card .nm{font-family:var(--serif); font-size:15.5px; line-height:1.18; color:var(--ink);}
+.card .mt{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--crimson); margin-top:4px; opacity:.85;}
+.card .ft{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px;}
+.card .who{font-family:var(--mono); font-size:10px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+.fit{font-family:var(--mono); font-size:10px; font-weight:600; padding:2px 7px; border-radius:999px; white-space:nowrap; font-variant-numeric:tabular-nums;}
+.fit.hi{background:var(--ok-soft); color:var(--ok);}
+.fit.md{background:var(--warn-soft); color:var(--warn);}
+.fit.lo{background:var(--wash-2); color:var(--muted);}
+.col .more{font-family:var(--mono); font-size:10px; color:var(--muted); text-align:center; padding:6px; letter-spacing:.1em;}
+.empty-col{font-size:12px; color:var(--muted); padding:8px 4px;}
+
+/* ---------- review ---------- */
+.review{display:grid; grid-template-columns:330px minmax(0,1fr); gap:16px; align-items:start;}
+@media (max-width:900px){ .review{grid-template-columns:1fr;} }
+.review-list{display:flex; flex-direction:column; gap:7px; max-height:calc(100vh - 140px); overflow:auto; position:sticky; top:12px; padding:2px;}
+@media (max-width:900px){ .review-list{max-height:none; position:static;} }
+.review-hint{font-size:12px; color:var(--muted); margin:0 2px 6px;}
+kbd{font-family:var(--mono); font-size:10.5px; border:1px solid var(--line-strong); border-bottom-width:2px; border-radius:4px; padding:0 4px; background:var(--paper);}
+
+/* ---------- detail (shared by review pane + drawer) ---------- */
+.detail{border:1px solid var(--line); border-radius:10px; background:var(--paper); min-width:0;}
+.d-head{padding:18px 20px 14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:14px; align-items:flex-start;}
+.d-head h2{font-size:28px; line-height:1.08;}
+.d-head .links{display:flex; gap:12px; flex-wrap:wrap; margin-top:8px; font-size:12.5px;}
+.d-head .links a{color:var(--info); text-decoration:none;}
+.d-head .links a:hover{text-decoration:underline;}
+.fitbig{text-align:right; flex-shrink:0;}
+.fitbig .v{font-family:var(--serif); font-size:40px; line-height:.9;}
+.fitbig .bar{width:84px; height:4px; background:var(--wash-2); border-radius:4px; margin:6px 0 4px auto; overflow:hidden;}
+.fitbig .bar i{display:block; height:100%; background:var(--navy); border-radius:4px;}
+.d-body{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:0;}
+@media (max-width:1100px){ .d-body{grid-template-columns:1fr;} }
+.d-main{padding:16px 20px 20px; border-right:1px solid var(--line); min-width:0;}
+@media (max-width:1100px){ .d-main{border-right:none; border-bottom:1px solid var(--line);} }
+.d-side{padding:16px 20px 20px; min-width:0;}
+.section + .section{margin-top:18px;}
+.section > .eyebrow{display:block; margin-bottom:8px;}
+.field{display:flex; flex-direction:column; gap:4px; margin-bottom:10px;}
+.field label{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+.field input,.field textarea{border:1px solid var(--line-strong); border-radius:6px; padding:8px 10px; background:var(--paper); width:100%;}
+.field textarea{min-height:300px; resize:vertical; line-height:1.55; font-size:13.5px;}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+@media (max-width:560px){ .row2{grid-template-columns:1fr;} }
+.badge{display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; padding:3px 8px; border-radius:999px; white-space:nowrap;}
+.badge.ok{background:var(--ok-soft); color:var(--ok);}
+.badge.warn{background:var(--warn-soft); color:var(--warn);}
+.badge.info{background:var(--info-soft); color:var(--info);}
+.badge.red{background:var(--crimson-soft); color:var(--crimson);}
+.badge.gray{background:var(--wash-2); color:var(--ink-2);}
+.actions{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:4px;}
+.actions .spacer{flex:1;}
+.reasons{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px;}
+.reasons li{display:grid; grid-template-columns:34px 1fr; gap:6px; font-size:12.5px; color:var(--ink-2);}
+.reasons .p{font-family:var(--mono); font-size:11px; text-align:right; font-variant-numeric:tabular-nums;}
+.reasons .p.pos{color:var(--ok);}
+.reasons .p.neg{color:var(--crimson);}
+.chips{display:flex; gap:6px; flex-wrap:wrap;}
+.chip{font-size:12px; border:1px solid var(--line); background:var(--wash); border-radius:999px; padding:3px 10px; color:var(--ink-2);}
+.kv{font-size:12.5px; color:var(--ink-2); display:flex; flex-direction:column; gap:4px;}
+.kv a{color:var(--info); text-decoration:none; word-break:break-all;}
+.note{font-size:12.5px; color:var(--warn); background:var(--warn-soft); border-radius:6px; padding:7px 10px; margin-bottom:10px;}
+.note.red{color:var(--crimson); background:var(--crimson-soft);}
+.thread{display:flex; flex-direction:column; gap:10px;}
+.msg{border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--paper);}
+.msg.in{background:var(--info-soft); border-color:transparent;}
+.msg .mh{display:flex; justify-content:space-between; gap:8px; margin-bottom:6px; flex-wrap:wrap;}
+.msg .sub{font-weight:600; font-size:13px;}
+.msg pre{white-space:pre-wrap; font-family:var(--sans); font-size:13px; margin:0; color:var(--ink-2); line-height:1.5;}
+.timeline{list-style:none; margin:0; padding:0 0 0 12px; border-left:1px solid var(--line); display:flex; flex-direction:column; gap:8px;}
+.timeline li{font-size:12px; color:var(--ink-2); position:relative;}
+.timeline li::before{content:""; position:absolute; left:-16.5px; top:5px; width:8px; height:8px; border-radius:50%; background:var(--paper); border:1.5px solid var(--line-strong);}
+.timeline .t{font-family:var(--mono); font-size:10px; color:var(--muted); display:block;}
+.placeholder{padding:60px 20px; text-align:center; color:var(--muted);}
+.placeholder h3{font-size:22px; color:var(--ink); margin-bottom:6px;}
+
+/* ---------- drawer ---------- */
+.scrim{position:fixed; inset:0; background:rgba(11,21,51,.28); opacity:0; pointer-events:none; transition:opacity .2s; z-index:40;}
+.scrim.on{opacity:1; pointer-events:auto;}
+.drawer{position:fixed; top:0; right:0; bottom:0; width:min(940px, 100vw); background:var(--paper); z-index:41; transform:translateX(102%); transition:transform .24s cubic-bezier(.2,.7,.2,1); overflow:auto; box-shadow:-10px 0 40px -18px rgba(0,0,0,.4);}
+.drawer.on{transform:none;}
+.drawer .detail{border:none; border-radius:0;}
+.drawer-close{position:sticky; top:0; display:flex; justify-content:flex-end; padding:10px 12px 0; background:var(--paper); z-index:2;}
+@media (prefers-reduced-motion: reduce){ .drawer,.scrim{transition:none;} }
+
+/* ---------- list ---------- */
+.table-wrap{border:1px solid var(--line); border-radius:8px; overflow:auto;}
+table.list{width:100%; border-collapse:collapse; font-size:13px; min-width:760px;}
+table.list th{font-family:var(--mono); font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:500; text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); background:var(--wash); position:sticky; top:0; cursor:pointer; white-space:nowrap; user-select:none;}
+table.list td{padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:middle;}
+table.list tr:hover td{background:var(--wash);}
+table.list tr{cursor:pointer;}
+table.list .nm{font-family:var(--serif); font-size:15px;}
+table.list .num{text-align:right; font-variant-numeric:tabular-nums;}
+
+/* ---------- activity ---------- */
+.feed{list-style:none; margin:0; padding:0; border:1px solid var(--line); border-radius:8px;}
+.feed li{display:grid; grid-template-columns:110px 120px minmax(0,1fr); gap:12px; padding:10px 14px; border-bottom:1px solid var(--line); align-items:baseline; font-size:13px;}
+.feed li:last-child{border-bottom:none;}
+@media (max-width:640px){ .feed li{grid-template-columns:1fr; gap:3px;} }
+.feed .t{font-family:var(--mono); font-size:10.5px; color:var(--muted);}
+.feed .who{font-family:var(--serif); font-size:15px; color:var(--ink); cursor:pointer;}
+.feed .who:hover{text-decoration:underline;}
+.feed .body{color:var(--ink-2); overflow-wrap:anywhere;}
+
+/* ---------- sources ---------- */
+.grid2{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px;}
+@media (max-width:900px){ .grid2{grid-template-columns:1fr;} }
+.panel{border:1px solid var(--line); border-radius:10px; padding:16px 18px;}
+.panel h3{font-size:21px; margin-bottom:4px;}
+.panel p.sub{font-size:13px; color:var(--muted); margin:0 0 14px;}
+.conn{display:flex; flex-direction:column; gap:10px;}
+.conn-row{display:grid; grid-template-columns:22px 1fr; gap:8px; font-size:13px;}
+.conn-row .ic{width:18px; height:18px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:700; margin-top:1px;}
+.conn-row .ic.on{background:var(--ok-soft); color:var(--ok);}
+.conn-row .ic.off{background:var(--wash-2); color:var(--muted);}
+.conn-row b{font-weight:600;}
+.conn-row span.d{display:block; color:var(--muted); font-size:12px;}
+.towns{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:7px; margin-top:12px;}
+.town{border:1px solid var(--line); border-radius:6px; padding:7px 9px; display:flex; justify-content:space-between; gap:6px; align-items:center;}
+.town.off{opacity:.5;}
+.town .tn{font-family:var(--serif); font-size:15px;}
+.town .tm{font-family:var(--mono); font-size:9.5px; color:var(--muted); letter-spacing:.06em; white-space:nowrap;}
+.town .tb{display:flex; gap:2px;}
+.icon-btn{border:none; background:none; cursor:pointer; color:var(--muted); width:26px; height:26px; border-radius:5px; display:grid; place-items:center; font-size:13px;}
+.icon-btn:hover{background:var(--wash); color:var(--ink);}
+.inline-form{display:flex; gap:8px; flex-wrap:wrap;}
+.inline-form input{flex:1 1 160px; min-width:0; border:1px solid var(--line-strong); border-radius:6px; padding:8px 10px; background:var(--paper);}
+.run-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+.run-out{margin-top:10px; font-family:var(--mono); font-size:11px; color:var(--ink-2); background:var(--wash); border-radius:6px; padding:8px 10px; white-space:pre-wrap; max-height:200px; overflow:auto;}
+
+/* ---------- dialogs ---------- */
+dialog{border:none; border-radius:12px; padding:0; width:min(640px, calc(100vw - 32px)); background:var(--paper); color:var(--ink); box-shadow:0 20px 60px -20px rgba(0,0,0,.45);}
+dialog::backdrop{background:rgba(11,21,51,.35);}
+.dlg-h{padding:18px 20px 12px; border-bottom:1px solid var(--line);}
+.dlg-h h2{font-size:26px;}
+.dlg-b{padding:16px 20px; max-height:calc(100vh - 220px); overflow:auto;}
+.dlg-f{padding:12px 20px 16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px;}
+.set-group{margin-bottom:18px;}
+.set-group > .eyebrow{display:block; margin-bottom:10px; color:var(--crimson);}
+.help{font-size:12px; color:var(--muted); margin-top:-4px; margin-bottom:10px;}
+.toggle{display:flex; gap:10px; align-items:flex-start; font-size:13.5px; margin-bottom:10px; cursor:pointer;}
+.toggle input{margin-top:3px; width:16px; height:16px; accent-color:var(--navy);}
+
+/* ---------- gate ---------- */
+.gate{position:fixed; inset:0; background:var(--paper); z-index:60; display:grid; place-items:center; padding:16px;}
+.gate-card{width:min(420px,100%); border:1px solid var(--line); border-radius:12px; padding:26px 24px; box-shadow:var(--shadow);}
+.gate-card h2{font-size:30px; margin:8px 0 6px;}
+.gate-card p{color:var(--muted); font-size:13.5px; margin:0 0 16px;}
+.gate-card input{width:100%; border:1px solid var(--line-strong); border-radius:8px; padding:11px 12px; background:var(--paper); margin-bottom:10px;}
+.gate-err{color:var(--crimson); font-size:13px; min-height:18px; margin-top:6px;}
+
+/* ---------- toast ---------- */
+.toasts{position:fixed; left:50%; bottom:20px; transform:translateX(-50%); z-index:70; display:flex; flex-direction:column; gap:8px; align-items:center; width:min(520px, calc(100vw - 32px));}
+.toast{background:var(--ink); color:var(--paper); border-radius:8px; padding:10px 14px; font-size:13px; box-shadow:var(--shadow); width:100%;}
+.toast.err{background:var(--crimson); color:#fff;}
+
+footer{margin-top:40px; font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+footer a{color:inherit;}
+
+:root{color-scheme:light;}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){color-scheme:dark;} }
+:root[data-theme="dark"]{color-scheme:dark;}
+.wrap{padding-block:22px 60px; padding-left:max(24px, env(safe-area-inset-left, 0px)); padding-right:max(24px, env(safe-area-inset-right, 0px));}
+@media (max-width:640px){ .wrap{padding-block:16px 50px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));} }
+.toasts{bottom:calc(20px + env(safe-area-inset-bottom, 0px));}
+.drawer{padding-right:env(safe-area-inset-right, 0px); padding-top:env(safe-area-inset-top, 0px);}
+.conn-chips{display:flex; gap:6px; flex-wrap:wrap;}
+.cchip{display:inline-flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; padding:5px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted);}
+.cchip i{width:7px; height:7px; border-radius:50%; background:var(--muted);}
+.cchip.on{color:var(--ok); border-color:var(--ok-soft); background:var(--ok-soft);}
+.cchip.on i{background:var(--ok);}
+.cchip.bad{color:var(--crimson); border-color:var(--crimson-soft); background:var(--crimson-soft);}
+.cchip.bad i{background:var(--crimson);}
+.confirm{display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:var(--warn-soft); border-radius:8px; padding:8px 10px; width:100%;}
+.confirm span{font-size:13px; color:var(--ink); flex:1 1 200px;}
+.banner{border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-top:16px; display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;}
+.banner p{margin:4px 0 0; color:var(--ink-2); font-size:13.5px; max-width:75ch;}
+.banner.warn{background:var(--warn-soft); border-color:transparent;}
+.queue-bar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 2px 8px;}
+.rv-head{display:flex; flex-direction:column; gap:10px; margin-bottom:12px;}
+.rv-top{display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between;}
+.seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:999px; overflow:hidden;}
+.seg button{border:none; background:var(--paper); padding:7px 14px; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2); cursor:pointer;}
+.seg button[aria-pressed="true"]{background:var(--navy); color:var(--paper);}
+.today{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-2); flex:1 1 260px; min-width:0;}
+.today .bar{flex:1; max-width:220px; height:6px; background:var(--wash-2); border-radius:6px; overflow:hidden;}
+.today .bar i{display:block; height:100%; background:var(--ok); border-radius:6px; transition:width .3s;}
+.fchips{display:flex; gap:6px; flex-wrap:wrap;}
+.fchip{border:1px solid var(--line); background:var(--paper); border-radius:999px; padding:4px 11px; font-size:12px; color:var(--ink-2); cursor:pointer;}
+.fchip b{font-weight:500; color:var(--muted); margin-left:4px; font-variant-numeric:tabular-nums;}
+.fchip[aria-pressed="true"]{background:var(--info-soft); border-color:var(--info); color:var(--info);}
+.band{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:10px 2px 2px; display:flex; justify-content:space-between;}
+.toast button{margin-left:10px; background:none; border:1px solid currentColor; color:inherit; border-radius:999px; padding:2px 10px; cursor:pointer; font-size:12px;}
+table.list a{color:var(--info); text-decoration:none;}
+.stage{font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; padding:3px 8px; border-radius:999px; background:var(--wash-2); color:var(--ink-2); white-space:nowrap;}
+.stage.contacted{background:var(--info-soft); color:var(--info);}
+.stage.talks,.stage.applied,.stage.selected{background:var(--warn-soft); color:var(--warn);}
+.stage.active,.stage.completed{background:var(--ok-soft); color:var(--ok);}
+.stage.passed{background:var(--crimson-soft); color:var(--crimson);}
+.reply-banner{border-color:var(--crimson); background:var(--crimson-soft);}
+.reply-links{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+.reply-links .btn{background:var(--paper);}
+.reply-box{border:1px solid var(--line); border-radius:8px; padding:12px 14px;}
+.reply-box.waiting{border-color:var(--crimson);}
+.reply-box.waiting > .eyebrow{color:var(--crimson);}
+.reply-box .field textarea{min-height:140px;}
+.prep{margin-top:18px;}
+.prep-text{white-space:pre-wrap; font-family:var(--sans); font-size:13px; line-height:1.55; color:var(--ink-2); background:var(--wash); border-radius:8px; padding:12px 14px; margin:0 0 10px; min-height:60px;}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="44" height="44" viewBox="0 0 100 100" aria-hidden="true"><path d="M68 8 A42 42 0 1 0 68 92 L68 62 A12 12 0 1 1 68 38 Z" fill="var(--navy)"/><circle cx="75" cy="30" r="7" fill="var(--crimson)"/><circle cx="68" cy="70" r="16" fill="var(--steel, #7B868C)"/></svg>
+      <div>
+        <div class="eyebrow">Connect.AI · Business outreach</div>
+        <h1>Who I've emailed, <em class="acc">and who wrote back.</em></h1>
+      </div>
+    </div>
+    <div class="top-right">
+      <span class="live" id="live"><i></i><span id="liveText">Connecting</span></span>
+      <div class="conn-chips" id="conn">
+        <span class="cchip" id="cDb"><i></i>Dashboard data</span>
+        <span class="cchip" id="cCrm"><i></i>Class CRM</span>
+        <span class="cchip" id="cGmail"><i></i>Gmail</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="notice"></div>
+
+  <section class="stats" id="stats" aria-label="Summary"></section>
+
+  <section class="chart-card" aria-label="Emails sent and replies, last 14 days">
+    <div>
+      <div class="eyebrow">Last 14 days</div>
+      <h3 id="chartTitle">Sent and replies</h3>
+      <div class="legend">
+        <span><i style="background:var(--series-sent)"></i>Emails sent</span>
+        <span><i style="background:var(--series-reply)"></i>Replies</span>
+      </div>
+    </div>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <div class="toolbar">
+    <div class="tabs" role="tablist" id="tabs"></div>
+  </div>
+  <div class="filters" id="filters">
+    <input type="search" id="q" placeholder="Search businesses, people, towns, emails…" aria-label="Search">
+    <select id="fState" aria-label="State"><option value="">Every state</option></select>
+    <select id="fTown" aria-label="Town"><option value="">Every town</option></select>
+    <select id="fFit" aria-label="Fit">
+      <option value="0">Any fit</option><option value="50">Fit 50+</option><option value="65">Fit 65+</option><option value="80">Fit 80+</option>
+    </select>
+    <label class="check"><input type="checkbox" id="fClosed"> Show closed</label>
+  </div>
+
+  <main class="view" id="view"></main>
+
+  <footer>Connect.AI · Outreach · Businesses from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> and the <a href="https://data.ct.gov/" target="_blank" rel="noopener">CT Open Data Portal</a> · Sent from your Gmail · Logged to <a href="https://connect-ai.world/crm/" target="_blank" rel="noopener">connect-ai.world/crm</a></footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Business details" aria-hidden="true">
+  <div class="drawer-close"><button class="btn sm" id="drawerClose">Close · Esc</button></div>
+  <div id="drawerBody"></div>
+</aside>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- constants ----------
+const CRM = 'Connect AI';
+const GMAIL = 'Gmail';
+const STATUS = {
+  ready: { label: 'Ready for review', badge: 'info' },
+  queued: { label: 'Approved · waiting to send', badge: 'warn' },
+  sent: { label: 'Emailed', badge: 'gray' },
+  followed_up: { label: 'Followed up', badge: 'gray' },
+  replied: { label: 'Replied', badge: 'ok' },
+  not_interested: { label: 'Not interested', badge: 'red' },
+  bounced: { label: 'Bounced', badge: 'red' },
+  skipped: { label: 'Skipped', badge: 'gray' },
+  no_email: { label: 'No email found', badge: 'gray' },
+};
+const COLUMNS = [
+  { label: 'Ready for review', dot: 'dot f', statuses: ['ready'] },
+  { label: 'Approved', dot: 'dot redo', statuses: ['queued'] },
+  { label: 'Emailed', dot: 'dot navy', statuses: ['sent'] },
+  { label: 'Followed up', dot: 'dot navy', statuses: ['followed_up'] },
+  { label: 'Replied', dot: 'dot red', statuses: ['replied'] },
+];
+const CLOSED_COLUMNS = [
+  { label: 'Not interested', dot: 'dot', statuses: ['not_interested'] },
+  { label: 'Bounced', dot: 'dot', statuses: ['bounced'] },
+  { label: 'No email found', dot: 'dot', statuses: ['no_email'] },
+  { label: 'Skipped', dot: 'dot', statuses: ['skipped'] },
+];
+const CLOSED = new Set(['not_interested', 'bounced', 'skipped', 'no_email']);
+const SENT = new Set(['sent', 'followed_up', 'replied', 'not_interested', 'bounced']);
+const EMAIL_SOURCE = {
+  website: ['From their website', 'ok'], osm: ['From OpenStreetMap', 'info'], registry: ['Filed with the CT Secretary of State', 'info'],
+  guess: ['Guessed from the owner\'s name: check it', 'warn'], manual: ['Added by you', 'ok'],
+};
+const TOOL_NAMES = { calendly: 'Calendly', acuity: 'Acuity', square: 'Square', vagaro: 'Vagaro', mindbody: 'Mindbody', schedulicity: 'Schedulicity', zocdoc: 'Zocdoc', nexhealth: 'NexHealth', localmed: 'LocalMed', solutionreach: 'Solutionreach', weave: 'Weave', opentable: 'OpenTable', resy: 'Resy', tock: 'Tock', toast: 'Toast', chownow: 'ChowNow', housecallpro: 'Housecall Pro', servicetitan: 'ServiceTitan', jobber: 'Jobber', setmore: 'Setmore', simplybook: 'SimplyBook', booksy: 'Booksy', glossgenius: 'GlossGenius', fresha: 'Fresha', janeapp: 'Jane', boulevard: 'Boulevard', practicebetter: 'Practice Better', wellnessliving: 'WellnessLiving', clover: 'Clover', shopify: 'Shopify', woocommerce: 'WooCommerce', bigcommerce: 'BigCommerce', ecwid: 'Ecwid', square_online: 'Square Online', tawk: 'Tawk chat', intercom: 'Intercom', drift: 'Drift', livechat: 'LiveChat', tidio: 'Tidio', podium: 'Podium', birdeye: 'Birdeye', hubspot: 'HubSpot', zendesk: 'Zendesk', wix: 'Wix', squarespace: 'Squarespace', godaddy: 'GoDaddy', weebly: 'Weebly', wordpress: 'WordPress', duda: 'Duda', webflow: 'Webflow' };
+const toolName = k => TOOL_NAMES[k] || k;
+const OPT_OUT = /\b(unsubscribe|remove me|take me off|stop (emailing|contacting)|not interested|no thanks|no thank you|please don'?t (email|contact)|do not (email|contact)|we('| a)re all set|we'?ll pass|not at this time)\b/i;
+// The class works in Connecticut, Boston, New York and the rest of New England.
+// Businesses there go in the class CRM; anywhere else stays on this desk only.
+const CLASS_STATES = ['CT', 'MA', 'RI', 'NH', 'VT', 'ME', 'NY'];
+const STATE_NAMES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'Washington, DC', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming' };
+const stateOf = p => String((p && p.state) || 'CT').toUpperCase();
+const inClassArea = p => CLASS_STATES.includes(stateOf(p));
+const placeLabel = p => stateOf(p) === 'CT' ? (p.town || '') : `${p.town || ''}, ${stateOf(p)}`;
+const DEFAULTS = { daily_cap: 20, followup_after_days: 4, sender_name: 'Soham Shah', cc_email: 'soham.shah@uconn.edu', free_times: 'Weekday afternoons after 2pm' };
+// Every email Soham sends from the desk copies his UConn address.
+function ccList() { const c = String(settings().cc_email || '').trim(); return c ? { cc: [c] } : {}; }
+
+// Owners mostly read email first thing, so approved emails go out on
+// weekday mornings (New York time), whenever this page is open then.
+const SEND_FROM = 8, SEND_UNTIL = 12;
+const WEEKEND = new Set(['Sat', 'Sun']);
+const DAY_NAMES = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' };
+function nyClock(d = new Date()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', hourCycle: 'h23' }).formatToParts(d).map(x => [x.type, x.value]));
+  return { wd: parts.weekday, hour: Number(parts.hour) };
+}
+function inSendWindow() { const c = nyClock(); return !WEEKEND.has(c.wd) && c.hour >= SEND_FROM && c.hour < SEND_UNTIL; }
+function nextSendWindow() {
+  const c = nyClock();
+  if (!WEEKEND.has(c.wd) && c.hour < SEND_FROM) return 'at 8am this morning';
+  const order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let i = order.indexOf(c.wd), n = 0;
+  do { i = (i + 1) % 7; n++; } while (WEEKEND.has(order[i]));
+  return n === 1 ? 'at 8am tomorrow' : `${DAY_NAMES[order[i]]} at 8am`;
+}
+// The next few weekdays, for proposing call times: "Thursday, Oct 30".
+function nextWeekdays(n) {
+  const out = []; const d = new Date();
+  while (out.length < n) {
+    d.setDate(d.getDate() + 1);
+    const wd = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' }).format(d);
+    if (!WEEKEND.has(wd)) out.push(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'short', day: 'numeric' }).format(d));
+  }
+  return out;
+}
+// Someone wrote back and Soham hasn't answered since.
+const needsAnswer = p => p.status === 'replied' && (!p.answered_at || String(p.answered_at) < String(p.replied_at || ''));
+
+// ---------- state ----------
+const S = {
+  db: null, mcp: null, sample: null,
+  prospects: [], meta: {}, loaded: false, dbState: 'connecting',
+  crmAll: null, crmMine: null, crmState: 'connecting', crmError: '', gmailState: 'unknown',
+  tab: lsGet('outreach-tab') || 'review',
+  q: '', state: '', town: '', fit: 0, closed: false,
+  reviewMode: lsGet('review-mode') || 'today', rvBucket: '', rvWeb: false, rvOwner: false,
+  reviewId: null, drawerId: null, confirming: null,
+  sort: { key: 'fit_score', dir: -1 },
+  busy: new Set(), sendingQueue: false,
+  threads: {}, threadLoading: new Set(), replyDrafts: {}, working: {},
+};
+
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage blocked */ } }
+
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nowIso = () => new Date().toISOString();
+const settings = () => ({ ...DEFAULTS, ...(S.meta.settings || {}) });
+
+function nameKey(name) {
+  return String(name || '').toLowerCase().replace(/['’`]/g, '').replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(l\s?l\s?c|inc|incorporated|co|corp|corporation|company|ltd|limited|pc|p\s?c|pllc|llp|lp|dba)\b/g, ' ')
+    .replace(/^\s*the\s+/, '').replace(/\s+/g, ' ').trim();
+}
+
+// "Lacerta Group, LLC" → "Lacerta Group", for CRM names and emails.
+function shortName(name) {
+  const n = String(name || '')
+    .replace(/,?\s*\b(limited partnership|limited liability( company| partnership)?|l\.?\s?l\.?\s?c|inc|incorporated|corp|corporation|co|company|ltd|limited|p\.?\s?c|p\.?\s?l\.?\s?l\.?\s?c|l\.?\s?l\.?\s?p|l\.?\s?p|ltd\.? liability co)\b\.?\s*$/i, '')
+    .replace(/,?\s*\b(limited liability|limited partnership|l\.?\s?l\.?\s?c|inc|p\.?\s?c)\b\.?\s*$/i, '')
+    .replace(/[,\s]+$/, '').trim();
+  return n || String(name || '');
+}
+function addDays(n) { const d = new Date(); d.setDate(d.getDate() + n); return dayKey(d); }
+
+// ---------- toasts ----------
+function toast(msg, { err = false, undo = null } = {}) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (err ? ' err' : '');
+  el.textContent = msg;
+  if (undo) {
+    const b = document.createElement('button');
+    b.textContent = 'Undo';
+    b.addEventListener('click', () => { undo(); el.remove(); });
+    el.appendChild(b);
+  }
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), err ? 8000 : undo ? 7000 : 3500);
+}
+
+// Connector failures each have a different fix; say which.
+function mcpMessage(e, server) {
+  const code = e && e.code;
+  if (code === 'needs_reauth') return `${server} needs reconnecting: claude.ai → Settings → Connectors.`;
+  if (code === 'server_not_connected') return `${server} isn't connected: add it in claude.ai → Settings → Connectors.`;
+  if (code === 'not_in_manifest' || code === 'approval_required' || code === 'consent_required') return `This page needs your OK to use ${server}. Allow it when claude.ai asks, then try again.`;
+  if (code === 'selection_required') return `You have more than one ${server} connector; pick one when claude.ai asks.`;
+  if (code === 'server_unavailable') return `${server} didn't answer. It may still have gone through: check before trying again.`;
+  if (code === 'tool_error') return `${server} said: ${String(e.message || '').slice(0, 200)}`;
+  return `${server}: ${String((e && e.message) || e || 'something failed').slice(0, 200)}`;
+}
+
+// ---------- dates ----------
+function ago(iso) {
+  if (!iso) return '';
+  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 45) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)}m ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  if (s < 86400 * 7) return `${Math.round(s / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+function when(iso) { return iso ? new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
+function businessDaysSince(iso) {
+  let n = 0; const d = new Date(iso); const end = new Date();
+  d.setHours(12, 0, 0, 0); end.setHours(12, 0, 0, 0);
+  while (d < end) { d.setDate(d.getDate() + 1); const w = d.getDay(); if (w && w !== 6) n++; }
+  return n;
+}
+const dayKey = d => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+function sentToday() { const k = dayKey(new Date()); return S.prospects.reduce((n, p) => n + (p.sent_at && dayKey(p.sent_at) === k ? 1 : 0) + (p.followup_at && dayKey(p.followup_at) === k ? 1 : 0), 0); }
+function followupDue(p) { return p.status === 'sent' && p.sent_at && businessDaysSince(p.sent_at) >= settings().followup_after_days; }
+
+// ---------- db writes ----------
+async function patch(id, fields, logLine) {
+  if (!S.db) throw new Error('Dashboard data isn\'t connected.');
+  const p = S.prospects.find(x => x.id === id) || {};
+  const data = { ...fields, updated_at: nowIso() };
+  if (logLine) data.log = [...(p.log || []), { at: nowIso(), what: logLine }].slice(-40);
+  await S.db.doc(`prospects/${id}`).update(data);
+}
+
+// ---------- CRM ----------
+function crmMatch(name) {
+  const k = nameKey(name);
+  return (S.crmAll || []).find(o => nameKey(o.name) === k) || null;
+}
+
+async function logToCrm(p, kind, body, extra = {}) {
+  if (!S.mcp) throw new Error('Connectors aren\'t available in this view.');
+  let orgId = p.crm_org_id;
+  if (!orgId) {
+    const existing = crmMatch(p.name);
+    if (existing) orgId = existing.id;
+  }
+  if (!orgId) {
+    const f = p.facts || {};
+    const res = await S.mcp.callTool(CRM, 'crm_create_org', {
+      name: shortName(p.name), kind: 'business', stage: extra.stage || 'contacted', owner: 'me', source: 'outreach',
+      ...(p.town ? { city: p.town } : {}), state: stateOf(p),
+      ...(p.website || p.domain ? { website: p.website || `https://${p.domain}` } : {}),
+      ...(p.category ? { industry: p.category } : {}),
+      ...(f.team_size_text ? { headcount: String(f.team_size_text) } : {}),
+      next_step: extra.stage === 'lead' ? leadNextStep(p) : 'Follow up on intro email if no reply',
+      // crm_create_org rejects a null date; leads simply get none.
+      ...(extra.stage === 'lead' ? {} : { next_step_due: addDays(6) }),
+      notes: (p.crm_notes || fallbackNotes(p)).slice(0, 3900),
+      ...(p.contact_name ? { contact: { full_name: p.contact_name, ...(p.email ? { email: p.email } : {}), ...(p.contact_title ? { title: p.contact_title } : {}), is_primary: true } } : {}),
+    });
+    const pl = res.payload || {};
+    orgId = pl.id || (pl.org && pl.org.id) || (pl.organization && pl.organization.id) || (pl.existing && pl.existing.id) || null;
+    if (!orgId) throw new Error('The CRM didn\'t return an organization id.');
+  }
+  if (!kind) { S.mcp.invalidate(CRM).catch(() => {}); return orgId; }
+  await S.mcp.callTool(CRM, 'crm_log_touchpoint', { org: orgId, kind, body: body.slice(0, 3990), ...(p.contact_name && extra.withContact !== false ? { contact: p.contact_name } : {}) })
+    .catch(async e => {
+      // The contact name must exist at that org; retry once without it.
+      if (e && e.code === 'tool_error' && p.contact_name) return S.mcp.callTool(CRM, 'crm_log_touchpoint', { org: orgId, kind, body: body.slice(0, 3990) });
+      throw e;
+    });
+  if (extra.update) await S.mcp.callTool(CRM, 'crm_update_org', { org: orgId, ...extra.update });
+  S.mcp.invalidate(CRM).catch(() => {});
+  return orgId;
+}
+
+// ---------- sending ----------
+function readEditor(root) {
+  const v = sel => root.querySelector(sel)?.value;
+  return {
+    email: (v('#dTo') || '').trim().toLowerCase(),
+    contact_name: (v('#dName') || '').trim() || null,
+    subject: (v('#dSubj') || '').trim(),
+    body: v('#dBody') || '',
+  };
+}
+
+async function sendInitial(p, vals) {
+  if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
+  if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(vals.email)) throw new Error('That email address doesn\'t look right.');
+  if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails. Sending more from a personal Gmail gets it flagged as spam.`);
+  const res = await S.mcp.callTool(GMAIL, 'send_message', { to: [vals.email], ...ccList(), subject: vals.subject, body: vals.body });
+  const pl = res.payload || {};
+  const sentAt = nowIso();
+  await patch(p.id, {
+    status: 'sent', sent_at: sentAt, email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body,
+    thread_id: pl.threadId || null, message_id: pl.id || null,
+  }, `Emailed ${vals.contact_name ? vals.contact_name + ' at ' : ''}${vals.email}`);
+  S.gmailState = 'ok';
+  try {
+    const orgId = await logToCrm({ ...p, ...vals }, 'email', `Intro email sent to ${vals.email}.\nSubject: ${vals.subject}\n\n${vals.body}`,
+      { update: { stage: 'contacted', next_step: 'Follow up on intro email if no reply', next_step_due: addDays(6) } });
+    await patch(p.id, { crm_org_id: orgId, crm_stage: 'contacted', crm_error: null }, 'Class CRM: moved to Contacted, email logged');
+  } catch (e) {
+    await patch(p.id, { crm_error: mcpMessage(e, CRM) }, 'Couldn\'t log to the CRM');
+  }
+}
+
+async function sendFollowup(p) {
+  if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails.`);
+  const greet = (/^Hi [^\n]+,/.exec(p.body || '') || ['Hi there,'])[0];
+  const body = `${greet}\n\nJust bumping this in case it got buried. Even a 10-minute call would help me a lot; I'm trying to learn how businesses like yours actually run, whether or not we ever work together.\n\nIf you'd rather, the form is at connect-ai.world/apply (about 3 minutes, with a free AI-readiness report). And if now isn't a good time, no problem at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
+  const subject = /^re:/i.test(p.subject || '') ? p.subject : `Re: ${p.subject || p.name}`;
+  await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, body, ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
+  await patch(p.id, { status: 'followed_up', followup_at: nowIso(), followup_body: body }, `Followed up with ${p.email}`);
+  if (p.crm_org_id) logToCrm(p, 'email', `Follow-up email sent to ${p.email}.\n\n${body}`).catch(() => {});
+}
+
+// ---------- conversations ----------
+const threadIdOf = p => p.reply_thread_id || p.thread_id;
+const fromThem = (p, m) => !!p.email && String(m.sender || '').toLowerCase().includes(p.email.toLowerCase());
+// Gmail's snippets come HTML-encoded ("I&#39;m"); plain-text bodies don't.
+const unentity = t => String(t || '').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const msgText = m => String(m.plaintextBody ?? m.plaintext_body ?? unentity(m.snippet));
+// Drop the quoted history Gmail appends under "On Tue, ... wrote:".
+function freshPart(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const cut = lines.findIndex((l, i) => /^On .+wrote:\s*$/.test(l) || (/^On .+/.test(l) && /wrote:\s*$/.test(lines[i + 1] || '')) || /^-{2,}\s*Original Message/i.test(l) || /^From: .+/.test(l));
+  return (cut > 0 ? lines.slice(0, cut) : lines).filter(l => !/^>/.test(l)).join('\n').trim();
+}
+
+async function loadThread(p, { force = false } = {}) {
+  const tid = threadIdOf(p);
+  if (!tid || !S.mcp || S.threadLoading.has(tid) || (S.threads[tid] && !force)) return;
+  S.threadLoading.add(tid);
+  try {
+    const res = await S.mcp.callTool(GMAIL, 'get_thread', { threadId: tid, messageFormat: 'PLAIN_TEXT' });
+    S.threads[tid] = (res.payload || {}).messages || [];
+  } catch (e) {
+    S.threads[tid] = { error: mcpMessage(e, GMAIL) };
+  } finally {
+    S.threadLoading.delete(tid);
+    refreshDetail(p.id);
+  }
+}
+
+function conversationText(p) {
+  const msgs = S.threads[threadIdOf(p)];
+  if (Array.isArray(msgs) && msgs.length) {
+    return msgs.map(m => `${fromThem(p, m) ? (p.contact_name || 'Them') : 'Soham'} (${m.date || ''}):\n${freshPart(msgText(m))}`).join('\n\n---\n\n');
+  }
+  return [`Soham:\n${p.body || ''}`, p.followup_body ? `Soham (follow-up):\n${p.followup_body}` : null, p.reply_snippet ? `${p.contact_name || 'Them'}:\n${p.reply_snippet}` : null].filter(Boolean).join('\n\n---\n\n');
+}
+
+function businessFacts(p) {
+  const f = p.facts || {};
+  return {
+    business: shortName(p.name), kind: p.category, town: placeLabel(p), state: stateOf(p), contact: p.contact_name, title: p.contact_title,
+    website: p.website, founded: f.founded, years: f.years_claimed, family_owned: f.family_owned, team_size: f.team_size_text,
+    books_by_phone: f.phone_first, takes_quote_requests: f.quote_requests, paper_forms: f.paper_forms, hiring: f.hiring, catering: f.catering,
+    tools_on_site: [...(f.booking_tools || []), ...(f.shop_tools || []), ...(f.chat_tools || [])].map(toolName), site_platform: f.platform ? toolName(f.platform) : null,
+    how_they_describe_themselves: f.description || f.about || null,
+  };
+}
+
+async function draftReply(p, ta) {
+  const s = settings();
+  const near = stateOf(p) === 'CT' && p.miles_from_storrs != null ? p.miles_from_storrs <= 30 : stateOf(p) === 'CT';
+  const prompt = `You are drafting an email reply for ${s.sender_name}, an accounting major at UConn, to a small-business owner who wrote back to him.
+
+Who Soham is: he interned in accounting at Henkel this past summer and will be at Andersen next summer. He reached out mainly to learn how small businesses actually run, both to be useful to them and because he wants to start his own business someday. ${inClassArea(p) ? 'He is also in Connect.AI, a UConn course where student teams work with small businesses in Connecticut, New England and New York to find where AI could save them time and build it for free. The optional application is at connect-ai.world/apply (about 3 minutes, free AI-readiness report). Do not claim any partnership with the CT Small Business Development Center or anyone else.' : 'This business is outside the area his course works in, so do not mention Connect.AI or the form.'}
+
+What we know about the business (use only this; never invent anything):
+${JSON.stringify(businessFacts(p))}
+
+The conversation so far, oldest first:
+${conversationText(p)}
+
+When Soham is free: ${s.free_times || DEFAULTS.free_times}.
+The next weekdays are: ${nextWeekdays(6).join('; ')}.
+Ways to talk: phone or Zoom${near ? `, or he can come by in person since he's in Storrs, close to ${p.town}` : ''}.
+
+Write Soham's reply to their latest message:
+- If they're open to talking, thank them, and offer two or three specific times drawn from when he's free on the dates above (e.g. "Tuesday, Nov 4 at 3pm"), say it'd take 15 to 20 minutes, and ask which works and whether they prefer ${near ? 'phone, Zoom or him stopping by' : 'phone or Zoom'}. If they already suggested a time, just confirm it.
+- If they asked questions, answer them plainly and honestly with only what's above. It's free, there's no contract, and the form is optional.
+- If they said not now, thank them warmly, say no problem, and leave the door open in one line. Don't push.
+- If they pointed him to someone else, thank them and ask for the best way to reach that person.
+Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi ${p.contact_name ? p.contact_name.split(' ')[0] : 'there'}," and end with "Thanks,\\nSoham". Reply with only the email body.`;
+  ta.value = '';
+  const out = await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
+  const text = (out && out.text) || ta.value;
+  S.replyDrafts[p.id] = text;
+  await patch(p.id, { reply_draft: text });
+}
+
+async function sendReply(p, body) {
+  if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
+  if (!body.trim()) throw new Error('Write a reply first.');
+  const tid = threadIdOf(p);
+  if (!tid) throw new Error('Couldn\'t find this conversation in Gmail. Answer it from Gmail instead.');
+  if (!Array.isArray(S.threads[tid])) await loadThread(p, { force: true });
+  const msgs = Array.isArray(S.threads[tid]) ? S.threads[tid] : [];
+  const last = [...msgs].reverse().find(m => fromThem(p, m)) || msgs[msgs.length - 1];
+  if (!last || !last.id) throw new Error('Couldn\'t find their message in Gmail. Answer it from Gmail instead.');
+  await S.mcp.callTool(GMAIL, 'reply', { messageId: last.id, body, ...ccList() });
+  const at = nowIso();
+  await patch(p.id, { answered_at: at, reply_draft: null, my_replies: [...(p.my_replies || []), { at, body }].slice(-10) }, `Answered ${p.contact_name || p.email}`);
+  delete S.replyDrafts[p.id];
+  loadThread(p, { force: true });
+  const who = p.contact_name || shortName(p.name);
+  logToCrm(p, 'email', `Soham answered ${who}:\n\n${body}`, { update: { next_step: `Set up a call with ${who}`, next_step_due: addDays(3) } })
+    .then(orgId => (p.crm_org_id ? null : patch(p.id, { crm_org_id: orgId }))).catch(() => {});
+}
+
+async function makePrepSheet(p, pre) {
+  const prompt = `Make a one-page call prep sheet for ${settings().sender_name}, a UConn accounting student, who has a short call coming up with a small-business owner. He wants to learn how the business really runs day to day${inClassArea(p) ? ', and his UConn course (Connect.AI) may build them a free AI tool later, but this call is about listening, not pitching' : ''}.
+
+What we know (use only this; if something isn't known, say so instead of guessing):
+${JSON.stringify(businessFacts(p))}
+
+The emails so far, oldest first:
+${conversationText(p)}
+
+Write plain text with these headings, each on its own line, and "- " bullets under them:
+WHO THEY ARE (2 or 3 short bullets)
+WHAT THEIR WEBSITE SUGGESTS ABOUT HOW THEY WORK (2 to 4 bullets; only what the facts above show)
+WHAT THEY SAID (1 or 2 bullets summing up their reply)
+QUESTIONS TO ASK (6 open questions for this kind of business: how a normal day goes, where the hours go, what tools or paper they use, what they'd fix first, how they find customers, what they wish someone had told them when starting)
+WHERE AI MIGHT HELP, TO ASK ABOUT (2 or 3 bullets, written as questions, not promises)
+KEEP IN MIND (2 or 3 bullets: listen more than talk, take notes, ask if it's OK to follow up${inClassArea(p) ? ', mention the form only if it comes up naturally' : ''})
+Under 300 words. No markdown symbols other than "- ". No intro or sign-off.`;
+  pre.textContent = '';
+  const out = await S.sample(prompt, { onText: ({ text }) => { pre.textContent = text; }, modelTier: 'default', cache: false });
+  const text = (out && out.text) || pre.textContent;
+  await patch(p.id, { prep_sheet: text, prep_at: nowIso() }, 'Made a call prep sheet');
+}
+
+async function saveGmailDraft(p, vals) {
+  const res = await S.mcp.callTool(GMAIL, 'create_draft', { to: [vals.email], ...ccList(), subject: vals.subject, body: vals.body });
+  await patch(p.id, { email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body, gmail_draft_url: (res.payload || {}).viewUrl || null }, 'Saved as a Gmail draft');
+}
+
+// ---------- what goes into the class CRM ----------
+// Classmates read these, so an entry needs something real: research runs
+// write crm_notes (what they do, size, website, contact, why) and crm_ok
+// (false for street addresses and shell names with nothing known).
+const ADDRESS_NAME = /^\d+\s+[\w.' -]*\b(road|rd|street|st|avenue|ave|lane|ln|drive|dr|way|route|rt|highway|hwy|turnpike|tpke|boulevard|blvd|place|pl|court|ct|circle|hill|pike)\b/i;
+const OPAQUE_NAME = /^([A-Z]{2,5}|[A-Z]{1,4}[\s-]?\d{2,}|\w+\s?\d{3,})$/;
+function crmWorthy(p) {
+  if (p.crm_ok === false || !inClassArea(p)) return false;
+  const n = shortName(p.name);
+  if (ADDRESS_NAME.test(n)) return false;
+  if (!p.website && !(p.facts || {}).description && !(p.facts || {}).about && OPAQUE_NAME.test(n)) return false;
+  return true;
+}
+// What a Lead's card on the class board says: just what kind of business it
+// is (the card already shows the town), short enough to fit. card_line is
+// written during research; the fallback is the business's category.
+function leadNextStep(p) {
+  if (p.card_line) return String(p.card_line).slice(0, 60);
+  const c = String(p.category || '').trim();
+  return c ? c[0].toUpperCase() + c.slice(1) : 'Local business';
+}
+function fallbackNotes(p) {
+  const f = p.facts || {};
+  return [
+    f.about || f.description ? `What they do: ${f.about || f.description}` : (p.category ? `What they do: ${p.category}` : null),
+    f.team_size_text ? `Size: about ${f.team_size_text} people` : null,
+    p.website ? `Website: ${p.website}` : 'Website: none found',
+    p.contact_name || p.email ? `Contact: ${[p.contact_name, p.email].filter(Boolean).join(', ')}` : null,
+    `Found by Soham's outreach research (fit ${p.fit_score ?? '?'}/100). Intro email drafted; not sent yet.`,
+  ].filter(Boolean).join('\n');
+}
+const CRM_LEADS_PER_DAY = 15;
+function crmAddedToday() { const k = dayKey(new Date()); return S.prospects.filter(p => p.crm_added_at && dayKey(p.crm_added_at) === k).length; }
+
+// ---------- leads: every researched business goes into the class CRM ----------
+// As soon as a business has a draft, it's posted to connect-ai.world/crm as a
+// Lead owned by Soham, so the class sees it before any email goes out.
+let leadSync = false;
+async function syncLeads() {
+  if (leadSync || !S.mcp || !S.db || !S.crmAll || !S.crmMine) return;
+  const room = CRM_LEADS_PER_DAY - crmAddedToday();
+  const todo = room <= 0 ? [] : S.prospects
+    .filter(p => ['ready', 'queued'].includes(p.status) && !p.crm_org_id && p.email && crmWorthy(p))
+    .sort((a, b) => (b.fit_score ?? 0) - (a.fit_score ?? 0))
+    .slice(0, Math.min(room, 15));
+  if (!todo.length) { syncNotes(); return; }
+  leadSync = true;
+  let added = 0;
+  try {
+    for (const p of todo) {
+      const existing = crmMatch(p.name) || crmMatch(shortName(p.name));
+      if (existing && !S.crmMine.some(o => o.id === existing.id)) {
+        await patch(p.id, { status: 'skipped' }, `Skipped: already in the class CRM${existing.owner ? ` (owner: ${existing.owner.name})` : ''}`);
+        continue;
+      }
+      const orgId = existing ? existing.id : await logToCrm(p, null, '', { stage: 'lead' });
+      await patch(p.id, { crm_org_id: orgId, crm_stage: existing ? (existing.stage || 'lead') : 'lead', ...(existing ? {} : { crm_added_at: nowIso(), crm_notes_synced: true }) }, existing ? 'Linked to its class CRM record' : 'Added to the class CRM as a Lead (owner: you)');
+      if (!existing) added++;
+    }
+  } catch (e) {
+    toast(mcpMessage(e, CRM), { err: true });
+  } finally {
+    leadSync = false;
+    if (added) toast(`Added ${added} business${added === 1 ? '' : 'es'} to the class CRM as Leads (${CRM_LEADS_PER_DAY} a day max).`);
+    syncNotes();
+  }
+}
+
+// Keep each CRM entry's notes in step with the research, and take entries
+// that turned out not to be real businesses off the class pipeline.
+let notesSync = false;
+const cardsFixed = new Set();
+async function syncNotes() {
+  if (notesSync || !S.mcp || !S.db || !S.crmMine) return;
+  const mine = new Map(S.crmMine.map(o => [o.id, o]));
+  // Also redo leads whose card doesn't show their one-line description yet.
+  const oldCard = p => { const o = mine.get(p.crm_org_id); return !cardsFixed.has(p.crm_org_id) && o && o.stage === 'lead' && crmWorthy(p) && (o.next_step || '') !== leadNextStep(p); };
+  const todo = S.prospects.filter(p => p.crm_org_id && mine.has(p.crm_org_id) && p.crm_notes && (p.crm_notes_synced === false || oldCard(p))).slice(0, 25);
+  if (!todo.length) return;
+  notesSync = true;
+  let n = 0, pulled = 0;
+  try {
+    for (const p of todo) {
+      const worthy = crmWorthy(p);
+      const update = { org: p.crm_org_id, notes: p.crm_notes.slice(0, 3900) };
+      update.website = p.website || null; // a website we couldn't confirm doesn't stay in the CRM
+      if ((p.facts || {}).team_size_text) update.headcount = String(p.facts.team_size_text);
+      const stillLead = !p.crm_stage || p.crm_stage === 'lead';
+      if (worthy && stillLead) { update.next_step = leadNextStep(p); update.next_step_due = null; }
+      update.state = stateOf(p);
+      if (p.town) update.city = p.town;
+      const away = !inClassArea(p);
+      if (!worthy && stillLead) { update.stage = 'passed'; update.next_step = null; update.next_step_due = null; update.notes = `${away ? `Outside the class area (${stateOf(p)}): Soham may still reach out on his own, but it's not a Connect.AI lead.` : 'Taken off the outreach list: not enough known about this one to reach out.'}\n\n${update.notes}`.slice(0, 3900); }
+      await S.mcp.callTool(CRM, 'crm_update_org', update);
+      cardsFixed.add(p.crm_org_id);
+      if (p.crm_notes_synced !== false) { n++; continue; }
+      // Outside the class area it leaves the CRM but stays on this desk.
+      await patch(p.id, { crm_notes_synced: true, ...(!worthy && stillLead ? { crm_stage: 'passed', ...(away ? {} : { status: 'skipped' }) } : {}) },
+        !worthy && stillLead ? (away ? 'Class CRM: moved to Not now (outside the class area; stays on your desk)' : 'Class CRM: moved to Not now (not enough known about it)') : 'Class CRM: description updated');
+      if (!worthy && stillLead) pulled++; else n++;
+    }
+  } catch (e) {
+    toast(mcpMessage(e, CRM), { err: true });
+  } finally {
+    notesSync = false;
+    if (n || pulled) toast(`Class CRM: updated ${n} description${n === 1 ? '' : 's'}${pulled ? `, moved ${pulled} to Not now` : ''}.`);
+    S.mcp.invalidate(CRM).catch(() => {});
+  }
+}
+
+// ---------- reply checking ----------
+let replyUnsubs = [];
+let replyKey = '';
+function watchReplies() {
+  if (!S.mcp) return;
+  // Businesses that already replied stay watched, so a second message shows up too.
+  const waiting = S.prospects.filter(p => ['sent', 'followed_up', 'replied'].includes(p.status) && p.email);
+  const emails = [...new Set(waiting.map(p => p.email.toLowerCase()))].sort();
+  const key = emails.join(',');
+  if (key === replyKey) return;
+  replyKey = key;
+  replyUnsubs.forEach(u => u());
+  replyUnsubs = [];
+  for (let i = 0; i < emails.length; i += 20) {
+    const chunk = emails.slice(i, i + 20);
+    const input = { query: `from:(${chunk.join(' OR ')}) newer_than:60d -in:sent`, pageSize: 50, view: 'THREAD_VIEW_MINIMAL' };
+    replyUnsubs.push(S.mcp.watchTool(GMAIL, 'search_threads', input, ev => {
+      if (ev.type === 'error') { if (['needs_reauth', 'server_not_connected', 'not_in_manifest'].includes(ev.error.code)) { S.gmailState = 'bad'; renderConn(); } return; }
+      S.gmailState = 'ok'; renderConn();
+      handleReplies((ev.result.payload || {}).threads || []);
+    }, { refetchInterval: 5 * 60 * 1000 }));
+  }
+  // Bounce notices come from the mail system, not the business; match them by the address in the snippet.
+  if (emails.length) replyUnsubs.push(S.mcp.watchTool(GMAIL, 'search_threads', { query: 'from:(mailer-daemon OR postmaster) newer_than:30d', pageSize: 50, view: 'THREAD_VIEW_MINIMAL' }, ev => {
+    if (ev.type === 'error') return;
+    handleBounces((ev.result.payload || {}).threads || []);
+  }, { refetchInterval: 10 * 60 * 1000 }));
+}
+
+async function handleBounces(threads) {
+  for (const t of threads) {
+    for (const m of (t.messages || [])) {
+      const text = `${m.subject || ''} ${m.snippet || ''}`.toLowerCase();
+      const p = S.prospects.find(x => (x.status === 'sent' || x.status === 'followed_up') && x.email && text.includes(x.email.toLowerCase()));
+      if (!p || S.busy.has(p.id)) continue;
+      S.busy.add(p.id);
+      try {
+        await patch(p.id, { status: 'bounced' }, `Email to ${p.email} bounced`);
+        toast(`${p.name}: the email bounced.`, { err: true });
+      } finally { S.busy.delete(p.id); }
+    }
+  }
+}
+
+async function handleReplies(threads) {
+  for (const t of threads) {
+    const msgs = t.messages || [];
+    const p = S.prospects.find(x => ['sent', 'followed_up', 'replied'].includes(x.status) && x.email && msgs.some(m => fromThem(x, m)));
+    if (!p || S.busy.has(p.id)) continue;
+    const theirs = msgs.filter(m => fromThem(p, m));
+    const keys = theirs.map(m => m.id || String(m.snippet || '').slice(0, 80));
+    const latest = theirs[theirs.length - 1];
+    const seen = new Set(p.reply_msg_ids || []);
+    if (p.status === 'replied') {
+      if (!p.reply_msg_ids) { patch(p.id, { reply_msg_ids: keys }).catch(() => {}); continue; } // first look at an older reply
+      if (!keys.some(k => !seen.has(k))) continue;
+    }
+    S.busy.add(p.id);
+    const snippet = unentity(latest.snippet || latest.subject || '').slice(0, 600);
+    const status = OPT_OUT.test(snippet) ? 'not_interested' : 'replied';
+    const again = p.status === 'replied';
+    const who = p.contact_name || p.email;
+    try {
+      await patch(p.id, { status, replied_at: nowIso(), reply_snippet: snippet, reply_thread_id: t.id, reply_msg_ids: keys },
+        status === 'not_interested' ? `${who} said no thanks` : again ? `${who} wrote back again` : `${who} replied`);
+      delete S.threads[t.id];
+      toast(status === 'not_interested' ? `${p.name} said no thanks.` : `${p.name} ${again ? 'wrote back again' : 'replied'}. Open it to answer.`);
+      logToCrm(p, 'email', `${status === 'replied' ? 'Replied' : 'Replied (not interested)'} from ${p.email}:\n\n${snippet}`,
+        { update: status === 'replied' ? { next_step: `Reply to ${p.contact_name || shortName(p.name)}`, next_step_due: dayKey(new Date()) } : { stage: 'passed', next_step: null, next_step_due: null } })
+        .then(() => patch(p.id, { crm_reply_logged: true })).catch(() => {});
+    } finally { S.busy.delete(p.id); }
+  }
+}
+
+// ---------- derived ----------
+function filtered({ includeClosed = S.closed } = {}) {
+  const q = S.q.trim().toLowerCase();
+  return S.prospects.filter(p => {
+    if (!includeClosed && CLOSED.has(p.status)) return false;
+    if (S.state === 'outside' ? inClassArea(p) : S.state && stateOf(p) !== S.state) return false;
+    if (S.town && placeLabel(p) !== S.town) return false;
+    if (S.fit && (p.fit_score ?? 0) < S.fit) return false;
+    if (q && ![p.name, p.town, p.email, p.contact_name, p.category].some(v => String(v || '').toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+const fitClass = n => (n >= 70 ? 'hi' : n >= 50 ? 'md' : 'lo');
+const BUCKET_LABEL = { health: 'Health', trades: 'Trades', professional: 'Professional', food: 'Food', booking: 'Appointments', auto: 'Auto', manufacturing: 'Manufacturing', retail: 'Retail', other: 'Other' };
+const DAILY_GOAL = 15;
+function ownersOwnEmail(p) {
+  if (!p.email || !p.contact_name || p.email_source === 'guess') return false;
+  const local = p.email.split('@')[0].toLowerCase().replace(/[^a-z]/g, '');
+  const parts = p.contact_name.toLowerCase().split(/\s+/).map(x => x.replace(/[^a-z]/g, '')).filter(x => x.length > 1);
+  return parts.some(x => local.includes(x));
+}
+function readyAll() { return filtered({ includeClosed: false }).filter(p => p.status === 'ready').sort((a, b) => (b.fit_score ?? 0) - (a.fit_score ?? 0)); }
+function chipFiltered(list) {
+  return list.filter(p => (!S.rvBucket || (p.bucket || 'other') === S.rvBucket) && (!S.rvWeb || p.website) && (!S.rvOwner || ownersOwnEmail(p)));
+}
+function reviewItems() {
+  const list = chipFiltered(readyAll());
+  return S.reviewMode === 'today' ? list.slice(0, DAILY_GOAL) : list;
+}
+// How many drafts were approved, sent or skipped today.
+function handledToday() {
+  const k = dayKey(new Date());
+  return S.prospects.filter(p => (p.log || []).some(l => l.at && dayKey(l.at) === k && /^(Approved|Emailed|Skipped)/.test(l.what || ''))).length;
+}
+
+// ---------- render: header bits ----------
+function renderConn() {
+  const set = (id, st) => { const el = $(id); el.classList.toggle('on', st === 'ok'); el.classList.toggle('bad', st === 'bad'); };
+  set('#cDb', S.dbState);
+  set('#cCrm', S.crmState);
+  set('#cGmail', S.gmailState);
+  $('#cCrm').title = S.crmError || '';
+  const live = $('#live');
+  live.classList.toggle('stale', S.dbState !== 'ok');
+  $('#liveText').textContent = S.dbState === 'ok' ? `Live${S.meta.last_run_at ? ` · last research run ${ago(S.meta.last_run_at)}` : ''}` : S.dbState === 'bad' ? 'Offline' : 'Connecting';
+}
+
+function renderNotice() {
+  let html = '';
+  if (S.meta.progress) {
+    const total = Number(S.meta.progress_total) || 0;
+    const done = Math.min(Number(S.meta.progress_done) || 0, total);
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    html += `<div class="banner" style="display:block"><b><span class="live" style="margin:0 6px 0 0"><i></i></span>Research run in progress</b><p>${esc(S.meta.progress)}${S.meta.progress_at ? ` · updated ${ago(S.meta.progress_at)}` : ''}</p>${total ? `<div style="margin-top:10px; display:flex; align-items:center; gap:12px"><div role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}" aria-label="Businesses researched" style="flex:1; height:6px; background:var(--wash-2); border-radius:6px; overflow:hidden"><div style="width:${pct}%; height:100%; background:var(--navy); border-radius:6px; transition:width .4s"></div></div><span class="mono" style="white-space:nowrap; font-variant-numeric:tabular-nums">${done} of ${total} researched</span></div>` : ''}</div>`;
+  }
+  const waiting = S.prospects.filter(needsAnswer).sort((a, b) => String(a.replied_at).localeCompare(String(b.replied_at)));
+  if (waiting.length) {
+    html += `<div class="banner reply-banner"><div style="min-width:0"><b>${waiting.length === 1 ? '1 person wrote back' : `${waiting.length} people wrote back`} and ${waiting.length === 1 ? 'is' : 'are'} waiting on you</b>
+      <p>Open one to read the whole email, get a reply drafted, and make a prep sheet for the call.</p>
+      <div class="reply-links">${waiting.map(p => `<button class="btn sm" data-open="${esc(p.id)}">${esc(shortName(p.name))}<span style="opacity:.6">· ${esc(ago(p.replied_at))}</span></button>`).join('')}</div></div></div>`;
+  }
+  const queued = S.prospects.filter(p => p.status === 'queued').length;
+  if (queued && !inSendWindow() && S.tab !== 'review') {
+    html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>Weekday mornings are when owners are most likely to read email. They send when this page is open between 8am and noon on a weekday.</p></div></div>`;
+  }
+  if (S.dbState === 'bad') {
+    html = `<div class="banner warn"><div><b>This page can't reach its data.</b><p>Open it on claude.ai while signed in to your account. The businesses, drafts and history live with the page there.</p></div></div>`;
+  } else if (S.loaded && !S.prospects.length && !S.meta.progress) {
+    html += `<div class="banner"><div><b>No businesses researched yet.</b><p>Claude fills this in: it finds small businesses near Storrs, reads their websites for the owner and an email address, and writes each one a draft. They'll show up here under Review. Your class CRM is already connected; see the My CRM tab.${S.meta.blocked ? ` <br><br>${esc(S.meta.blocked)}` : ''}</p></div></div>`;
+  }
+  $('#notice').innerHTML = html;
+}
+
+function renderStats() {
+  const ps = S.prospects;
+  const c = st => ps.filter(p => st.includes(p.status)).length;
+  const emailed = ps.filter(p => SENT.has(p.status)).length;
+  const replied = c(['replied', 'not_interested']);
+  const rate = emailed ? Math.round((replied / emailed) * 100) : 0;
+  const mine = S.crmMine ? S.crmMine.length : null;
+  const tiles = [
+    { n: ps.filter(p => p.status !== 'skipped').length, l: 'Businesses found' },
+    { n: c(['ready']), l: 'Ready for review', hot: c(['ready']) > 0 },
+    { n: emailed, l: 'Emailed' },
+    { n: replied, l: ps.some(needsAnswer) ? `Replied · ${ps.filter(needsAnswer).length} waiting on you` : 'Replied', small: emailed ? `${rate}%` : '', hot: ps.some(needsAnswer) },
+    { n: ps.filter(followupDue).length, l: 'Follow-ups due' },
+    { n: sentToday(), l: 'Sent today', small: `/ ${settings().daily_cap}` },
+    { n: mine ?? '–', l: 'Mine in class CRM' },
+  ];
+  $('#stats').innerHTML = tiles.map(t => `<div class="stat${t.hot ? ' hot' : ''}"><div class="n">${t.n}${t.small ? `<small>${esc(t.small)}</small>` : ''}</div><div class="l eyebrow">${esc(t.l)}</div></div>`).join('');
+}
+
+function renderChart() {
+  const days = [];
+  for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push({ day: dayKey(d), sent: 0, replies: 0 }); }
+  const idx = Object.fromEntries(days.map((d, i) => [d.day, i]));
+  for (const p of S.prospects) {
+    if (p.sent_at && idx[dayKey(p.sent_at)] != null) days[idx[dayKey(p.sent_at)]].sent++;
+    if (p.followup_at && idx[dayKey(p.followup_at)] != null) days[idx[dayKey(p.followup_at)]].sent++;
+    if (p.replied_at && idx[dayKey(p.replied_at)] != null) days[idx[dayKey(p.replied_at)]].replies++;
+  }
+  const W = 700, H = 96, padB = 16, padT = 6, n = days.length, slot = W / n, bw = Math.min(10, slot / 3.2);
+  const max = Math.max(4, ...days.map(d => Math.max(d.sent, d.replies)));
+  const y = v => H - padB - ((H - padB - padT) * v) / max;
+  const bar = (x, v, color) => {
+    if (!v) return '';
+    const top = y(v), bottom = H - padB, h = bottom - top, r = Math.min(4, h, bw / 2);
+    return `<path d="M${x},${bottom} V${top + r} Q${x},${top} ${x + r},${top} H${x + bw - r} Q${x + bw},${top} ${x + bw},${top + r} V${bottom} Z" fill="${color}"/>`;
+  };
+  let marks = '', labels = '', hits = '';
+  days.forEach((d, i) => {
+    const cx = i * slot + slot / 2;
+    marks += bar(cx - bw - 1, d.sent, 'var(--series-sent)') + bar(cx + 1, d.replies, 'var(--series-reply)');
+    if (i === 0 || i === n - 1 || i === Math.floor(n / 2)) labels += `<text x="${cx}" y="${H - 2}" text-anchor="middle" font-size="10" font-family="var(--mono)" fill="var(--muted)">${new Date(d.day + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</text>`;
+    hits += `<rect x="${i * slot}" y="0" width="${slot}" height="${H - padB}" fill="transparent" data-i="${i}"/>`;
+  });
+  const grid = [0.5, 1].map(f => `<line x1="0" x2="${W}" y1="${y(max * f)}" y2="${y(max * f)}" stroke="var(--line)" stroke-dasharray="2 4"/><text x="${W}" y="${y(max * f) - 3}" text-anchor="end" font-size="9.5" font-family="var(--mono)" fill="var(--muted)">${Math.round(max * f)}</text>`).join('');
+  const ts = days.reduce((a, d) => a + d.sent, 0), tr = days.reduce((a, d) => a + d.replies, 0);
+  $('#chartTitle').textContent = `${ts} sent · ${tr} ${tr === 1 ? 'reply' : 'replies'}`;
+  $('#chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Bar chart of emails sent and replies per day">${grid}<line x1="0" x2="${W}" y1="${H - padB}" y2="${H - padB}" stroke="var(--line-strong)"/>${marks}${labels}${hits}</svg>
+    <div class="tip" id="tip"></div>
+    <details><summary>Show as table</summary><table><thead><tr><th>Day</th><th>Sent</th><th>Replies</th></tr></thead><tbody>${days.map(d => `<tr><td>${esc(d.day)}</td><td>${d.sent}</td><td>${d.replies}</td></tr>`).join('')}</tbody></table></details>`;
+  const svg = $('#chart svg'), tip = $('#tip');
+  svg.addEventListener('mousemove', e => {
+    const i = e.target.dataset && e.target.dataset.i;
+    if (i == null) { tip.classList.remove('on'); return; }
+    const d = days[i], rect = svg.getBoundingClientRect(), host = $('#chart').getBoundingClientRect();
+    tip.innerHTML = `<b>${new Date(d.day + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</b><br>${d.sent} sent · ${d.replies} ${d.replies === 1 ? 'reply' : 'replies'}`;
+    tip.style.left = `${((+i + 0.5) / n) * rect.width + rect.left - host.left}px`;
+    tip.style.top = `${rect.top - host.top + 10}px`;
+    tip.classList.add('on');
+  });
+  svg.addEventListener('mouseleave', () => tip.classList.remove('on'));
+}
+
+function renderTabs() {
+  const ps = S.prospects;
+  const tabs = [
+    ['review', 'Review', ps.filter(p => p.status === 'ready').length],
+    ['pipeline', 'Pipeline', ps.filter(p => !CLOSED.has(p.status)).length],
+    ['list', 'All businesses', ps.length],
+    ['activity', 'Activity', null],
+    ['crm', 'My CRM', S.crmMine ? S.crmMine.length : null],
+  ];
+  $('#tabs').innerHTML = tabs.map(([k, l, n]) => `<button class="tab" role="tab" aria-selected="${S.tab === k}" data-tab="${k}">${l}${n != null ? `<b>${n}</b>` : ''}</button>`).join('');
+  $('#filters').hidden = S.tab === 'activity' || S.tab === 'crm';
+  $('#fClosed').closest('label').hidden = S.tab === 'review';
+  const states = [...new Set(ps.map(stateOf))].sort((a, b) => (a === 'CT' ? -1 : b === 'CT' ? 1 : a.localeCompare(b)));
+  const outside = ps.filter(p => !inClassArea(p)).length;
+  // Every state is listed; ones the research hasn't reached yet show 0.
+  const allStates = [...new Set([...states, ...Object.keys(STATE_NAMES).sort()])];
+  $('#fState').innerHTML = '<option value="">Every state</option>'
+    + allStates.map(st => { const n = ps.filter(p => stateOf(p) === st).length; return `<option value="${st}" ${st === S.state ? 'selected' : ''}>${esc(STATE_NAMES[st] || st)} (${n || 'not searched yet'})</option>`; }).join('')
+    + (outside ? `<option value="outside" ${S.state === 'outside' ? 'selected' : ''}>Outside class area (${outside})</option>` : '');
+  const towns = [...new Set(ps.filter(p => !S.state || (S.state === 'outside' ? !inClassArea(p) : stateOf(p) === S.state)).map(placeLabel).filter(Boolean))].sort();
+  $('#fTown').innerHTML = '<option value="">Every town</option>' + towns.map(t => `<option ${t === S.town ? 'selected' : ''}>${esc(t)}</option>`).join('');
+}
+
+// ---------- cards & views ----------
+function cardHtml(p, sel = false) {
+  const who = p.status === 'sent' || p.status === 'followed_up' ? `${p.contact_name || p.email || ''}${p.sent_at ? ' · ' + ago(p.sent_at) : ''}`
+    : p.status === 'replied' ? `${p.contact_name || p.email || ''} · ${ago(p.replied_at)}`
+    : (p.contact_name || p.email || 'no email yet');
+  const fit = p.fit_score != null ? `<span class="fit ${fitClass(p.fit_score)}">${p.fit_score}</span>` : '';
+  return `<button class="card${sel ? ' sel' : ''}" data-id="${esc(p.id)}">
+    <div class="nm">${esc(p.name)}</div>
+    <div class="mt">${esc([p.category, placeLabel(p)].filter(Boolean).join(' · '))}${inClassArea(p) ? '' : ' · <span title="Outside the class area: stays on this desk, not in the class CRM">desk only</span>'}</div>
+    <div class="ft"><span class="who">${esc(who)}</span>${fit}</div>
+  </button>`;
+}
+
+function emptyView(title, body) { return `<div class="detail"><div class="placeholder"><h3>${title}</h3><p>${body}</p></div></div>`; }
+
+function renderReview() {
+  const all = readyAll();
+  const items = reviewItems();
+  const queued = S.prospects.filter(p => p.status === 'queued');
+  const n = queued.length, s = n === 1 ? '' : 's';
+  const qbar = !n ? '' : S.sendingQueue
+    ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Gmail. Keep this page open until it finishes.</span></div>`
+    : inSendWindow()
+      ? `<div class="queue-bar"><button class="btn solid" id="sendQueue">Send ${n} approved email${s}</button><span class="help" style="margin:0">It's a weekday morning, so they'll start going out on their own in a minute. Keep this page open.</span></div>`
+      : `<div class="queue-bar"><span class="badge warn">${n} approved · going out ${esc(nextSendWindow())}</span><span class="help" style="margin:0">Owners mostly read email on weekday mornings. They send when this page is open between 8am and noon.</span><button class="btn ghost sm" id="sendQueue">Send now anyway</button></div>`;
+
+  const done = handledToday();
+  const counts = {};
+  for (const p of all) { const b = p.bucket || 'other'; counts[b] = (counts[b] || 0) + 1; }
+  const webN = all.filter(p => p.website).length, ownerN = all.filter(ownersOwnEmail).length;
+  const weak = all.filter(p => (p.fit_score ?? 0) < 40);
+  const head = `<div class="rv-head">
+    <div class="rv-top">
+      <div class="seg" role="group" aria-label="Which drafts to show">
+        <button data-rvmode="today" aria-pressed="${S.reviewMode === 'today'}">Today's ${DAILY_GOAL}</button>
+        <button data-rvmode="all" aria-pressed="${S.reviewMode === 'all'}">All ${all.length}</button>
+      </div>
+      <div class="today"><span>Today: <b>${done}</b> of ${DAILY_GOAL} handled</span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${DAILY_GOAL}" aria-valuenow="${Math.min(done, DAILY_GOAL)}" aria-label="Drafts handled today"><i style="width:${Math.min(100, Math.round((done / DAILY_GOAL) * 100))}%"></i></div></div>
+      ${S.reviewMode === 'all' && weak.length ? `<button class="btn ghost sm" id="skipWeak">Skip ${weak.length} with fit under 40</button>` : ''}
+    </div>
+    <div class="fchips" role="group" aria-label="Narrow the list">
+      <button class="fchip" data-rvbucket="" aria-pressed="${!S.rvBucket}">Every kind<b>${all.length}</b></button>
+      ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([b, n]) => `<button class="fchip" data-rvbucket="${b}" aria-pressed="${S.rvBucket === b}">${esc(BUCKET_LABEL[b] || b)}<b>${n}</b></button>`).join('')}
+      <button class="fchip" data-rvweb aria-pressed="${S.rvWeb}">Has a website<b>${webN}</b></button>
+      <button class="fchip" data-rvowner aria-pressed="${S.rvOwner}">Owner's own email<b>${ownerN}</b></button>
+    </div>
+  </div>`;
+
+  if (!items.length) return qbar + head + emptyView(all.length ? 'Nothing matches those filters.' : 'Nothing waiting for review.', all.length ? 'Clear a filter above to see more.' : (S.prospects.length ? 'Every draft has been handled. New ones arrive after the next research run.' : 'Drafts show up here as Claude researches businesses.'));
+  if (!items.some(p => p.id === S.reviewId)) S.reviewId = items[0].id;
+
+  let list = '';
+  if (S.reviewMode === 'all') {
+    const bands = [['Strong fit · 70+', p => p.fit_score >= 70], ['Good fit · 55–69', p => p.fit_score >= 55 && p.fit_score < 70], ['Maybe · under 55', p => (p.fit_score ?? 0) < 55]];
+    for (const [label, test] of bands) {
+      const group = items.filter(test);
+      if (group.length) list += `<div class="band"><span>${label}</span><span>${group.length}</span></div>` + group.map(p => cardHtml(p, p.id === S.reviewId)).join('');
+    }
+  } else {
+    list = items.map(p => cardHtml(p, p.id === S.reviewId)).join('') + (all.length > items.length ? `<div class="more">${all.length - items.length} more waiting · <button class="btn ghost sm" data-rvmode="all">See all</button></div>` : '');
+  }
+  return `${qbar}${head}<div class="review">
+    <div class="review-list" id="reviewList">
+      <div class="review-hint"><kbd>J</kbd> <kbd>K</kbd> next / previous · <kbd>A</kbd> approve · <kbd>S</kbd> skip</div>
+      ${list}
+    </div>
+    <div id="reviewPane">${detailHtml(S.reviewId)}</div>
+  </div>`;
+}
+
+function renderPipeline() {
+  const ps = filtered();
+  const cols = S.closed ? COLUMNS.concat(CLOSED_COLUMNS) : COLUMNS;
+  return `<div class="board">${cols.map(c => {
+    const items = ps.filter(p => c.statuses.includes(p.status)).sort((a, b) => c.statuses[0] === 'ready' ? (b.fit_score ?? -1) - (a.fit_score ?? -1) : new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    const shown = items.slice(0, 40);
+    return `<section class="col" aria-label="${esc(c.label)}">
+      <div class="col-h"><span class="eyebrow"><i class="${c.dot}"></i>${esc(c.label)}</span><span class="eyebrow">${items.length}</span></div>
+      <div class="cards">${shown.map(p => cardHtml(p)).join('') || '<div class="empty-col">Nothing here yet.</div>'}</div>
+      ${items.length > shown.length ? `<div class="more">+ ${items.length - shown.length} more in All businesses</div>` : ''}
+    </section>`;
+  }).join('')}</div>`;
+}
+
+function renderList() {
+  const ps = filtered();
+  const { key, dir } = S.sort;
+  ps.sort((a, b) => { const av = a[key] ?? '', bv = b[key] ?? ''; return (av > bv ? 1 : av < bv ? -1 : 0) * dir; });
+  const th = (k, l, cls = '') => `<th data-sort="${k}" class="${cls}" aria-sort="${key === k ? (dir > 0 ? 'ascending' : 'descending') : 'none'}">${l}${key === k ? (dir > 0 ? ' ↑' : ' ↓') : ''}</th>`;
+  return `<div class="table-wrap"><table class="list">
+    <thead><tr>${th('name', 'Business')}${th('town', 'Town')}${th('category', 'Kind')}${th('contact_name', 'Contact')}${th('email', 'Email')}${th('fit_score', 'Fit', 'num')}${th('status', 'Status')}${th('updated_at', 'Updated')}</tr></thead>
+    <tbody>${ps.slice(0, 600).map(p => `<tr data-id="${esc(p.id)}">
+      <td class="nm">${esc(p.name)}</td><td>${esc(placeLabel(p))}</td><td>${esc(p.category || '')}</td><td>${esc(p.contact_name || '')}</td>
+      <td style="font-family:var(--mono); font-size:12px">${esc(p.email || '')}</td>
+      <td class="num">${p.fit_score != null ? `<span class="fit ${fitClass(p.fit_score)}">${p.fit_score}</span>` : ''}</td>
+      <td><span class="badge ${(STATUS[p.status] || {}).badge || 'gray'}">${esc((STATUS[p.status] || {}).label || p.status)}</span></td>
+      <td style="color:var(--muted); font-size:12px">${ago(p.updated_at)}</td></tr>`).join('') || '<tr><td colspan="8" style="color:var(--muted); padding:30px; text-align:center">No businesses match.</td></tr>'}</tbody>
+  </table></div>`;
+}
+
+function renderActivity() {
+  const ev = [];
+  for (const p of S.prospects) for (const l of (p.log || [])) ev.push({ ...l, p });
+  for (const r of (S.meta.runs || [])) ev.push({ at: r.at, what: r.summary, run: true });
+  ev.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  if (!ev.length) return emptyView('No activity yet.', 'Research runs, emails sent, replies and CRM updates all show up here.');
+  const kind = w => /^answered/i.test(w) ? ['Email', 'info'] : /prep sheet/i.test(w) ? ['Update', 'gray'] : /replied|wrote back/i.test(w) ? ['Replied', 'ok'] : /no thanks|bounced|couldn't/i.test(w) ? ['Heads up', 'red'] : /^emailed|followed up/i.test(w) ? ['Email', 'info'] : /crm/i.test(w) ? ['CRM', 'gray'] : ['Update', 'gray'];
+  return `<ul class="feed">${ev.slice(0, 200).map(e => {
+    const [lab, cls] = e.run ? ['Research', 'gray'] : kind(e.what || '');
+    return `<li><span class="t">${ago(e.at)}</span><span><span class="badge ${cls}">${lab}</span></span>
+      <span>${e.p ? `<span class="who" data-id="${esc(e.p.id)}">${esc(e.p.name)}</span> · ` : ''}<span class="body">${esc(e.what || '')}</span></span></li>`;
+  }).join('')}</ul>`;
+}
+
+function renderCrm() {
+  if (S.crmState === 'bad') return emptyView('Can\'t reach the class CRM.', esc(S.crmError || 'Check the Connect AI connector in claude.ai → Settings → Connectors.'));
+  if (!S.crmMine) return emptyView('Loading your CRM…', 'Reading connect-ai.world/crm as you.');
+  if (!S.crmMine.length) return emptyView('Nothing in the CRM under your name yet.', 'Every email you send from here adds the business to the class CRM as Contacted, owned by you.');
+  return `<div class="table-wrap"><table class="list">
+    <thead><tr><th>Organization</th><th>Stage</th><th>Town</th><th>Next step</th><th>Due</th><th>Touches</th><th>Last touch</th></tr></thead>
+    <tbody>${S.crmMine.map(o => `<tr><td class="nm"><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.name)} ↗</a></td>
+      <td><span class="stage ${esc(o.stage)}">${esc(o.stage_label || o.stage)}</span></td><td>${esc(o.city || '')}</td>
+      <td>${esc(o.next_step || '')}</td><td style="font-family:var(--mono); font-size:12px">${esc(o.next_step_due || '')}</td>
+      <td class="num">${o.touches ?? 0}</td><td style="color:var(--muted); font-size:12px">${ago(o.last_touch_at)}</td></tr>`).join('')}</tbody>
+  </table></div><p class="help" style="margin-top:8px">Live from connect-ai.world/crm, refreshed every few minutes.</p>`;
+}
+
+// ---------- detail ----------
+function factChips(f) {
+  const out = [];
+  if (f.founded) out.push(`Since ${f.founded}`); else if (f.years_claimed) out.push(`${f.years_claimed}+ years`);
+  if (f.family_owned) out.push('Family-owned'); else if (f.locally_owned) out.push('Locally owned');
+  if (f.team_size_text) out.push(`Team of ~${f.team_size_text}`);
+  if (f.phone_first) out.push('Books by phone');
+  if (f.quote_requests) out.push('Takes quote requests');
+  if (f.paper_forms) out.push('Paper / PDF forms');
+  if (f.hiring) out.push('Hiring');
+  if (f.catering) out.push('Catering / events');
+  for (const t of [...(f.booking_tools || []), ...(f.shop_tools || []), ...(f.chat_tools || [])]) out.push(`Uses ${toolName(t)}`);
+  if (f.platform) out.push(`Site on ${toolName(f.platform)}`);
+  if (f.site_year) out.push(`Site © ${f.site_year}`);
+  if (f.registered_year) out.push(`Registered ${f.registered_year}`);
+  return out;
+}
+
+function actionsHtml(p) {
+  if (S.confirming && S.confirming.id === p.id) {
+    const c = S.confirming;
+    return `<div class="confirm"><span>${esc(c.text)}</span><button class="btn solid" data-act="${c.act}" data-confirmed="1">${esc(c.yes)}</button>${c.alt ? `<button class="btn" data-act="${c.alt.act}" data-confirmed="1">${esc(c.alt.yes)}</button>` : ''}<button class="btn ghost" data-act="cancel-confirm">Cancel</button></div>`;
+  }
+  if (p.status === 'replied') return `<span class="spacer"></span><button class="btn ghost" data-mark="not_interested">Not interested</button>`;
+  if (p.status === 'ready' || p.status === 'no_email') return `<button class="btn solid" data-act="approve" title="Approve now, send in one batch later">Approve</button>
+      <button class="btn" data-act="send">Send now</button>
+      <span class="spacer"></span>
+      ${S.sample ? '<button class="btn ghost" data-act="rewrite">Rewrite with Claude</button>' : ''}
+      <button class="btn ghost" data-act="draft">Save as Gmail draft</button>
+      <button class="btn crimson" data-act="skip">Skip</button>`;
+  if (p.status === 'queued') return `<span class="badge warn">Approved · send it from the Review tab's button</span><span class="spacer"></span>
+      <button class="btn" data-act="save">Save edits</button><button class="btn" data-act="send">Send now</button><button class="btn ghost" data-act="unqueue">Back to review</button>`;
+  if (p.status === 'sent' || p.status === 'followed_up') return `${followupDue(p) ? '<button class="btn solid" data-act="followup">Send follow-up</button>' : ''}<span class="spacer"></span>
+      <button class="btn" data-mark="replied">They replied</button><button class="btn ghost" data-mark="not_interested">Not interested</button><button class="btn ghost" data-mark="bounced">Bounced</button>`;
+  if (CLOSED.has(p.status)) return `<span class="spacer"></span><button class="btn ghost" data-mark="ready">Move back to review</button>`;
+  return '';
+}
+
+// The whole email conversation, read from Gmail once someone has replied;
+// before that (or if Gmail can't be read) what the desk already knows.
+function threadHtml(p) {
+  const tid = threadIdOf(p);
+  const gmailLink = tid ? `<a style="color:var(--info); font-size:12.5px" href="https://mail.google.com/mail/u/0/#all/${encodeURIComponent(tid)}" target="_blank" rel="noopener">Open in Gmail ↗</a>` : '';
+  const msgs = S.threads[tid];
+  if (p.status === 'replied' && !msgs) queueMicrotask(() => loadThread(p));
+  if (Array.isArray(msgs) && msgs.length) {
+    return `<div class="thread">${msgs.map(m => {
+      const them = fromThem(p, m);
+      return `<div class="msg${them ? ' in' : ''}"><div class="mh"><span class="sub">${them ? esc(p.contact_name || p.email) : 'You'}</span><span class="mono">${esc(m.date ? when(m.date) : '')}</span></div><pre>${esc(freshPart(msgText(m)) || msgText(m))}</pre></div>`;
+    }).join('')}<div>${gmailLink}</div></div>`;
+  }
+  return `<div class="thread">
+    ${p.body ? `<div class="msg"><div class="mh"><span class="sub">${esc(p.subject || '')}</span><span class="mono">${when(p.sent_at)}</span></div><pre>${esc(p.body)}</pre></div>` : '<p class="help">Nothing sent yet.</p>'}
+    ${p.followup_at ? `<div class="msg"><div class="mh"><span class="sub">Follow-up</span><span class="mono">${when(p.followup_at)}</span></div><pre>${esc(p.followup_body || '')}</pre></div>` : ''}
+    ${p.reply_snippet ? `<div class="msg in"><div class="mh"><span class="sub">Reply from ${esc(p.email)}</span><span class="mono">${when(p.replied_at)}</span></div><pre>${esc(p.reply_snippet)}</pre></div>` : ''}
+    ${(p.my_replies || []).map(r => `<div class="msg"><div class="mh"><span class="sub">You</span><span class="mono">${when(r.at)}</span></div><pre>${esc(r.body)}</pre></div>`).join('')}
+    ${msgs && msgs.error ? `<p class="help">${esc(msgs.error)}</p>` : S.threadLoading.has(tid) ? '<p class="help">Loading the full conversation from Gmail…</p>' : ''}
+    <div>${gmailLink}</div>
+  </div>`;
+}
+
+function replyBoxHtml(p) {
+  const draft = S.replyDrafts[p.id] ?? p.reply_draft ?? '';
+  const busy = S.working[p.id];
+  const waiting = needsAnswer(p);
+  return `<div class="section reply-box${waiting ? ' waiting' : ''}">
+    <span class="eyebrow">${waiting ? `Your answer · ${esc(p.contact_name || 'they')} wrote ${esc(ago(p.replied_at))}` : `Answered ${esc(ago(p.answered_at))} · write again if you need to`}</span>
+    <div class="field"><label for="rFree">When you're free (used for suggesting call times)</label><input id="rFree" value="${esc(settings().free_times || '')}" placeholder="e.g. Tue/Thu after 2pm, Fridays any time"></div>
+    <div class="field"><label for="rBody">Reply to ${esc(p.email || '')}${settings().cc_email ? ` · cc ${esc(settings().cc_email)}` : ''}</label><textarea id="rBody" spellcheck="true" placeholder="${S.sample ? 'Press “Draft a reply” and Claude writes one from their email, or type your own.' : 'Type your reply.'}">${esc(draft)}</textarea></div>
+    <div class="actions">
+      ${S.confirming && S.confirming.id === p.id && S.confirming.act === 'send-reply'
+        ? `<div class="confirm"><span>Send this reply to ${esc(p.email)} in the same Gmail thread? It also gets logged in the class CRM.</span><button class="btn solid" data-act="send-reply" data-confirmed="1">Yes, send it</button><button class="btn ghost" data-act="cancel-confirm">Cancel</button></div>`
+        : `<button class="btn solid" data-act="send-reply" ${busy ? 'disabled' : ''}>Send reply</button>
+      ${S.sample ? `<button class="btn" data-act="draft-reply" ${busy ? 'disabled' : ''}>${busy === 'reply' ? 'Drafting…' : draft ? 'Redraft with Claude' : 'Draft a reply with Claude'}</button>` : ''}
+      ${waiting ? '<span class="spacer"></span><button class="btn ghost" data-act="mark-answered" title="You answered from Gmail or by phone">I answered another way</button>' : ''}`}
+    </div>
+  </div>`;
+}
+
+function prepHtml(p) {
+  const busy = S.working[p.id] === 'prep';
+  return `<div class="section prep">
+    <span class="eyebrow">Call prep${p.prep_at ? ` · made ${esc(ago(p.prep_at))}` : ''}</span>
+    ${p.prep_sheet || busy ? `<pre id="prepText" class="prep-text">${esc(p.prep_sheet || '')}</pre>` : `<p class="help" style="margin-top:0">A one-page sheet for the call: who they are, what their website shows about how they work, what they said, and good questions to ask.</p>`}
+    <div class="actions">
+      ${S.sample ? `<button class="btn${p.prep_sheet ? '' : ' solid'}" data-act="prep" ${busy ? 'disabled' : ''}>${busy ? 'Writing…' : p.prep_sheet ? 'Redo' : 'Make a prep sheet'}</button>` : '<span class="help">Claude isn\'t available in this view.</span>'}
+      ${p.prep_sheet ? '<button class="btn ghost" data-act="copy-prep">Copy</button>' : ''}
+    </div>
+  </div>`;
+}
+
+// Re-draw one business's detail wherever it's showing, unless you're typing in it.
+function refreshDetail(id) {
+  if (isEditing()) return;
+  if (S.drawerId === id) { $('#drawerBody').innerHTML = detailHtml(id); fitTextareas(); }
+  if (S.tab === 'review' && S.reviewId === id && $('#reviewPane')) { $('#reviewPane').innerHTML = detailHtml(id); fitTextareas(); }
+}
+
+function detailHtml(id) {
+  const p = S.prospects.find(x => x.id === id);
+  if (!p) return emptyView('Not found', 'This business may have been removed.');
+  const f = p.facts || {};
+  const editable = ['ready', 'queued', 'no_email'].includes(p.status);
+  const st = STATUS[p.status] || { label: p.status, badge: 'gray' };
+  const src = EMAIL_SOURCE[p.email_source];
+  const reasons = (p.fit_reasons || []).filter(r => r.pts !== 0 || /miles/.test(r.why));
+  const google = `https://www.google.com/search?q=${encodeURIComponent(`${p.name} ${p.town || ''} ${stateOf(p)}`)}`;
+  const linkedin = p.contact_name
+    ? `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${p.contact_name} ${shortName(p.name)}`)}`
+    : `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(shortName(p.name))}`;
+  const inCrm = !p.crm_org_id && crmMatch(p.name);
+  const gmailUrl = p.thread_id ? `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(p.thread_id)}` : null;
+  const crmUrl = p.crm_org_id ? `https://connect-ai.world/crm/org/?id=${encodeURIComponent(p.crm_org_id)}` : null;
+  return `<article class="detail" data-detail="${esc(p.id)}">
+    <div class="d-head">
+      <div style="min-width:0">
+        <div class="eyebrow">${esc([p.category, placeLabel(p), inClassArea(p) ? null : 'outside class area · desk only', p.miles_from_storrs != null ? `${Math.round(p.miles_from_storrs)} mi from Storrs` : null].filter(Boolean).join(' · '))}</div>
+        <h2>${esc(p.name)}</h2>
+        <div class="links">
+          <span class="badge ${st.badge}">${esc(st.label)}</span>
+          ${p.website ? `<a href="${esc(p.website)}" target="_blank" rel="noopener">${esc(p.domain || 'Website')} ↗</a>` : ''}
+          <a href="${google}" target="_blank" rel="noopener">Google ↗</a>
+          <a href="${linkedin}" target="_blank" rel="noopener">${p.contact_name ? `Find ${esc(p.contact_name.split(' ')[0])} on LinkedIn` : 'Search LinkedIn'} ↗</a>
+          ${gmailUrl ? `<a href="${gmailUrl}" target="_blank" rel="noopener">Open in Gmail ↗</a>` : ''}
+          ${p.gmail_draft_url ? `<a href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Gmail draft ↗</a>` : ''}
+          ${crmUrl ? `<a href="${crmUrl}" target="_blank" rel="noopener">In class CRM ↗</a>` : ''}
+          ${p.phone ? `<span style="color:var(--muted)">${esc(p.phone)}</span>` : ''}
+        </div>
+      </div>
+      ${p.fit_score != null ? `<div class="fitbig"><div class="v">${p.fit_score}</div><div class="bar"><i style="width:${Math.max(0, Math.min(100, p.fit_score))}%"></i></div><div class="eyebrow">Fit score</div></div>` : ''}
+    </div>
+    <div class="d-body">
+      <div class="d-main">
+        ${inCrm ? `<div class="note red">Already in the class CRM${inCrm.owner ? ` (owner: ${esc(inCrm.owner.name)})` : ''}, stage ${esc(inCrm.stage_label || inCrm.stage)}. Someone may already be talking to them.</div>` : ''}
+        ${p.crm_error ? `<div class="note red">${esc(p.crm_error)}</div>` : ''}
+        ${p.email_source === 'guess' && editable ? '<div class="note">This address is a guess (first name @ their domain). Check it before sending; a bounce hurts how your other emails land.</div>' : ''}
+        ${editable ? `<div class="section">
+          <span class="eyebrow">Email</span>
+          <div class="row2">
+            <div class="field"><label for="dTo">To ${src ? `· <span class="badge ${src[1]}" style="font-size:8.5px">${esc(src[0])}</span>` : ''}</label><input id="dTo" type="email" value="${esc(p.email || '')}" placeholder="Add an email address">${settings().cc_email ? `<div style="font-size:11px; color:var(--muted); margin-top:4px">cc ${esc(settings().cc_email)}</div>` : ''}</div>
+            <div class="field"><label for="dName">Their name</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
+          </div>
+          <div class="field"><label for="dSubj">Subject</label><input id="dSubj" value="${esc(p.subject || '')}"></div>
+          <div class="field"><label for="dBody">Message</label><textarea id="dBody" spellcheck="true">${esc(p.body || '')}</textarea></div>
+          <div class="actions">${actionsHtml(p)}</div>
+        </div>` : `<div class="section">
+          <span class="eyebrow">Emails</span>
+          ${threadHtml(p)}
+        </div>${p.status === 'replied' ? replyBoxHtml(p) : ''}<div class="actions" style="margin-top:12px">${actionsHtml(p)}</div>${p.status === 'replied' || p.prep_sheet ? prepHtml(p) : ''}`}
+      </div>
+      <div class="d-side">
+        ${reasons.length ? `<div class="section"><span class="eyebrow">Why this fit score</span>
+          <ul class="reasons">${reasons.map(r => `<li><span class="p ${r.pts > 0 ? 'pos' : r.pts < 0 ? 'neg' : ''}">${r.pts > 0 ? '+' : ''}${r.pts}</span><span>${esc(r.why)}</span></li>`).join('')}</ul></div>` : ''}
+        ${factChips(f).length ? `<div class="section"><span class="eyebrow">What we noticed</span><div class="chips">${factChips(f).map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div></div>` : ''}
+        ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} <span style="color:var(--muted)">(${esc(x.how)})</span></span>`).join('')}</div></div>` : ''}
+        ${(f.emails_found || []).length ? `<div class="section"><span class="eyebrow">Addresses found</span><div class="kv">${f.emails_found.map(x => `<span><b style="font-weight:500">${esc(x.email)}</b> <span style="color:var(--muted)">· ${esc(x.why)}</span></span>`).join('')}</div></div>` : ''}
+        ${f.description ? `<div class="section"><span class="eyebrow">How they describe themselves</span><div class="kv"><span>${esc(f.description)}</span></div></div>` : ''}
+        ${(f.pages_read || []).length ? `<div class="section"><span class="eyebrow">Pages read</span><div class="kv">${f.pages_read.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(String(u).replace(/^https?:\/\/(www\.)?/, ''))}</a>`).join('')}</div></div>` : ''}
+        ${(f.enrich_notes || []).length ? `<div class="section"><span class="eyebrow">Notes</span><div class="kv">${f.enrich_notes.map(n => `<span>${esc(n)}</span>`).join('')}</div></div>` : ''}
+        ${(p.log || []).length ? `<div class="section"><span class="eyebrow">History</span><ul class="timeline">${p.log.slice().reverse().map(e => `<li><span class="t">${when(e.at)}</span>${esc(e.what)}</li>`).join('')}</ul></div>` : ''}
+      </div>
+    </div>
+  </article>`;
+}
+
+// ---------- render ----------
+function renderView() {
+  const v = $('#view');
+  if (S.tab === 'pipeline') v.innerHTML = renderPipeline();
+  else if (S.tab === 'list') v.innerHTML = renderList();
+  else if (S.tab === 'activity') v.innerHTML = renderActivity();
+  else if (S.tab === 'crm') v.innerHTML = renderCrm();
+  else v.innerHTML = renderReview();
+  fitTextareas();
+}
+function isEditing() {
+  const a = document.activeElement;
+  return a && /TEXTAREA|INPUT/.test(a.tagName) && a.closest('.detail');
+}
+function render() {
+  renderConn(); renderNotice(); renderStats(); renderChart(); renderTabs();
+  // While Claude is writing into a reply or prep sheet, leave the page as it is.
+  const writing = Object.keys(S.working).length > 0;
+  if (!isEditing() && !writing) renderView();
+  if (S.drawerId && !writing && !($('#drawerBody').contains(document.activeElement) && isEditing())) { $('#drawerBody').innerHTML = detailHtml(S.drawerId); fitTextareas(); }
+}
+function fitTextareas() {
+  document.querySelectorAll('textarea#dBody, textarea#rBody').forEach(t => { t.style.height = 'auto'; t.style.height = `${t.scrollHeight + 4}px`; });
+}
+document.addEventListener('input', e => {
+  if (e.target.id === 'dBody' || e.target.id === 'rBody') fitTextareas();
+  if (e.target.id === 'rBody') S.replyDrafts[e.target.closest('[data-detail]').dataset.detail] = e.target.value;
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'rBody') patch(e.target.closest('[data-detail]').dataset.detail, { reply_draft: e.target.value }).catch(() => {});
+  if (e.target.id === 'rFree' && S.db) {
+    S.db.doc('meta/status').update({ settings: { ...(S.meta.settings || {}), free_times: e.target.value.trim() } })
+      .then(() => toast('Saved. New reply drafts will use these times.')).catch(err => toast(err.message || String(err), { err: true }));
+  }
+});
+setInterval(renderConn, 30000);
+
+// ---------- drawer ----------
+function openDrawer(id) {
+  S.drawerId = id;
+  $('#drawerBody').innerHTML = detailHtml(id);
+  $('#drawer').classList.add('on'); $('#drawer').setAttribute('aria-hidden', 'false'); $('#scrim').classList.add('on');
+  fitTextareas();
+  $('#drawerClose').focus();
+}
+function closeDrawer() {
+  S.drawerId = null; S.confirming = null;
+  $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); $('#scrim').classList.remove('on');
+}
+$('#drawerClose').addEventListener('click', closeDrawer);
+$('#scrim').addEventListener('click', closeDrawer);
+
+function neighbor(id, step) {
+  const items = reviewItems();
+  const i = items.findIndex(p => p.id === id);
+  return (items[i + step] || items[i - step] || {}).id || null;
+}
+function rerenderDetail(root) {
+  const id = root.dataset.detail;
+  const html = detailHtml(id);
+  const holder = root.parentElement;
+  holder.innerHTML = html;
+  fitTextareas();
+}
+
+// ---------- actions ----------
+async function onAction(root, act, confirmed) {
+  const id = root.dataset.detail;
+  const p = S.prospects.find(x => x.id === id);
+  if (!p) return;
+  const vals = root.querySelector('#dBody') ? readEditor(root) : null;
+  const rBody = root.querySelector('#rBody');
+  if (rBody) S.replyDrafts[id] = rBody.value;
+  if (act === 'cancel-confirm') { S.confirming = null; rerenderDetail(root); return; }
+  if (act === 'send-reply' && !confirmed) {
+    if (!rBody || !rBody.value.trim()) { toast('Write a reply first, or press “Draft a reply”.', { err: true }); return; }
+    S.confirming = { id, act };
+    rerenderDetail(root);
+    return;
+  }
+  if (act === 'copy-prep') {
+    try { await navigator.clipboard.writeText(p.prep_sheet || ''); toast('Copied.'); } catch (e) { toast('Couldn\'t copy here. Select the text and copy it instead.', { err: true }); }
+    return;
+  }
+  if (act === 'draft-reply' || act === 'prep') {
+    if (!S.sample) { toast('Claude isn\'t available in this view.', { err: true }); return; }
+    S.working[id] = act === 'prep' ? 'prep' : 'reply';
+    rerenderDetail(root);
+    const fresh = document.querySelector(`[data-detail="${CSS.escape(id)}"]`);
+    try {
+      if (!Array.isArray(S.threads[threadIdOf(p)])) await loadThread(p, { force: true });
+      if (act === 'prep') await makePrepSheet(p, fresh.querySelector('#prepText') || document.createElement('pre'));
+      else await draftReply(p, fresh.querySelector('#rBody'));
+      toast(act === 'prep' ? 'Prep sheet ready.' : 'Reply drafted. Read it over, then send.');
+    } catch (e) {
+      toast(e && e.code ? mcpMessage(e, 'Claude') : (e.message || String(e)), { err: true });
+    } finally {
+      delete S.working[id];
+      refreshDetail(id);
+    }
+    return;
+  }
+  if ((act === 'send' || act === 'followup') && !confirmed) {
+    if (vals) await patch(id, { email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body }).catch(() => {});
+    const to = vals ? vals.email : p.email;
+    const cc = settings().cc_email ? ` (cc ${settings().cc_email})` : '';
+    S.confirming = act === 'followup'
+      ? { id, act, text: `Send a short follow-up to ${p.email} in the same thread?`, yes: 'Yes, follow up' }
+      : inSendWindow() || !vals
+        ? { id, act, text: `Send this to ${to}${cc} from your Gmail now? It also gets logged in the class CRM.`, yes: 'Yes, send it' }
+        : { id, act: 'approve', text: `Owners mostly read email on weekday mornings. Send this to ${to}${cc} ${nextSendWindow()} instead? It goes out when this page is open then.`, yes: `Send ${nextSendWindow()}`, alt: { act: 'send', yes: 'Send right now' } };
+    rerenderDetail(root);
+    return;
+  }
+  S.confirming = null;
+  const buttons = root.querySelectorAll('button');
+  buttons.forEach(b => { b.disabled = true; });
+  const next = S.tab === 'review' && !S.drawerId ? neighbor(id, 1) : null;
+  try {
+    if (act === 'approve') {
+      if (!vals.email) throw new Error('Add an email address first.');
+      await patch(id, { ...vals, status: 'queued' }, 'Approved');
+      toast(`${p.name} approved.`);
+      if (next) S.reviewId = next;
+    } else if (act === 'unqueue') {
+      await patch(id, { status: 'ready' }, 'Moved back to review');
+    } else if (act === 'save') {
+      await patch(id, vals, 'Edited the draft');
+      toast('Saved.');
+    } else if (act === 'skip') {
+      const prev = p.status;
+      await patch(id, { status: 'skipped' }, 'Skipped');
+      toast(`${p.name} skipped.`, { undo: () => patch(id, { status: prev }, 'Un-skipped').catch(() => {}) });
+      if (next) S.reviewId = next;
+    } else if (act === 'send') {
+      await sendInitial(p, vals);
+      toast(`Sent to ${vals.email}.`);
+      if (next) S.reviewId = next;
+    } else if (act === 'followup') {
+      await sendFollowup(p);
+      toast(`Followed up with ${p.email}.`);
+    } else if (act === 'send-reply') {
+      await sendReply(p, S.replyDrafts[id] || '');
+      toast(`Reply sent to ${p.email}.`);
+    } else if (act === 'mark-answered') {
+      await patch(id, { answered_at: nowIso() }, 'Marked as answered (outside the desk)');
+    } else if (act === 'draft') {
+      await saveGmailDraft(p, vals);
+      toast('Saved to your Gmail drafts.');
+    } else if (act === 'rewrite') {
+      const ta = root.querySelector('#dBody');
+      const prompt = `You are editing a short cold email from a UConn student (${settings().sender_name}) to the owner of a small business in ${placeLabel(p) || 'their town'}${stateOf(p) === 'CT' ? ', Connecticut' : ''}, mainly asking to learn how their business runs. ${inClassArea(p) ? 'He is also in Connect.AI, a UConn course where student teams work with small businesses in Connecticut and around New England and New York to find where AI could save them time and build it for free (do not claim any partnership with the CT Small Business Development Center or anyone else). Application: connect-ai.world/apply (10 questions, about 3 minutes, free AI-readiness report either way).' : 'This business is outside the area the course works in, so do NOT mention Connect.AI, the course or the application form; just ask for a short call.'}${stateOf(p) === 'CT' ? '' : ' He is in Storrs, CT, so offer a phone or Zoom call, not a visit.'}
+
+Facts found on the business's own website. Use only these; never invent anything:
+${JSON.stringify({ business: p.name, town: p.town, category: p.category, contact: vals.contact_name, facts: { founded: (p.facts || {}).founded, family_owned: (p.facts || {}).family_owned, books_by_phone: (p.facts || {}).phone_first, quote_requests: (p.facts || {}).quote_requests, hiring: (p.facts || {}).hiring, description: (p.facts || {}).description, tools: [...((p.facts || {}).booking_tools || []), ...((p.facts || {}).shop_tools || [])].map(toolName) } })}
+
+Current draft:
+${ta.value}
+
+Rewrite it so it reads like a real student wrote it, not a sales email: plain, warm, curious, specific to this business, under 200 words. Lead with who he is and a genuine question about how they run things; the course and form come after. The sender is an accounting major who interned in accounting at Henkel this past summer and will be at Andersen next summer. That's big-company work; he wants to soak up how small businesses actually run, both so he can help them and because he wants to start his own business someday. He genuinely wants to hear how this business runs, whether or not they ever work together. Keep: the greeting, that he's an accounting major at UConn, the Henkel/Andersen line and wanting to start his own business, the line with his LinkedIn link (https://www.linkedin.com/in/soham-shah-uconn/) for anyone who wants to know more about him, ${inClassArea(p) ? 'the free/no-contract point, the form link offered as optional ("if you\'re interested in helping us understand your business better"), ' : ''}the ask for a quick call even if they don't fill out the form, the easy way to say no, and the signature. No exclamation marks, no marketing words, no flattery beyond one light touch. Reply with only the email body.`;
+      ta.value = '';
+      await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
+      toast('Rewritten. Check it, then send or approve.');
+    }
+  } catch (e) {
+    const server = act === 'rewrite' ? 'Claude' : /send|followup|draft/.test(act) ? GMAIL : 'Dashboard';
+    if (act === 'send-reply') { S.confirming = null; refreshDetail(id); }
+    toast(e && e.code ? mcpMessage(e, server) : (e.message || String(e)), { err: true });
+  } finally {
+    buttons.forEach(b => { b.disabled = false; });
+  }
+}
+
+async function sendQueue() {
+  if (S.sendingQueue) return;
+  const queued = S.prospects.filter(p => p.status === 'queued').sort((a, b) => (b.fit_score ?? 0) - (a.fit_score ?? 0));
+  if (!queued.length) return;
+  S.sendingQueue = true; render();
+  const label = t => { const b = $('#sendQueue'); if (b) b.textContent = t; };
+  let sent = 0;
+  try {
+    for (const q of queued) {
+      // Another open tab, or you, may have changed it since the list was made.
+      const p = S.prospects.find(x => x.id === q.id);
+      if (!p || p.status !== 'queued') continue;
+      if (sentToday() >= settings().daily_cap) { toast(`Stopped at today's limit of ${settings().daily_cap}. The rest go out on the next weekday morning.`); break; }
+      label(`Sending ${sent + 1} of ${queued.length}…`);
+      if (S.db) S.db.doc('meta/status').update({ send_lock: { by: TAB_ID, at: nowIso() } }).catch(() => {});
+      await sendInitial(p, { email: p.email, contact_name: p.contact_name || null, subject: p.subject, body: p.body });
+      sent++;
+      await new Promise(r => setTimeout(r, 4000 + Math.random() * 4000));
+    }
+    if (sent) toast(`Sent ${sent} email${sent === 1 ? '' : 's'}.`);
+    return true;
+  } catch (e) {
+    toast(`Stopped after ${sent}: ${e && e.code ? mcpMessage(e, GMAIL) : e.message}`, { err: true });
+    return false;
+  } finally {
+    S.sendingQueue = false; render();
+  }
+}
+
+// On weekday mornings, approved emails go out by themselves while the page
+// is open. If two tabs are open, the one that claimed the send lock sends.
+const TAB_ID = Math.random().toString(36).slice(2);
+let autoTried = '';
+async function autoSend() {
+  if (S.autoOff || !S.loaded || !S.mcp || !S.db || S.sendingQueue || !inSendWindow()) return;
+  if (!S.prospects.some(p => p.status === 'queued') || sentToday() >= settings().daily_cap) return;
+  const lock = S.meta.send_lock || {};
+  if (lock.by && lock.by !== TAB_ID && Date.now() - new Date(lock.at).getTime() < 3 * 60 * 1000) return;
+  const minute = new Date().toISOString().slice(0, 16);
+  if (autoTried === minute) return;
+  autoTried = minute;
+  try { await S.db.doc('meta/status').update({ send_lock: { by: TAB_ID, at: nowIso() } }); } catch (e) { return; }
+  await new Promise(r => setTimeout(r, 2500));
+  if ((S.meta.send_lock || {}).by !== TAB_ID) return;
+  toast('Weekday morning: sending your approved emails.');
+  // If something's wrong (Gmail disconnected, say), don't retry every minute; the button still works.
+  if (!(await sendQueue())) S.autoOff = true;
+}
+setInterval(autoSend, 60 * 1000);
+
+document.addEventListener('click', async e => {
+  const t = e.target;
+  const tab = t.closest('[data-tab]');
+  if (tab) { S.tab = tab.dataset.tab; lsSet('outreach-tab', S.tab); render(); return; }
+  if (t.closest('#sendQueue')) { sendQueue(); return; }
+  const opener = t.closest('[data-open]');
+  if (opener) { openDrawer(opener.dataset.open); return; }
+  const mode = t.closest('[data-rvmode]');
+  if (mode) { S.reviewMode = mode.dataset.rvmode; lsSet('review-mode', S.reviewMode); renderView(); return; }
+  const bucket = t.closest('[data-rvbucket]');
+  if (bucket) { S.rvBucket = bucket.dataset.rvbucket; renderView(); return; }
+  if (t.closest('[data-rvweb]')) { S.rvWeb = !S.rvWeb; renderView(); return; }
+  if (t.closest('[data-rvowner]')) { S.rvOwner = !S.rvOwner; renderView(); return; }
+  if (t.closest('#skipWeak')) {
+    const weak = readyAll().filter(p => (p.fit_score ?? 0) < 40);
+    for (const p of weak) await patch(p.id, { status: 'skipped' }, 'Skipped (fit under 40, in bulk)').catch(() => {});
+    toast(`Skipped ${weak.length} low-fit drafts.`, { undo: async () => { for (const p of weak) await patch(p.id, { status: 'ready' }, 'Un-skipped').catch(() => {}); } });
+    return;
+  }
+  const actBtn = t.closest('[data-act]');
+  if (actBtn) { onAction(actBtn.closest('[data-detail]'), actBtn.dataset.act, !!actBtn.dataset.confirmed); return; }
+  const markBtn = t.closest('[data-mark]');
+  if (markBtn) {
+    const id = markBtn.closest('[data-detail]').dataset.detail;
+    const st = markBtn.dataset.mark;
+    try {
+      await patch(id, { status: st, ...(st === 'replied' || st === 'not_interested' ? { replied_at: nowIso() } : {}) }, `Marked as ${(STATUS[st] || {}).label || st}`);
+      const p = S.prospects.find(x => x.id === id);
+      if (p && (st === 'not_interested') && (p.crm_org_id)) S.mcp.callTool(CRM, 'crm_update_org', { org: p.crm_org_id, stage: 'passed' }).catch(() => {});
+    } catch (err) { toast(err.message, { err: true }); }
+    return;
+  }
+  const card = t.closest('.card[data-id], tr[data-id], .feed .who[data-id]');
+  if (card) {
+    if (S.tab === 'review' && card.closest('#reviewList')) {
+      S.reviewId = card.dataset.id; S.confirming = null;
+      document.querySelectorAll('#reviewList .card').forEach(c => c.classList.toggle('sel', c.dataset.id === S.reviewId));
+      $('#reviewPane').innerHTML = detailHtml(S.reviewId); fitTextareas();
+      return;
+    }
+    openDrawer(card.dataset.id);
+    return;
+  }
+  const sortTh = t.closest('th[data-sort]');
+  if (sortTh) { const k = sortTh.dataset.sort; S.sort = { key: k, dir: S.sort.key === k ? -S.sort.dir : (k === 'name' || k === 'town' ? 1 : -1) }; renderView(); }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && S.drawerId) { closeDrawer(); return; }
+  if (S.tab !== 'review' || S.drawerId || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'j' || k === 'k') {
+    const items = reviewItems();
+    const i = items.findIndex(p => p.id === S.reviewId);
+    const target = items[i + (k === 'j' ? 1 : -1)];
+    if (target) { S.reviewId = target.id; S.confirming = null; renderView(); document.querySelector(`#reviewList .card[data-id="${CSS.escape(S.reviewId)}"]`)?.scrollIntoView({ block: 'nearest' }); }
+  } else if (k === 'a' || k === 's') {
+    const root = document.querySelector('#reviewPane [data-detail]');
+    const btn = root && root.querySelector(`[data-act="${k === 'a' ? 'approve' : 'skip'}"]`);
+    if (btn) { e.preventDefault(); onAction(root, k === 'a' ? 'approve' : 'skip', false); }
+  }
+});
+
+$('#q').addEventListener('input', e => { S.q = e.target.value; renderView(); });
+$('#fTown').addEventListener('change', e => { S.town = e.target.value; renderView(); });
+$('#fState').addEventListener('change', e => { S.state = e.target.value; S.town = ''; renderTabs(); renderView(); });
+$('#fFit').addEventListener('change', e => { S.fit = Number(e.target.value); renderView(); });
+$('#fClosed').addEventListener('change', e => { S.closed = e.target.checked; renderView(); });
+
+// ---------- boot ----------
+render();
+(async () => {
+  const [db, mcp, sample] = await Promise.all([
+    window.claude ? window.claude.use('db') : null,
+    window.claude ? window.claude.use('mcp') : null,
+    window.claude ? window.claude.use('sample') : null,
+  ]);
+  S.db = db; S.mcp = mcp; S.sample = sample;
+  if (!db) { S.dbState = 'bad'; S.loaded = true; render(); }
+  else {
+    db.collection('prospects').onSnapshot(snap => {
+      S.prospects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      S.loaded = true; S.dbState = 'ok';
+      render(); watchReplies(); syncLeads(); autoSend();
+    }, () => { S.dbState = 'bad'; S.loaded = true; render(); });
+    db.doc('meta/status').onSnapshot(snap => { S.meta = snap.exists ? (snap.data() || {}) : {}; render(); }, () => {});
+  }
+  if (!mcp) { S.crmState = 'bad'; S.gmailState = 'bad'; S.crmError = 'Connectors aren\'t available in this view. Open the page on claude.ai.'; render(); return; }
+  const crmHandler = which => ev => {
+    if (ev.type === 'error') {
+      if (['needs_reauth', 'server_not_connected', 'not_in_manifest', 'blocked_by_policy', 'approval_required', 'consent_required', 'selection_required'].includes(ev.error.code)) {
+        S.crmState = 'bad'; S.crmError = mcpMessage(ev.error, CRM);
+        if (which === 'mine') S.crmMine = null; else S.crmAll = null;
+      }
+      render(); return;
+    }
+    S.crmState = 'ok'; S.crmError = '';
+    const orgs = (ev.result.payload || {}).orgs || [];
+    if (which === 'mine') S.crmMine = orgs; else S.crmAll = orgs;
+    syncLeads();
+    // Hand the CRM's names to the research runs (they can't reach the CRM themselves) so they skip businesses a classmate already has.
+    if (which === 'all' && S.db && orgs.length) {
+      const names = orgs.map(o => o.name).filter(Boolean).sort();
+      if (JSON.stringify(names) !== JSON.stringify(S.meta.crm_names || [])) {
+        S.db.doc('meta/status').update({ crm_names: names, crm_names_at: nowIso() }).catch(() => {});
+      }
+    }
+    render();
+  };
+  mcp.watchTool(CRM, 'crm_list_orgs', { owner: 'me', include_closed: true, limit: 200 }, crmHandler('mine'), { refetchInterval: 5 * 60 * 1000 });
+  mcp.watchTool(CRM, 'crm_list_orgs', { include_closed: true, limit: 200 }, crmHandler('all'), { refetchInterval: 10 * 60 * 1000 });
+})();
+})();
+</script>
