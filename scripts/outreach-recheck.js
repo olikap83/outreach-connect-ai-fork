@@ -38,12 +38,14 @@ async function recheck(doc) {
   const merged = { ...p, ...patch };
   if (doc.email && merged.email !== doc.email) problems.push(`${doc.email} no longer checks out as this business's own address.`);
   problems.push(...readinessProblems({ ...merged, email: doc.email }));
-  if (!problems.length) return null;
+  const registryId = merged.registry?.id || null;
+  // Passing drafts still get the filing's id, for the desk's links to it.
+  if (!problems.length) return registryId && registryId !== doc.registry_id ? { id: doc.id, data: { registry_id: registryId } } : null;
   const now = new Date().toISOString();
   return {
     id: doc.id,
     data: {
-      status: 'needs_check', check_problems: [...new Set(problems)],
+      status: 'needs_check', check_problems: [...new Set(problems)], registry_id: registryId,
       website: merged.website ?? null, domain: merged.domain ?? null, website_verified: !!merged.website_verified,
       updated_at: now, log: [...(doc.log || []), { at: now, what: `Moved to "Needs a look": ${problems[0]}` }].slice(-40),
     },
@@ -61,7 +63,7 @@ async function main() {
   const updates = (await mapLimit(todo, 4, async d => {
     try {
       const u = await recheck(d);
-      console.log(`  [${++i}/${todo.length}] ${d.name}: ${u ? `needs a look (${u.data.check_problems[0]})` : 'ok'}`);
+      console.log(`  [${++i}/${todo.length}] ${d.name}: ${u && u.data.status ? `needs a look (${u.data.check_problems[0]})` : 'ok'}`);
       return u;
     } catch (err) {
       console.log(`  [${++i}/${todo.length}] ${d.name}: check failed (${err.message}); left as is`);
@@ -69,7 +71,7 @@ async function main() {
     }
   })).filter(Boolean);
   fs.writeFileSync(path.join(outDir, 'recheck.json'), JSON.stringify(updates, null, 2));
-  console.log(`${updates.length} of ${todo.length} moved to "Needs a look". Wrote ${path.join(outDir, 'recheck.json')}`);
+  console.log(`${updates.filter(u => u.data.status).length} of ${todo.length} moved to "Needs a look"; ${updates.filter(u => !u.data.status).length} got their filing link. Wrote ${path.join(outDir, 'recheck.json')}`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

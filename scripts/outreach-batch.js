@@ -158,6 +158,8 @@ async function toDoc(p, settings) {
       enrich_notes: f.enrich_notes || [], website_unverified: f.website_unverified || null,
     },
     source: merged.source,
+    // The CT filing this business's details came from, so the desk can link to it.
+    registry_id: merged.registry?.id || null,
     crm_ok: hasSubstance(merged) && inClassArea(merged),
     crm_notes: buildCrmNotes(merged),
     card_line: cardLine(merged),
