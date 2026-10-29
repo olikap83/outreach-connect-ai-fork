@@ -554,3 +554,14 @@ test('greets by name only when the name is confirmed, not just from the state fi
   const ownEmail = { ...base, email: 'amelendez@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } };
   assert.match(composeInitial(ownEmail, settings).body, /^Hi Antonio,/);
 });
+
+test('larger companies are caught by what their own site says', () => {
+  const { bigCompanySignals } = require('../lib/outreach/enrich');
+  const { readinessProblems } = require('../lib/outreach/verify');
+  const nexdine = 'NEXDINE Hospitality serves corporate dining, education and senior living clients across six states. Leadership: David Lanci, Chief Executive Officer. David Chechik, Chief Growth Officer. Over 1,500 team members.';
+  const sig = bigCompanySignals(nexdine);
+  assert.ok(sig.length >= 3, sig.join(' | '));
+  assert.equal(readinessProblems({ name: 'Nexdine LLC', town: 'Mansfield', state: 'MA', email: 'david@nexdinehospitality.com', domain: 'nexdinehospitality.com', facts: { big_signals: sig } }).length, 1);
+  assert.deepEqual(bigCompanySignals("Family-owned since 1998. Our team of 8 serves Coventry and Tolland. Call us at 860-555-1212. We're hiring!"), []);
+  assert.deepEqual(bigCompanySignals('We have served 2,500 happy customers in Connecticut.'), []);
+});
