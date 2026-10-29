@@ -648,7 +648,7 @@ async function sendInitial(p, vals) {
   if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
   if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(vals.email)) throw new Error('That email address doesn\'t look right.');
   if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails. Sending more from a personal Gmail gets it flagged as spam.`);
-  const res = await S.mcp.callTool(GMAIL, 'send_message', { to: [vals.email], ...ccList(), subject: vals.subject, body: vals.body });
+  const res = await S.mcp.callTool(GMAIL, 'send_message', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body) });
   const pl = res.payload || {};
   const sentAt = nowIso();
   await patch(p.id, {
@@ -670,7 +670,7 @@ async function sendFollowup(p) {
   const greet = (/^Hi [^\n]+,/.exec(p.body || '') || [`Hi ${shortName(p.name)} team,`])[0];
   const body = `${greet}\n\nJust bumping this in case it got buried. Even a 10-minute call would help me a lot; I'm trying to learn how businesses like yours actually run, whether or not we ever work together.\n\nAnd if now isn't a good time, no worries at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
   const subject = /^re:/i.test(p.subject || '') ? p.subject : `Re: ${p.subject || p.name}`;
-  await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, body, ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
+  await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
   await patch(p.id, { status: 'followed_up', followup_at: nowIso(), followup_body: body }, `Followed up with ${p.email}`);
   if (p.crm_org_id) logToCrm(p, 'email', `Follow-up email sent to ${p.email}.\n\n${body}`).catch(() => {});
 }
@@ -762,7 +762,7 @@ async function sendReply(p, body) {
   const msgs = Array.isArray(S.threads[tid]) ? S.threads[tid] : [];
   const last = [...msgs].reverse().find(m => fromThem(p, m)) || msgs[msgs.length - 1];
   if (!last || !last.id) throw new Error('Couldn\'t find their message in Gmail. Answer it from Gmail instead.');
-  await S.mcp.callTool(GMAIL, 'reply', { messageId: last.id, body, ...ccList() });
+  await S.mcp.callTool(GMAIL, 'reply', { messageId: last.id, ...mailBodies(body), ...ccList() });
   const at = nowIso();
   await patch(p.id, { answered_at: at, reply_draft: null, my_replies: [...(p.my_replies || []), { at, body }].slice(-10) }, `Answered ${p.contact_name || p.email}`);
   delete S.replyDrafts[p.id];
@@ -796,7 +796,7 @@ Under 300 words. No markdown symbols other than "- ". No intro or sign-off.`;
 }
 
 async function saveGmailDraft(p, vals) {
-  const res = await S.mcp.callTool(GMAIL, 'create_draft', { to: [vals.email], ...ccList(), subject: vals.subject, body: vals.body });
+  const res = await S.mcp.callTool(GMAIL, 'create_draft', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body) });
   await patch(p.id, { email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body, gmail_draft_url: (res.payload || {}).viewUrl || null }, 'Saved as a Gmail draft');
 }
 
@@ -819,6 +819,16 @@ function newSubject(p) {
 const LINKEDIN_LINE = /\n\n(More about me: |If you want to know a bit more about me first, here's my LinkedIn: )https?:\/\/\S+\n\n/;
 // The signature carries his UConn address and LinkedIn instead.
 const SIGNATURE = 'Thanks,\nSoham Shah\nAccounting, University of Connecticut\nsoham.shah@uconn.edu · linkedin.com/in/soham-shah-uconn';
+// Every email goes out with an HTML version, so the LinkedIn address shows as a
+// clean "LinkedIn" link instead of Gmail's long google.com/url redirect.
+const LINKEDIN_URL = 'https://www.linkedin.com/in/soham-shah-uconn';
+function mailBodies(body) {
+  const html = esc(body)
+    .replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, `<a href="${LINKEDIN_URL}">LinkedIn</a>`)
+    .replace(/soham\.shah@uconn\.edu/g, '<a href="mailto:soham.shah@uconn.edu">soham.shah@uconn.edu</a>')
+    .replace(/\n/g, '<br>');
+  return { body: body.replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, LINKEDIN_URL), htmlBody: `<div>${html}</div>` };
+}
 const OLD_SIGNATURES = ['Thanks,\nSoham Shah\nUniversity of Connecticut', 'Thanks,\nSoham Shah\nConnect.AI, University of Connecticut\nconnect-ai.world'];
 let stripping = false;
 async function stripLinkedIn() {
