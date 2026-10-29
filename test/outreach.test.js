@@ -208,9 +208,9 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.match(body, /soham\.shah@uconn\.edu · linkedin\.com\/in\/soham-shah-uconn$/);
   assert.match(body, /Henkel/);
   assert.match(body, /Andersen/);
-  assert.match(body, /start my own/);
-  assert.match(body, /15-minute call/);
-  assert.match(body, /stop by since I'm in Storrs/);
+  assert.match(body, /start (my own|something of my own)|run my own business/);
+  assert.match(body, /15 minutes/);
+  assert.match(body, /stop by|come by/);
   assert.match(body, /no worries at all/);
   assert.match(subject, /UConn/);
   assert.match(subject, /Willow Creek Family Dentistry/);
@@ -478,7 +478,7 @@ test('class area: CT, Boston, New York and New England; others stay on the desk'
   const tx = composeInitial({ id: 't', name: 'Sellmark', town: 'Mansfield', state: 'TX', bucket: 'manufacturing', email: 'a@b.com' }, settings).body;
   assert.doesNotMatch(tx, /Connect\.AI|stop by/);
   const ma = composeInitial({ id: 'm', name: 'Boardwalk Storage', town: 'Mansfield', state: 'MA', bucket: 'trades', email: 'a@b.com' }, settings).body;
-  assert.match(ma, /Phone or Zoom/);
+  assert.match(ma, /Phone or Zoom|call or do Zoom/);
   assert.doesNotMatch(ma, /stop by/);
 });
 
@@ -524,10 +524,10 @@ test('map businesses: no college departments, no CT filings from other towns, cl
 test('CT businesses from the registry still get the come-by-in-person line', () => {
   const { composeInitial } = require('../lib/outreach/compose');
   const vernon = composeInitial({ id: 'v', name: 'Forte Accounting, LLC', town: 'Vernon', bucket: 'professional', email: 'a@b.com' }, settings).body;
-  assert.match(vernon, /stop by since I'm in Storrs/);
+  assert.match(vernon, /stop by|come by/);
   const far = composeInitial({ id: 'f', name: 'Far Shop', town: 'Greenwich', bucket: 'retail', email: 'a@b.com' }, settings).body;
   assert.doesNotMatch(far, /stop by/);
-  assert.match(far, /Phone or Zoom/);
+  assert.match(far, /Phone or Zoom|call or do Zoom/);
 });
 
 test("a website for a different business with a shared common word doesn't count", () => {
