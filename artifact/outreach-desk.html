@@ -1507,6 +1507,28 @@ function sourceLink(name, p) {
   const s = nameSource(name, p);
   return s ? `<a href="${esc(s.href)}" target="_blank" rel="noopener">(${s.label} ↗)</a>` : '<span style="color:var(--crimson)">(no source found)</span>';
 }
+// Where the email address and phone number came from, as links. A phone
+// number with no source isn't shown at all.
+function emailSource(p) {
+  if (p.email_url) return p.email_url;
+  if (p.email_source === 'registry') return filingUrl(p);
+  if (p.email_source === 'osm' && p.source_ref) return `https://www.openstreetmap.org/${p.source_ref}`;
+  return null;
+}
+function phoneSource(p) {
+  if (!p.phone || !p.phone_url) return null;
+  return { href: p.phone_url, label: /openstreetmap\.org/.test(p.phone_url) ? 'from OpenStreetMap' : 'from their website' };
+}
+// Other class-area states have no open data like Connecticut's, so for those
+// the desk links the state's own business search instead.
+const STATE_SEARCH = {
+  MA: ['MA business search', 'https://corp.sec.state.ma.us/corpweb/corpsearch/corpsearch.aspx'],
+  RI: ['RI business search', 'https://business.sos.ri.gov/corpweb/corpsearch/corpsearch.aspx'],
+  NH: ['NH business search', 'https://quickstart.sos.nh.gov/online/BusinessInquire'],
+  VT: ['VT business search', 'https://bizfilings.vermont.gov/online/BusinessInquire'],
+  ME: ['ME business search', 'https://apps3.web.maine.gov/nei-sos-icrs/ICRS?MainPage=x'],
+  NY: ['NY business search', 'https://apps.dos.ny.gov/publicInquiry/'],
+};
 const fromFiling = p => p.source === 'registry' || ((p.facts || {}).people || []).some(x => x.how === 'state filing');
 
 function detailHtml(id) {
@@ -1538,7 +1560,8 @@ function detailHtml(id) {
           ${p.gmail_draft_url ? `<a href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Gmail draft ↗</a>` : ''}
           ${crmUrl ? `<a href="${crmUrl}" target="_blank" rel="noopener">In class CRM ↗</a>` : ''}
           ${fromFiling(p) ? `<a href="${filingUrl(p)}" target="_blank" rel="noopener" title="The business's Connecticut registration: address, email, date (public data)">CT filing ↗</a>${p.registry_id ? `<a href="${personFilingUrl('', p)}" target="_blank" rel="noopener" title="Everyone listed on this business's Connecticut filing (public data)">People on the filing ↗</a>` : ''}<a href="${CT_SEARCH}" target="_blank" rel="noopener" title="Connecticut's business search: type the business name">CT business search ↗</a>` : ''}
-          ${p.phone ? `<span style="color:var(--muted)">${esc(p.phone)}</span>` : ''}
+          ${phoneSource(p) ? `<span style="color:var(--muted)">${esc(p.phone)} <a href="${esc(phoneSource(p).href)}" target="_blank" rel="noopener">(${phoneSource(p).label} ↗)</a></span>` : ''}
+          ${STATE_SEARCH[stateOf(p)] ? `<a href="${STATE_SEARCH[stateOf(p)][1]}" target="_blank" rel="noopener" title="This state's business registry: type the business name to see who's listed on its filing">${STATE_SEARCH[stateOf(p)][0]} ↗</a>` : ''}
         </div>
       </div>
       ${p.fit_score != null ? `<div class="fitbig"><div class="v">${p.fit_score}</div><div class="bar"><i style="width:${Math.max(0, Math.min(100, p.fit_score))}%"></i></div><div class="eyebrow">Fit score</div></div>` : ''}
@@ -1552,7 +1575,7 @@ function detailHtml(id) {
         ${editable ? `<div class="section">
           <span class="eyebrow">Email</span>
           <div class="row2">
-            <div class="field"><label for="dTo">To ${src ? `· <span class="badge ${src[1]}" style="font-size:8.5px">${esc(src[0])}</span>` : ''}</label><input id="dTo" type="email" value="${esc(p.email || '')}" placeholder="Add an email address">${settings().cc_email ? `<div style="font-size:11px; color:var(--muted); margin-top:4px">cc ${esc(settings().cc_email)}</div>` : ''}</div>
+            <div class="field"><label for="dTo">To ${src ? `· ${emailSource(p) ? `<a class="badge ${src[1]}" style="font-size:8.5px; text-decoration:none" href="${esc(emailSource(p))}" target="_blank" rel="noopener" title="Open where this address was found">${esc(src[0])} ↗</a>` : `<span class="badge ${src[1]}" style="font-size:8.5px">${esc(src[0])}</span>`}` : ''}</label><input id="dTo" type="email" value="${esc(p.email || '')}" placeholder="Add an email address">${settings().cc_email ? `<div style="font-size:11px; color:var(--muted); margin-top:4px">cc ${esc(settings().cc_email)}</div>` : ''}</div>
             <div class="field"><label for="dName">Their name${p.contact_name ? (() => { const ns = nameSource(p.contact_name, p); return ns ? ` · <a class="badge ${ns.ok ? 'ok' : 'warn'}" style="font-size:8.5px; text-decoration:none" href="${esc(ns.href)}" target="_blank" rel="noopener" title="Open where this name came from">${ns.ok ? ns.label : 'from the state filing, not confirmed'} ↗</a>` : ' · <span class="badge red" style="font-size:8.5px">no source found, check before sending</span>'; })() : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
           </div>
           <div class="field"><label for="dSubj">Subject</label><input id="dSubj" value="${esc(p.subject || '')}"></div>

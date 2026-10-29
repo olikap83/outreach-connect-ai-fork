@@ -9,8 +9,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { fetchPage, extractPage } = require('../lib/outreach/enrich');
-const { registryLookup, registryPrincipals } = require('../lib/outreach/sources');
+const { fetchPage, extractPage, phoneOnPages } = require('../lib/outreach/enrich');
+const { registryLookup, registryPrincipals, runOverpass } = require('../lib/outreach/sources');
 const { greeting } = require('../lib/outreach/compose');
 const { mapLimit, nameKey, stateOf } = require('../lib/outreach/util');
 
@@ -44,6 +44,20 @@ async function filingFor(doc) {
   return null;
 }
 
+// The OpenStreetMap entry a business came from ("node/123"), found again by
+// its exact name in its state. With several, the one with the same phone.
+async function osmRef(doc) {
+  const st = stateOf(doc);
+  if (!st || !doc.name) return null;
+  const name = String(doc.name).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const q = `[out:json][timeout:25];area["ISO3166-2"="US-${st}"]->.a;nwr["name"="${name}"](area.a);out tags 10;`;
+  const res = await runOverpass(q).catch(() => null);
+  const els = (res && res.elements) || [];
+  const digits = x => String(x || '').replace(/\D/g, '').slice(-10);
+  const pick = els.length === 1 ? els[0] : els.find(e => doc.phone && digits((e.tags || {}).phone || (e.tags || {})['contact:phone']) === digits(doc.phone));
+  return pick ? `${pick.type}/${pick.id}` : null;
+}
+
 async function pagesFor(doc) {
   const urls = [...new Set([...((doc.facts || {}).pages_read || []), doc.website].filter(Boolean))].slice(0, 6);
   const out = [];
@@ -59,13 +73,12 @@ async function source(doc) {
   if (doc.contact_name && !people.some(x => samePerson(x.name, doc.contact_name))) {
     people.unshift({ name: doc.contact_name, role: (doc.contact_title || '').toLowerCase() || null, how: 'site text' });
   }
-  if (!people.length) return null;
-
   let filing = null;
   // A lookup that errors (network) fails the whole business, so it's left as
   // is rather than losing names we just couldn't check.
   if (people.some(x => x.how === 'state filing' || !x.url)) filing = await filingFor(doc);
   let pages = null;
+  const getPages = async () => (pages = pages || await pagesFor(doc));
   for (const x of people) {
     const onFiling = filing && filing.principals.some(pr => samePerson(pr.name, x.name));
     if (x.how === 'state filing') {
@@ -73,7 +86,7 @@ async function source(doc) {
       continue;
     }
     if (!x.url) {
-      pages = pages || await pagesFor(doc);
+      await getPages();
       x.url = (pages.find(pg => nameOnPage(x.name, pg.text)) || {}).url || null;
     }
     // Not on their site, but on the filing: that's the source then.
@@ -91,19 +104,37 @@ async function source(doc) {
     data.contact_name = owner ? owner.name : null;
     data.contact_title = owner && owner.role ? owner.role.replace(/\b\w/g, c => c.toUpperCase()) : null;
   }
+  // The email address and phone number get their sources too.
+  if (doc.email && !doc.email_url && doc.email_source === 'website') {
+    const hit = (await getPages()).find(pg => (pg.emails || []).includes(doc.email) || String(pg.html || '').toLowerCase().includes(doc.email));
+    if (hit) data.email_url = hit.url;
+  }
+  if (doc.phone && !doc.phone_url) {
+    const onSite = phoneOnPages(doc.phone, doc.website ? await getPages() : []);
+    const osm = onSite ? null : (doc.source_ref || (doc.source === 'osm' ? await osmRef(doc) : null));
+    if (onSite) data.phone_url = onSite;
+    else if (osm) { data.phone_url = `https://www.openstreetmap.org/${osm}`; data.source_ref = osm; }
+  }
+  if (doc.email_source === 'osm' && !doc.source_ref && !data.source_ref) {
+    const osm = await osmRef(doc);
+    if (osm) data.source_ref = osm;
+  }
+
   const next = { ...doc, ...data };
   if (UNSENT.has(doc.status) && /^Hi [^\n]*,\n/.test(doc.body || '')) {
     const hi = greeting(next);
     const body = doc.body.replace(/^Hi [^\n]*,\n/, `${hi}\n`);
     if (body !== doc.body) data.body = body;
   }
-  const changed = JSON.stringify(kept) !== JSON.stringify(facts.people || []) || data.registry_id || data.body || 'contact_name' in data;
+  const peopleChanged = JSON.stringify(kept) !== JSON.stringify(facts.people || []);
+  if (!peopleChanged) delete data.facts;
+  const changed = peopleChanged || data.registry_id || data.body || 'contact_name' in data || data.email_url || data.phone_url || data.source_ref;
   if (!changed) return null;
   const now = new Date().toISOString();
   data.updated_at = now;
   const what = dropped.length
     ? `Names checked against sources; dropped ${dropped.join(', ')} (no source found)`
-    : 'Names checked against sources: each links to where it was found';
+    : 'Names, email and phone checked against sources: each links to where it was found';
   data.log = [...(doc.log || []), { at: now, what }].slice(-40);
   return { id: doc.id, data, dropped };
 }
@@ -114,8 +145,8 @@ async function main() {
   fs.mkdirSync(outDir, { recursive: true });
   const docs = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
     .map(f => { const j = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); return { id: f.replace(/\.json$/, ''), ...(j.data || j) }; });
-  const todo = docs.filter(d => d.contact_name || ((d.facts || {}).people || []).length);
-  console.log(`Checking names on ${todo.length} businesses`);
+  const todo = docs.filter(d => d.contact_name || ((d.facts || {}).people || []).length || d.phone || d.email);
+  console.log(`Checking names, emails and phone numbers on ${todo.length} businesses`);
   let i = 0;
   const updates = (await mapLimit(todo, 4, async d => {
     try {

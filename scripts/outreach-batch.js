@@ -142,7 +142,8 @@ async function toDoc(p, settings) {
   return {
     id: docId(merged),
     name: merged.name, category: merged.category || null, bucket: merged.bucket || null,
-    town: merged.town || null, state: stateOf(merged), address: merged.address || null, phone: merged.phone || null,
+    town: merged.town || null, state: stateOf(merged), address: merged.address || null, phone: merged.phone || null, phone_url: merged.phone_url || null,
+    source_ref: merged.source_ref || null, email_url: merged.email_url || null,
     website: merged.website || null, domain: merged.domain || null, website_verified: !!merged.website_verified,
     miles_from_storrs: merged.miles_from_storrs ?? null,
     contact_name: merged.contact_name || null, contact_title: merged.contact_title || null,
