@@ -200,23 +200,23 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.match(body, /^Hi Karen,/);
   assert.match(body, /Willow Creek Family Dentistry/);
   assert.match(body, /since 1998|family-owned/);
-  assert.match(body, /build it for free/);
+  assert.match(body, /Connect\.AI/);
+  assert.doesNotMatch(body, /connect-ai\.world\/apply|free AI-readiness|build it for free/);
   assert.doesNotMatch(body, /Small Business Development Center/);
-  assert.match(body, /connect-ai\.world\/apply/);
   assert.match(body, /accounting major/);
   assert.match(body, /linkedin\.com\/in\/soham-shah-uconn/);
   assert.match(body, /Henkel/);
   assert.match(body, /Andersen/);
   assert.match(body, /start my own/);
   assert.match(body, /15-minute call/);
-  assert.match(body, /come by Mansfield in person/);
-  assert.match(body, /no worries at all, just let me know/);
+  assert.match(body, /stop by since I'm in Storrs/);
+  assert.match(body, /no worries at all/);
   assert.match(subject, /UConn/);
   assert.match(subject, /Willow Creek Family Dentistry/);
   assert.match(body, /I'm curious how a practice your size/);
   assert.doesNotMatch(body, /\{|\}|undefined|null/);
   const words = body.split(/\s+/).length;
-  assert.ok(words < 260, `email is ${words} words`);
+  assert.ok(words < 190, `email is ${words} words`);
 });
 
 test('wording varies between businesses', () => {
@@ -463,10 +463,10 @@ test('class area: CT, Boston, New York and New England; others stay on the desk'
   assert.equal(placeLabel({ town: 'Mansfield', state: 'MA' }), 'Mansfield, MA');
   const { composeInitial } = require('../lib/outreach/compose');
   const tx = composeInitial({ id: 't', name: 'Sellmark', town: 'Mansfield', state: 'TX', bucket: 'manufacturing', email: 'a@b.com' }, settings).body;
-  assert.doesNotMatch(tx, /connect-ai\.world\/apply|come by/);
+  assert.doesNotMatch(tx, /Connect\.AI|stop by/);
   const ma = composeInitial({ id: 'm', name: 'Boardwalk Storage', town: 'Mansfield', state: 'MA', bucket: 'trades', email: 'a@b.com' }, settings).body;
-  assert.match(ma, /phone or Zoom/);
-  assert.doesNotMatch(ma, /come by/);
+  assert.match(ma, /Phone or Zoom/);
+  assert.doesNotMatch(ma, /stop by/);
 });
 
 test('emails read right for businesses in other states', () => {
@@ -511,10 +511,10 @@ test('map businesses: no college departments, no CT filings from other towns, cl
 test('CT businesses from the registry still get the come-by-in-person line', () => {
   const { composeInitial } = require('../lib/outreach/compose');
   const vernon = composeInitial({ id: 'v', name: 'Forte Accounting, LLC', town: 'Vernon', bucket: 'professional', email: 'a@b.com' }, settings).body;
-  assert.match(vernon, /come by Vernon in person/);
+  assert.match(vernon, /stop by since I'm in Storrs/);
   const far = composeInitial({ id: 'f', name: 'Far Shop', town: 'Greenwich', bucket: 'retail', email: 'a@b.com' }, settings).body;
-  assert.doesNotMatch(far, /come by/);
-  assert.match(far, /phone or Zoom/);
+  assert.doesNotMatch(far, /stop by/);
+  assert.match(far, /Phone or Zoom/);
 });
 
 test("a website for a different business with a shared common word doesn't count", () => {
