@@ -9,7 +9,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { fetchPage, extractPage, phoneOnPages } = require('../lib/outreach/enrich');
+const { fetchPage, extractPage, phoneOnPages, factSources, keepSourced } = require('../lib/outreach/enrich');
+const { scoreProspect } = require('../lib/outreach/score');
+const { buildCrmNotes } = require('../lib/outreach/crmnotes');
 const { registryLookup, registryPrincipals, runOverpass } = require('../lib/outreach/sources');
 const { greeting } = require('../lib/outreach/compose');
 const { mapLimit, nameKey, stateOf } = require('../lib/outreach/util');
@@ -122,7 +124,9 @@ async function source(doc, restore) {
     if (onSite) data.phone_url = onSite;
     else if (osm) { data.phone_url = `https://www.openstreetmap.org/${osm}`; data.source_ref = osm; }
   }
-  if (doc.email_source === 'osm' && !doc.source_ref && !data.source_ref) {
+  // A business found on OpenStreetMap: its map entry is the source for its
+  // category and address.
+  if (doc.source === 'osm' && !doc.source_ref && !data.source_ref) {
     const osm = await osmRef(doc);
     if (osm) data.source_ref = osm;
   }
@@ -143,16 +147,34 @@ async function source(doc, restore) {
   }
   if (!phoneOk) { thrownOut.push(`phone ${doc.phone}`); data.phone = null; }
 
+  // Every fact read off their website keeps the page it's on; the rest go.
+  const newFacts = { ...facts, people: kept };
+  const siteFacts = ['founded', 'years_claimed', 'family_owned', 'locally_owned', 'team_size_text', 'phone_first', 'quote_requests', 'hiring',
+    'paper_forms', 'catering', 'online_ordering', 'has_faq', 'site_year', 'platform', 'description', 'about', 'site_title',
+    'booking_tools', 'chat_tools', 'shop_tools', 'big_signals', 'socials'];
+  if (siteFacts.some(k => Array.isArray(facts[k]) ? facts[k].length : facts[k] != null && facts[k] !== false)) {
+    const read = doc.website && doc.website_verified !== false ? await getPages() : [];
+    newFacts.sources = read.length ? factSources(read, doc.bucket, newFacts) : {};
+    keepSourced(newFacts);
+  }
+  const factsChanged = JSON.stringify(newFacts) !== JSON.stringify(facts);
+  if (factsChanged) data.facts = newFacts; else delete data.facts;
+
   const { _restored, ...plain } = doc;
-  const next = { ...plain, ...data };
+  const next = { ...plain, ...data, facts: newFacts };
+  // The score and the class CRM notes only use facts that have a link.
+  const scored = scoreProspect(next);
+  if (scored.fit_score !== doc.fit_score || JSON.stringify(scored.fit_reasons) !== JSON.stringify(doc.fit_reasons)) Object.assign(data, scored);
+  if (doc.crm_org_id) {
+    const notes = buildCrmNotes({ ...next, ...scored });
+    if (notes !== doc.crm_notes) Object.assign(data, { crm_notes: notes, crm_notes_synced: false });
+  }
   if (UNSENT.has(doc.status) && /^Hi [^\n]*,\n/.test(doc.body || '')) {
     const hi = greeting(next);
     const body = doc.body.replace(/^Hi [^\n]*,\n/, `${hi}\n`);
     if (body !== doc.body) data.body = body;
   }
-  const peopleChanged = JSON.stringify(kept) !== JSON.stringify(facts.people || []);
-  if (!peopleChanged) delete data.facts;
-  const changed = peopleChanged || data.registry_id || data.body || 'contact_name' in data || data.email_url || data.phone_url || data.source_ref || thrownOut.length;
+  const changed = data.facts || data.fit_score != null || data.crm_notes || data.registry_id || data.body || 'contact_name' in data || data.email_url || data.phone_url || data.source_ref || thrownOut.length;
   if (!changed) return null;
   const now = new Date().toISOString();
   data.updated_at = now;
@@ -172,8 +194,8 @@ async function main() {
   const docs = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
     .map(f => { const j = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); return { id: f.replace(/\.json$/, ''), ...(j.data || j) }; });
   const restore = arg('restore') ? JSON.parse(fs.readFileSync(arg('restore'), 'utf8')) : null;
-  const todo = docs.filter(d => d.contact_name || ((d.facts || {}).people || []).length || d.phone || d.email);
-  console.log(`Checking names, emails and phone numbers on ${todo.length} businesses`);
+  const todo = docs;
+  console.log(`Checking every fact on ${todo.length} businesses against its source`);
   let i = 0;
   const updates = (await mapLimit(todo, 4, async d => {
     try {

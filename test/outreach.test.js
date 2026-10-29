@@ -392,27 +392,37 @@ test('daily cap, auto-queue rules, and overlapping runs never double-send', asyn
 
 const { buildCrmNotes, hasSubstance } = require('../lib/outreach/crmnotes');
 
-test('CRM notes say something real about the business', () => {
+test('CRM notes say something real about the business, each with its source link', () => {
+  const site = 'https://willowcreekdental.com/';
+  const about = 'https://willowcreekdental.com/about';
   const notes = buildCrmNotes({
     name: 'Willow Creek Family Dentistry, LLC', town: 'Mansfield', address: '12 Storrs Rd, Mansfield', miles_from_storrs: 2.1,
-    website: 'https://willowcreekdental.com/', contact_name: 'Karen Whitfield', contact_title: 'Owner',
-    email: 'karen@willowcreekdental.com', email_source: 'website', phone: '(860) 555-0142', fit_score: 88, category: 'Dentist',
-    facts: { about: 'We are a family-owned practice serving Mansfield since 1998.', team_size_text: 9, founded: 1998, phone_first: true, family_owned: true },
+    website: site, contact_name: 'Karen Whitfield', contact_title: 'Owner', source: 'osm', source_ref: 'node/42',
+    email: 'karen@willowcreekdental.com', email_source: 'website', email_url: about, phone: '(860) 555-0142', phone_url: site, fit_score: 88, category: 'Dentist',
+    facts: {
+      about: 'We are a family-owned practice serving Mansfield since 1998.', team_size_text: 9, founded: 1998, phone_first: true, family_owned: true, hiring: true,
+      people: [{ name: 'Karen Whitfield', role: 'owner', how: 'site text', url: about }],
+      sources: { about, team_size_text: about, founded: about, phone_first: site, family_owned: about },
+    },
   });
-  assert.match(notes, /What they do: We are a family-owned practice/);
-  assert.match(notes, /Size: About 9 people/);
+  assert.match(notes, /What they do: We are a family-owned practice.* \(source: https:\/\/willowcreekdental\.com\/about\)/);
+  assert.match(notes, /Size: about 9 people, per their website \(source: /);
   assert.match(notes, /In business since: 1998/);
+  assert.match(notes, /Where: 12 Storrs Rd, Mansfield, CT \(2 mi from Storrs\) \(source: https:\/\/www\.openstreetmap\.org\/node\/42\)/);
   assert.match(notes, /Website: https:\/\/willowcreekdental\.com\//);
-  assert.match(notes, /Contact: Karen Whitfield \(Owner\), karen@willowcreekdental\.com \(from their website\)/);
-  assert.match(notes, /books appointments\/orders by phone/);
+  assert.match(notes, /Contact: Karen Whitfield \(Owner\) \(source: https:\/\/willowcreekdental\.com\/about\)/);
+  assert.match(notes, /Email: karen@willowcreekdental\.com \(source: /);
+  assert.match(notes, /books appointments\/orders by phone \(https:/);
+  assert.doesNotMatch(notes, /hiring/, 'a fact with no source is left out');
   assert.doesNotMatch(notes, /undefined|null/);
 
-  const reg = buildCrmNotes({ name: 'Rusty Mowers LLC', town: 'Mansfield', contact_name: 'Yasmine DelRio', email: 'rustymowersllc@gmail.com', email_source: 'registry',
-    facts: { naics: 'Landscaping Services (561730)', registered_year: 2019, people: [{ name: 'Yasmine DelRio', how: 'state filing' }] } });
-  assert.match(reg, /What they do: Landscaping Services \(the industry they filed with the state\)/);
-  assert.match(reg, /Small and owner-run/);
+  const reg = buildCrmNotes({ name: 'Rusty Mowers LLC', town: 'Mansfield', contact_name: 'Yasmine DelRio', email: 'rustymowersllc@gmail.com', email_source: 'registry', registry_id: '001ABC', source: 'registry',
+    facts: { naics: 'Landscaping Services (561730)', registered_year: 2019, people: [{ name: 'Yasmine DelRio', how: 'state filing', business_id: '001ABC' }] } });
+  assert.match(reg, /What they do: Landscaping Services \(the industry they filed with the state\) \(source: https:\/\/data\.ct\.gov\/resource\/n7gp-d28j\.json\?id=001ABC\)/);
+  assert.match(reg, /one person listed on the state filing.*ka36-64k6\.json\?business_id=001ABC/);
   assert.match(reg, /registered with the CT Secretary of the State in 2019/);
-  assert.match(reg, /Website: none found/);
+  assert.match(reg, /Contact: Yasmine DelRio \(source: https:\/\/data\.ct\.gov\/resource\/ka36-64k6/);
+  assert.doesNotMatch(reg, /Website:/);
 });
 
 test('addresses and shell names never go to the CRM', () => {
@@ -567,4 +577,23 @@ test('larger companies are caught by what their own site says', () => {
   assert.equal(readinessProblems({ name: 'Nexdine LLC', town: 'Mansfield', state: 'MA', email: 'david@nexdinehospitality.com', domain: 'nexdinehospitality.com', facts: { big_signals: sig } }).length, 1);
   assert.deepEqual(bigCompanySignals("Family-owned since 1998. Our team of 8 serves Coventry and Tolland. Call us at 860-555-1212. We're hiring!"), []);
   assert.deepEqual(bigCompanySignals('We have served 2,500 happy customers in Connecticut.'), []);
+});
+
+test('every fact read off a website keeps the page it came from; facts with no page are dropped', () => {
+  const { extractFacts, factSources, keepSourced } = require('../lib/outreach/enrich');
+  const page = (url, text, links = []) => ({ url, text, html: text, paragraphs: [], jsonld: [], links, emails: [] });
+  const pages = [
+    page('https://x.com/', 'Welcome. Request a free estimate today. © 2026', [{ url: 'https://facebook.com/xco', label: 'fb' }]),
+    page('https://x.com/about', 'We are a family-owned shop, established in 1987. Now hiring!'),
+  ];
+  const facts = extractFacts(pages, 'trades');
+  facts.sources = factSources(pages, 'trades', facts);
+  assert.equal(facts.sources.quote_requests, 'https://x.com/');
+  assert.equal(facts.sources.family_owned, 'https://x.com/about');
+  assert.equal(facts.sources.founded, 'https://x.com/about');
+  assert.equal(facts.sources.hiring, 'https://x.com/about');
+  assert.equal(facts.sources['socials:facebook'], 'https://facebook.com/xco');
+  const kept = keepSourced({ ...facts, catering: true, sources: { ...facts.sources } });
+  assert.equal(kept.catering, undefined, 'no page says it, so it goes');
+  assert.equal(kept.family_owned, true);
 });

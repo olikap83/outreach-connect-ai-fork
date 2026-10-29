@@ -714,15 +714,29 @@ function conversationText(p) {
   return [`Soham:\n${p.body || ''}`, p.followup_body ? `Soham (follow-up):\n${p.followup_body}` : null, p.reply_snippet ? `${p.contact_name || 'Them'}:\n${p.reply_snippet}` : null].filter(Boolean).join('\n\n---\n\n');
 }
 
+// Only facts with a link go to Claude, each with its source, so nothing it
+// writes about the business is unbacked.
 function businessFacts(p) {
   const f = p.facts || {};
-  return {
-    business: shortName(p.name), kind: p.category, town: placeLabel(p), state: stateOf(p), contact: p.contact_name, title: p.contact_title,
-    website: p.website, founded: f.founded, years: f.years_claimed, family_owned: f.family_owned, team_size: f.team_size_text,
-    books_by_phone: f.phone_first, takes_quote_requests: f.quote_requests, paper_forms: f.paper_forms, hiring: f.hiring, catering: f.catering,
-    tools_on_site: [...(f.booking_tools || []), ...(f.shop_tools || []), ...(f.chat_tools || [])].map(toolName), site_platform: f.platform ? toolName(f.platform) : null,
-    how_they_describe_themselves: f.description || f.about || null,
-  };
+  const out = { business: shortName(p.name), town: placeLabel(p), state: stateOf(p) };
+  const add = (name, value, key) => { const url = factUrl(p, key); if (value != null && value !== false && value !== '' && url) out[name] = { value, source: url }; };
+  add('kind', p.category, 'category');
+  add('contact', p.contact_name && `${p.contact_name}${p.contact_title ? ` (${p.contact_title})` : ''}`, 'contact');
+  add('website', p.website, 'website');
+  add('founded', f.founded, 'founded');
+  add('years_in_business', f.years_claimed, 'years_claimed');
+  add('family_owned', f.family_owned, 'family_owned');
+  add('team_size', f.team_size_text, 'team_size_text');
+  add('books_by_phone', f.phone_first, 'phone_first');
+  add('takes_quote_requests', f.quote_requests, 'quote_requests');
+  add('paper_forms', f.paper_forms, 'paper_forms');
+  add('hiring', f.hiring, 'hiring');
+  add('catering', f.catering, 'catering');
+  for (const k of ['booking_tools', 'shop_tools', 'chat_tools']) for (const t of f[k] || []) add(`uses_${t}`, toolName(t), `${k}:${t}`);
+  add('site_platform', f.platform && toolName(f.platform), 'platform');
+  add('how_they_describe_themselves', f.description, 'description');
+  add('about', f.about, 'about');
+  return out;
 }
 
 async function draftReply(p, ta) {
@@ -778,20 +792,20 @@ async function sendReply(p, body) {
 async function makePrepSheet(p, pre) {
   const prompt = `Make a one-page call prep sheet for ${settings().sender_name}, a UConn accounting student, who has a short call coming up with a small-business owner. He wants to learn how the business really runs day to day${inClassArea(p) ? ', and his UConn course (Connect.AI) may build them a free AI tool later, but this call is about listening, not pitching' : ''}.
 
-What we know (use only this; if something isn't known, say so instead of guessing):
+What we know (use only this; if something isn't known, say so instead of guessing). Each fact has the link it came from:
 ${JSON.stringify(businessFacts(p))}
 
 The emails so far, oldest first:
 ${conversationText(p)}
 
 Write plain text with these headings, each on its own line, and "- " bullets under them:
-WHO THEY ARE (2 or 3 short bullets)
-WHAT THEIR WEBSITE SUGGESTS ABOUT HOW THEY WORK (2 to 4 bullets; only what the facts above show)
+WHO THEY ARE (2 or 3 short bullets, each ending with its source link in parentheses, copied exactly from the facts above)
+WHAT THEIR WEBSITE SUGGESTS ABOUT HOW THEY WORK (2 to 4 bullets; only what the facts above show, each ending with its source link in parentheses)
 WHAT THEY SAID (1 or 2 bullets summing up their reply)
 QUESTIONS TO ASK (6 open questions for this kind of business: how a normal day goes, where the hours go, what tools or paper they use, what they'd fix first, how they find customers, what they wish someone had told them when starting)
 WHERE AI MIGHT HELP, TO ASK ABOUT (2 or 3 bullets, written as questions, not promises)
 KEEP IN MIND (2 or 3 bullets: listen more than talk, take notes, ask if it's OK to follow up${inClassArea(p) ? ', mention the form only if it comes up naturally' : ''})
-Under 300 words. No markdown symbols other than "- ". No intro or sign-off.`;
+Under 350 words. No markdown symbols other than "- ". No intro or sign-off. Never state a fact about the business that isn't in the facts above.`;
   pre.textContent = '';
   const out = await S.sample(prompt, { onText: ({ text }) => { pre.textContent = text; }, modelTier: 'default', cache: false });
   const text = (out && out.text) || pre.textContent;
@@ -887,11 +901,14 @@ function leadNextStep(p) {
 }
 function fallbackNotes(p) {
   const f = p.facts || {};
+  const line = (text, url) => text && url ? `${text} (source: ${url})` : null;
+  const aboutKey = f.about ? 'about' : f.description ? 'description' : null;
   return [
-    f.about || f.description ? `What they do: ${f.about || f.description}` : (p.category ? `What they do: ${p.category}` : null),
-    f.team_size_text ? `Size: about ${f.team_size_text} people` : null,
-    p.website ? `Website: ${p.website}` : 'Website: none found',
-    p.contact_name || p.email ? `Contact: ${[p.contact_name, p.email].filter(Boolean).join(', ')}` : null,
+    aboutKey ? line(`What they do: ${f[aboutKey]}`, factUrl(p, aboutKey)) : line(p.category && `What they do: ${p.category}`, factUrl(p, 'category')),
+    line(f.team_size_text && `Size: about ${f.team_size_text} people`, factUrl(p, 'team_size_text')),
+    p.website ? `Website: ${p.website}` : null,
+    line(p.contact_name && `Contact: ${p.contact_name}`, factUrl(p, 'contact')),
+    line(p.email && `Email: ${p.email}`, factUrl(p, 'email')),
     `Found by Soham's outreach research (fit ${p.fit_score ?? '?'}/100). Intro email drafted; not sent yet.`,
   ].filter(Boolean).join('\n');
 }
@@ -1360,20 +1377,23 @@ function renderCrm() {
 }
 
 // ---------- detail ----------
-function factChips(f) {
+function factChips(p) {
+  const f = p.facts || {};
   const out = [];
-  if (f.founded) out.push(`Since ${f.founded}`); else if (f.years_claimed) out.push(`${f.years_claimed}+ years`);
-  if (f.family_owned) out.push('Family-owned'); else if (f.locally_owned) out.push('Locally owned');
-  if (f.team_size_text) out.push(`Team of ~${f.team_size_text}`);
-  if (f.phone_first) out.push('Books by phone');
-  if (f.quote_requests) out.push('Takes quote requests');
-  if (f.paper_forms) out.push('Paper / PDF forms');
-  if (f.hiring) out.push('Hiring');
-  if (f.catering) out.push('Catering / events');
-  for (const t of [...(f.booking_tools || []), ...(f.shop_tools || []), ...(f.chat_tools || [])]) out.push(`Uses ${toolName(t)}`);
-  if (f.platform) out.push(`Site on ${toolName(f.platform)}`);
-  if (f.site_year) out.push(`Site © ${f.site_year}`);
-  if (f.registered_year) out.push(`Registered ${f.registered_year}`);
+  const add = (text, key) => { const url = factUrl(p, key); if (url) out.push({ text, url }); };
+  if (f.founded) add(`Since ${f.founded}`, 'founded'); else if (f.years_claimed) add(`${f.years_claimed}+ years`, 'years_claimed');
+  if (f.family_owned) add('Family-owned', 'family_owned'); else if (f.locally_owned) add('Locally owned', 'locally_owned');
+  if (f.team_size_text) add(`Team of ~${f.team_size_text}`, 'team_size_text');
+  if (f.phone_first) add('Books by phone', 'phone_first');
+  if (f.quote_requests) add('Takes quote requests', 'quote_requests');
+  if (f.paper_forms) add('Paper / PDF forms', 'paper_forms');
+  if (f.hiring) add('Hiring', 'hiring');
+  if (f.catering) add('Catering / events', 'catering');
+  for (const k of ['booking_tools', 'shop_tools', 'chat_tools']) for (const t of f[k] || []) add(`Uses ${toolName(t)}`, `${k}:${t}`);
+  if (f.platform) add(`Site on ${toolName(f.platform)}`, 'platform');
+  if (f.site_year) add(`Site © ${f.site_year}`, 'site_year');
+  for (const n of f.socials || []) add(`On ${n[0].toUpperCase()}${n.slice(1)}`, `socials:${n}`);
+  if (f.registered_year) add(`Registered ${f.registered_year}`, 'registered_year');
   return out;
 }
 
@@ -1443,7 +1463,7 @@ function prepHtml(p) {
   const busy = S.working[p.id] === 'prep';
   return `<div class="section prep">
     <span class="eyebrow">Call prep${p.prep_at ? ` · made ${esc(ago(p.prep_at))}` : ''}</span>
-    ${p.prep_sheet || busy ? `<pre id="prepText" class="prep-text">${esc(p.prep_sheet || '')}</pre>` : `<p class="help" style="margin-top:0">A one-page sheet for the call: who they are, what their website shows about how they work, what they said, and good questions to ask.</p>`}
+    ${p.prep_sheet || busy ? `<pre id="prepText" class="prep-text">${linkify(p.prep_sheet || '')}</pre>` : `<p class="help" style="margin-top:0">A one-page sheet for the call: who they are, what their website shows about how they work, what they said, and good questions to ask.</p>`}
     <div class="actions">
       ${S.sample ? `<button class="btn${p.prep_sheet ? '' : ' solid'}" data-act="prep" ${busy ? 'disabled' : ''}>${busy ? 'Writing…' : p.prep_sheet ? 'Redo' : 'Make a prep sheet'}</button>` : '<span class="help">Claude isn\'t available in this view.</span>'}
       ${p.prep_sheet ? '<button class="btn ghost" data-act="copy-prep">Copy</button>' : ''}
@@ -1509,6 +1529,33 @@ function sourceLink(name, p) {
 }
 // Where the email address and phone number came from, as links. A phone
 // number with no source isn't shown at all.
+// The link behind every fact on the desk (same keys as lib/outreach/factsources.js).
+// A fact with no link isn't shown.
+function osmUrl(p) { return p.source_ref ? `https://www.openstreetmap.org/${p.source_ref}` : null; }
+function listingUrl(p) { return p.source === 'osm' ? osmUrl(p) || (p.registry_id ? filingUrl(p) : null) : (p.registry_id ? filingUrl(p) : null) || osmUrl(p); }
+function factUrl(p, key) {
+  const f = p.facts || {};
+  switch (key) {
+    case 'category': return f.naics && p.registry_id ? filingUrl(p) : listingUrl(p);
+    case 'address': return listingUrl(p);
+    case 'filing': case 'registered_year': return p.registry_id ? filingUrl(p) : null;
+    case 'email': return emailSource(p) || (p.email_source === 'manual' && p.email ? `mailto:${p.email}` : null);
+    case 'contact': return p.contact_name ? (nameSource(p.contact_name, p) || {}).href || null : null;
+    case 'phone': return (phoneSource(p) || {}).href || null;
+    case 'website': case 'pages': return p.website || null;
+    case 'search': return `https://www.google.com/search?q=${encodeURIComponent(`${p.name} ${p.town || ''} ${stateOf(p) || ''}`.trim())}`;
+    default: return (f.sources || {})[key] || null;
+  }
+}
+// Distance is worked out from the address, so its link is the drive itself.
+function milesUrl(p) {
+  const to = [p.address, p.town, stateOf(p)].filter(Boolean).join(', ');
+  return to ? `https://www.google.com/maps/dir/${encodeURIComponent('Storrs, CT')}/${encodeURIComponent(to)}` : null;
+}
+// Plain text with its https links made clickable (prep sheets cite sources).
+const linkify = t => esc(t).replace(/https?:\/\/[^\s)<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+const srcA = (url, text) => url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${text}</a>` : '';
+
 // An address you type in yourself counts as its own source ("Added by you").
 function emailFields(p, email) {
   return email && email !== p.email ? { email, email_source: 'manual', email_url: null, email_confidence: 'high' } : { email };
@@ -1542,7 +1589,9 @@ function detailHtml(id) {
   const editable = ['ready', 'queued', 'no_email', 'needs_check'].includes(p.status);
   const st = STATUS[p.status] || { label: p.status, badge: 'gray' };
   const src = EMAIL_SOURCE[p.email_source];
-  const reasons = (p.fit_reasons || []).filter(r => r.pts !== 0 || /miles/.test(r.why));
+  const reasons = (p.fit_reasons || []).filter(r => r.pts !== 0 || /miles/.test(r.why))
+    .map(r => ({ ...r, url: r.src === 'address' ? milesUrl(p) || factUrl(p, 'address') : r.src ? factUrl(p, r.src) : null }))
+    .filter(r => r.url);
   const google = `https://www.google.com/search?q=${encodeURIComponent(`${p.name} ${p.town || ''} ${stateOf(p)}`)}`;
   const linkedin = p.contact_name
     ? `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${p.contact_name} ${shortName(p.name)}`)}`
@@ -1553,7 +1602,12 @@ function detailHtml(id) {
   return `<article class="detail" data-detail="${esc(p.id)}">
     <div class="d-head">
       <div style="min-width:0">
-        <div class="eyebrow">${esc([p.category, placeLabel(p), inClassArea(p) ? null : 'outside class area · desk only', p.miles_from_storrs != null ? `${Math.round(p.miles_from_storrs)} mi from Storrs` : null].filter(Boolean).join(' · '))}</div>
+        <div class="eyebrow">${[
+          p.category && factUrl(p, 'category') ? srcA(factUrl(p, 'category'), esc(p.category)) : null,
+          placeLabel(p) && factUrl(p, 'address') ? srcA(factUrl(p, 'address'), esc([p.address, placeLabel(p)].filter(Boolean).join(', '))) : null,
+          inClassArea(p) ? null : 'outside class area · desk only',
+          p.miles_from_storrs != null && milesUrl(p) ? srcA(milesUrl(p), `${Math.round(p.miles_from_storrs)} mi from Storrs`) : null,
+        ].filter(Boolean).join(' · ')}</div>
         <h2>${esc(p.name)}</h2>
         <div class="links">
           <span class="badge ${st.badge}">${esc(st.label)}</span>
@@ -1592,11 +1646,10 @@ function detailHtml(id) {
       </div>
       <div class="d-side">
         ${reasons.length ? `<div class="section"><span class="eyebrow">Why this fit score</span>
-          <ul class="reasons">${reasons.map(r => `<li><span class="p ${r.pts > 0 ? 'pos' : r.pts < 0 ? 'neg' : ''}">${r.pts > 0 ? '+' : ''}${r.pts}</span><span>${esc(r.why)}</span></li>`).join('')}</ul></div>` : ''}
-        ${factChips(f).length ? `<div class="section"><span class="eyebrow">What we noticed</span><div class="chips">${factChips(f).map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div></div>` : ''}
+          <ul class="reasons">${reasons.map(r => `<li><span class="p ${r.pts > 0 ? 'pos' : r.pts < 0 ? 'neg' : ''}">${r.pts > 0 ? '+' : ''}${r.pts}</span><span>${srcA(r.url, `${esc(r.why)} ↗`)}</span></li>`).join('')}</ul></div>` : ''}
+        ${factChips(p).length ? `<div class="section"><span class="eyebrow">What we noticed</span><div class="chips">${factChips(p).map(c => `<a class="chip" href="${esc(c.url)}" target="_blank" rel="noopener" style="text-decoration:none" title="Open where this was found">${esc(c.text)} ↗</a>`).join('')}</div></div>` : ''}
         ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} ${sourceLink(x.name, p)}</span>`).join('')}</div></div>` : ''}
-        ${(f.emails_found || []).length ? `<div class="section"><span class="eyebrow">Addresses found</span><div class="kv">${f.emails_found.map(x => `<span><b style="font-weight:500">${esc(x.email)}</b> <span style="color:var(--muted)">· ${esc(x.why)}</span></span>`).join('')}</div></div>` : ''}
-        ${f.description ? `<div class="section"><span class="eyebrow">How they describe themselves</span><div class="kv"><span>${esc(f.description)}</span></div></div>` : ''}
+        ${f.description && factUrl(p, 'description') ? `<div class="section"><span class="eyebrow">How they describe themselves</span><div class="kv"><span>${esc(f.description)} ${srcA(factUrl(p, 'description'), '(their website ↗)')}</span></div></div>` : ''}
         ${(f.pages_read || []).length ? `<div class="section"><span class="eyebrow">Pages read</span><div class="kv">${f.pages_read.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(String(u).replace(/^https?:\/\/(www\.)?/, ''))}</a>`).join('')}</div></div>` : ''}
         ${(f.enrich_notes || []).length ? `<div class="section"><span class="eyebrow">Notes</span><div class="kv">${f.enrich_notes.map(n => `<span>${esc(n)}</span>`).join('')}</div></div>` : ''}
         ${(p.log || []).length ? `<div class="section"><span class="eyebrow">History</span><ul class="timeline">${p.log.slice().reverse().map(e => `<li><span class="t">${when(e.at)}</span>${esc(e.what)}</li>`).join('')}</ul></div>` : ''}
