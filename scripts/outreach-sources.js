@@ -3,7 +3,7 @@
 // A name we can't point back to a source is dropped; if it was the contact,
 // the draft's greeting falls back to the people on the filing, or the team.
 //
-//   node scripts/outreach-sources.js --docs <dir of prospect JSON files> --out out [--restore names.json]
+//   node scripts/outreach-sources.js --docs <dir of prospect JSON files> --out out [--restore names.json] [--only ids.json]
 //
 // Writes out/sources.json: [{ id, data }] updates to apply.
 
@@ -202,7 +202,9 @@ async function main() {
   const docs = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
     .map(f => { const j = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); return { id: f.replace(/\.json$/, ''), ...(j.data || j) }; });
   const restore = arg('restore') ? JSON.parse(fs.readFileSync(arg('restore'), 'utf8')) : null;
-  const todo = docs;
+  // --only <file>: a JSON list of ids, to finish the ones an earlier run couldn't.
+  const only = arg('only') ? new Set(JSON.parse(fs.readFileSync(arg('only'), 'utf8'))) : null;
+  const todo = only ? docs.filter(d => only.has(d.id)) : docs;
   console.log(`Checking every fact on ${todo.length} businesses against its source`);
   let i = 0;
   const updates = (await mapLimit(todo, 4, async d => {

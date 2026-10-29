@@ -20,7 +20,8 @@ fs.mkdirSync(outDir, { recursive: true });
 const updates = [];
 let skipped = 0;
 for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json'))) {
-  const doc = { id: f.replace(/\.json$/, ''), ...JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) };
+  const raw = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+  const doc = { id: f.replace(/\.json$/, ''), ...(raw.data || raw) };
   if (!['ready', 'queued', 'needs_check'].includes(doc.status) || !doc.email || !doc.body) continue;
   // Drafts he wrote or changed himself stay as they are.
   if ((doc.log || []).some(l => EDITED.test(l.what || '')) || !/accounting major at UConn/.test(doc.body)) { skipped++; continue; }
