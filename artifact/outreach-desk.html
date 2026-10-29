@@ -1480,11 +1480,32 @@ function filingUrl(p) {
   const words = shortName(p.name).toUpperCase().replace(/[^A-Z0-9& ]/g, ' ').replace(/\s+/g, ' ').trim();
   return `https://data.ct.gov/resource/n7gp-d28j.json?$where=${encodeURIComponent(`upper(name) like '%${words.replace(/'/g, "''")}%'`)}`;
 }
-// Everyone listed on this business's filing, when we know which filing;
-// otherwise every filing that lists someone by that name.
-function personFilingUrl(name, p) {
-  if (p && p.registry_id) return `https://data.ct.gov/resource/ka36-64k6.json?business_id=${encodeURIComponent(p.registry_id)}`;
-  return `https://data.ct.gov/resource/ka36-64k6.json?$where=${encodeURIComponent(`upper(name__c)='${String(name).toUpperCase().replace(/'/g, "''")}'`)}`;
+// Everyone listed on this business's filing. Without the filing's id there's
+// no exact link, so it falls back to the state's own business search.
+function personFilingUrl(name, p, businessId) {
+  const id = businessId || (p && p.registry_id);
+  return id ? `https://data.ct.gov/resource/ka36-64k6.json?business_id=${encodeURIComponent(id)}` : CT_SEARCH;
+}
+// Where a name came from, as a link: the page of their website it's on, or
+// the state filing that lists them. null when we have no source for it.
+const nameWords = n => String(n || '').toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !/^(dr|mr|mrs|ms|jr|sr)$/.test(w));
+function samePerson(a, b) {
+  const A = nameWords(a), B = nameWords(b);
+  return !!(A.length && B.length && A[0] === B[0] && A[A.length - 1] === B[B.length - 1]);
+}
+function nameSource(name, p) {
+  if (!name) return null;
+  const people = ((p.facts || {}).people || []).filter(x => samePerson(x.name, name));
+  const site = people.find(x => x.url);
+  if (site) return { href: site.url, label: 'from their website', ok: true };
+  const filed = people.find(x => x.how === 'state filing' && (x.business_id || p.registry_id));
+  if (filed) return { href: personFilingUrl(name, p, filed.business_id), label: 'from the state filing', ok: false };
+  if (nameConfirmed(p) && samePerson(p.contact_name, name) && p.website) return { href: p.website, label: 'matches their email address', ok: true };
+  return null;
+}
+function sourceLink(name, p) {
+  const s = nameSource(name, p);
+  return s ? `<a href="${esc(s.href)}" target="_blank" rel="noopener">(${s.label} ↗)</a>` : '<span style="color:var(--crimson)">(no source found)</span>';
 }
 const fromFiling = p => p.source === 'registry' || ((p.facts || {}).people || []).some(x => x.how === 'state filing');
 
@@ -1532,7 +1553,7 @@ function detailHtml(id) {
           <span class="eyebrow">Email</span>
           <div class="row2">
             <div class="field"><label for="dTo">To ${src ? `· <span class="badge ${src[1]}" style="font-size:8.5px">${esc(src[0])}</span>` : ''}</label><input id="dTo" type="email" value="${esc(p.email || '')}" placeholder="Add an email address">${settings().cc_email ? `<div style="font-size:11px; color:var(--muted); margin-top:4px">cc ${esc(settings().cc_email)}</div>` : ''}</div>
-            <div class="field"><label for="dName">Their name${p.contact_name && !nameConfirmed(p) ? ` · <a class="badge warn" style="font-size:8.5px; text-decoration:none" href="${personFilingUrl(p.contact_name, p)}" target="_blank" rel="noopener" title="Open the state filing that lists this name">from the state filing, not confirmed ↗</a>` : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
+            <div class="field"><label for="dName">Their name${p.contact_name ? (() => { const ns = nameSource(p.contact_name, p); return ns ? ` · <a class="badge ${ns.ok ? 'ok' : 'warn'}" style="font-size:8.5px; text-decoration:none" href="${esc(ns.href)}" target="_blank" rel="noopener" title="Open where this name came from">${ns.ok ? ns.label : 'from the state filing, not confirmed'} ↗</a>` : ' · <span class="badge red" style="font-size:8.5px">no source found, check before sending</span>'; })() : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
           </div>
           <div class="field"><label for="dSubj">Subject</label><input id="dSubj" value="${esc(p.subject || '')}"></div>
           <div class="field"><label for="dBody">Message</label><textarea id="dBody" spellcheck="true">${esc(p.body || '')}</textarea></div>
@@ -1546,7 +1567,7 @@ function detailHtml(id) {
         ${reasons.length ? `<div class="section"><span class="eyebrow">Why this fit score</span>
           <ul class="reasons">${reasons.map(r => `<li><span class="p ${r.pts > 0 ? 'pos' : r.pts < 0 ? 'neg' : ''}">${r.pts > 0 ? '+' : ''}${r.pts}</span><span>${esc(r.why)}</span></li>`).join('')}</ul></div>` : ''}
         ${factChips(f).length ? `<div class="section"><span class="eyebrow">What we noticed</span><div class="chips">${factChips(f).map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div></div>` : ''}
-        ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} ${x.how === 'state filing' ? `<a href="${personFilingUrl(x.name, p)}" target="_blank" rel="noopener">(state filing ↗)</a>` : `<span style="color:var(--muted)">(${esc(x.how)})</span>`}</span>`).join('')}</div></div>` : ''}
+        ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} ${sourceLink(x.name, p)}</span>`).join('')}</div></div>` : ''}
         ${(f.emails_found || []).length ? `<div class="section"><span class="eyebrow">Addresses found</span><div class="kv">${f.emails_found.map(x => `<span><b style="font-weight:500">${esc(x.email)}</b> <span style="color:var(--muted)">· ${esc(x.why)}</span></span>`).join('')}</div></div>` : ''}
         ${f.description ? `<div class="section"><span class="eyebrow">How they describe themselves</span><div class="kv"><span>${esc(f.description)}</span></div></div>` : ''}
         ${(f.pages_read || []).length ? `<div class="section"><span class="eyebrow">Pages read</span><div class="kv">${f.pages_read.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(String(u).replace(/^https?:\/\/(www\.)?/, ''))}</a>`).join('')}</div></div>` : ''}
