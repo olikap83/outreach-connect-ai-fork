@@ -547,7 +547,8 @@ test('greets by name only when the name is confirmed, not just from the state fi
   const { composeInitial } = require('../lib/outreach/compose');
   const base = { id: 'ac', name: 'Air Control Mechanical LLC', town: 'Ellington', bucket: 'trades', contact_name: 'Antonio Melendez' };
   const filingOnly = { ...base, email: 'office@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }, { name: 'Jordan Vallee', how: 'state filing' }] } };
-  assert.match(composeInitial(filingOnly, settings).body, /^Hi there,/);
+  assert.match(composeInitial(filingOnly, settings).body, /^Hi Air Control Mechanical team,/);
+  assert.match(composeInitial({ ...filingOnly, email: 'tony77@gmail.com' }, settings).body, /^Hi there,/);
   const onSite = { ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'site text' }] } };
   assert.match(composeInitial(onSite, settings).body, /^Hi Antonio,/);
   const ownEmail = { ...base, email: 'amelendez@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } };

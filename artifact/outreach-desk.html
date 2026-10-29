@@ -1445,6 +1445,20 @@ function refreshDetail(id) {
   if (S.tab === 'review' && S.reviewId === id && $('#reviewPane')) { $('#reviewPane').innerHTML = detailHtml(id); fitTextareas(); }
 }
 
+// Same rule the drafts use: a name only counts once it's on their own
+// website or the email address is clearly theirs. A name from the state
+// filing alone may be an old owner or a partner.
+function nameConfirmed(p) {
+  if (!p.contact_name) return false;
+  const key = String(p.contact_name).toLowerCase();
+  if (((p.facts || {}).people || []).some(x => String(x.name || '').toLowerCase() === key && x.how && x.how !== 'state filing')) return true;
+  const local = String(p.email || '').split('@')[0].toLowerCase().replace(/[^a-z]/g, '');
+  const parts = key.split(/\s+/).map(x => x.replace(/[^a-z]/g, '')).filter(x => x.length > 1);
+  if (!local || parts.length < 2) return false;
+  const first = parts[0], last = parts[parts.length - 1];
+  return local.includes(last) || local === first || local.startsWith(first[0] + last.slice(0, 4)) || (first.length >= 4 && local.startsWith(first));
+}
+
 function detailHtml(id) {
   const p = S.prospects.find(x => x.id === id);
   if (!p) return emptyView('Not found', 'This business may have been removed.');
@@ -1488,7 +1502,7 @@ function detailHtml(id) {
           <span class="eyebrow">Email</span>
           <div class="row2">
             <div class="field"><label for="dTo">To ${src ? `· <span class="badge ${src[1]}" style="font-size:8.5px">${esc(src[0])}</span>` : ''}</label><input id="dTo" type="email" value="${esc(p.email || '')}" placeholder="Add an email address">${settings().cc_email ? `<div style="font-size:11px; color:var(--muted); margin-top:4px">cc ${esc(settings().cc_email)}</div>` : ''}</div>
-            <div class="field"><label for="dName">Their name</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
+            <div class="field"><label for="dName">Their name${p.contact_name && !nameConfirmed(p) ? ' · <span class="badge warn" style="font-size:8.5px">from the state filing, not confirmed</span>' : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
           </div>
           <div class="field"><label for="dSubj">Subject</label><input id="dSubj" value="${esc(p.subject || '')}"></div>
           <div class="field"><label for="dBody">Message</label><textarea id="dBody" spellcheck="true">${esc(p.body || '')}</textarea></div>
