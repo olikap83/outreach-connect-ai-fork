@@ -516,3 +516,12 @@ test('CT businesses from the registry still get the come-by-in-person line', () 
   assert.doesNotMatch(far, /come by/);
   assert.match(far, /phone or Zoom/);
 });
+
+test("a website for a different business with a shared common word doesn't count", () => {
+  const whale = [{ title: 'Plumbing, Heating & Air | Call the Whale', text: 'Call the Whale is a top-rated plumbing, heating and air service provider in Burlington, Vermont.' }];
+  assert.equal(siteMatchesBusiness(whale, 'Call the Frog LLC'), false);
+  assert.equal(siteMatchesBusiness(whale, 'Call the Whale LLC'), true);
+  const plumber = [{ title: 'Smith Plumbing', text: 'Smith Plumbing and Heating serves Coventry.' }];
+  assert.equal(siteMatchesBusiness(plumber, 'Smith Plumbing & Heating LLC'), true);
+  assert.equal(siteMatchesBusiness(plumber, 'Jones Plumbing LLC'), false);
+});
