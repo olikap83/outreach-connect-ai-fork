@@ -89,7 +89,7 @@ em.acc{color:var(--crimson); font-style:italic;}
 :focus-visible{outline:2px solid var(--info); outline-offset:2px;}
 
 /* ---------- stats ---------- */
-.stats{display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:10px; margin-top:20px;}
+.stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:10px; margin-top:20px;}
 @media (max-width:1100px){ .stats{grid-template-columns:repeat(4, minmax(0,1fr));} }
 @media (max-width:560px){ .stats{grid-template-columns:repeat(2, minmax(0,1fr));} }
 .stat{border:1px solid var(--line); border-radius:8px; padding:12px 14px 11px; background:var(--paper); min-width:0;}
@@ -430,6 +430,8 @@ h1,h2,h3{font-weight:600; letter-spacing:-.01em;}
 .card .mt{font-size:11px; color:var(--signal); opacity:1;}
 .card .who{font-size:12px;}
 .fit{font-size:12px; padding:3px 9px;}
+.opened{font-family:var(--mono); font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--signal-soft); color:var(--ink); white-space:nowrap;}
+
 .review{grid-template-columns:360px minmax(0,1fr); gap:20px;}
 @media (max-width:900px){ .review{grid-template-columns:1fr;} }
 .review-hint{font-size:13.5px;}
@@ -798,12 +800,13 @@ async function sendInitial(p, vals) {
   if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
   if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(vals.email)) throw new Error('That email address doesn\'t look right.');
   if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails. Sending more from a personal Gmail gets it flagged as spam.`);
-  const res = await S.mcp.callTool(GMAIL, 'send_message', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body) });
+  const trackId = trackingUrl() ? newTrackId(p, 'i') : null;
+  const res = await S.mcp.callTool(GMAIL, 'send_message', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body, trackId) });
   const pl = res.payload || {};
   const sentAt = nowIso();
   await patch(p.id, {
     status: 'sent', sent_at: sentAt, ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body,
-    thread_id: pl.threadId || null, message_id: pl.id || null,
+    thread_id: pl.threadId || null, message_id: pl.id || null, ...trackedPatch(p, trackId, 'intro', sentAt),
   }, `Emailed ${vals.contact_name ? vals.contact_name + ' at ' : ''}${vals.email}`);
   S.gmailState = 'ok';
   try {
@@ -820,8 +823,10 @@ async function sendFollowup(p) {
   const greet = (/^Hi [^\n]+,/.exec(p.body || '') || [`Hi ${shortName(p.name)} team,`])[0];
   const body = `${greet}\n\nJust bumping this in case it got buried. Even a 10-minute call would help me a lot; I'm trying to learn how businesses like yours actually run, whether or not we ever work together.\n\nAnd if now isn't a good time, no worries at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
   const subject = /^re:/i.test(p.subject || '') ? p.subject : `Re: ${p.subject || p.name}`;
-  await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
-  await patch(p.id, { status: 'followed_up', followup_at: nowIso(), followup_body: body }, `Followed up with ${p.email}`);
+  const trackId = trackingUrl() ? newTrackId(p, 'f') : null;
+  await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body, trackId), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
+  const fAt = nowIso();
+  await patch(p.id, { status: 'followed_up', followup_at: fAt, followup_body: body, ...trackedPatch(p, trackId, 'follow-up', fAt) }, `Followed up with ${p.email}`);
   if (p.crm_org_id) logToCrm(p, 'email', `Follow-up email sent to ${p.email}.\n\n${body}`).catch(() => {});
 }
 
@@ -929,9 +934,10 @@ async function sendReply(p, body) {
   const msgs = Array.isArray(S.threads[tid]) ? S.threads[tid] : [];
   const last = [...msgs].reverse().find(m => fromThem(p, m)) || msgs[msgs.length - 1];
   if (!last || !last.id) throw new Error('Couldn\'t find their message in Gmail. Answer it from Gmail instead.');
-  await S.mcp.callTool(GMAIL, 'reply', { messageId: last.id, ...mailBodies(body), ...ccList() });
+  const trackId = trackingUrl() ? newTrackId(p, 'r') : null;
+  await S.mcp.callTool(GMAIL, 'reply', { messageId: last.id, ...mailBodies(body, trackId), ...ccList() });
   const at = nowIso();
-  await patch(p.id, { answered_at: at, reply_draft: null, my_replies: [...(p.my_replies || []), { at, body }].slice(-10) }, `Answered ${p.contact_name || p.email}`);
+  await patch(p.id, { answered_at: at, reply_draft: null, my_replies: [...(p.my_replies || []), { at, body }].slice(-10), ...trackedPatch(p, trackId, 'reply', at) }, `Answered ${p.contact_name || p.email}`);
   delete S.replyDrafts[p.id];
   loadThread(p, { force: true });
   const who = p.contact_name || shortName(p.name);
@@ -989,12 +995,19 @@ const SIGNATURE = 'Thanks,\nSoham Shah\nAccounting, University of Connecticut\ns
 // Every email goes out with an HTML version, so the LinkedIn address shows as a
 // clean "LinkedIn" link instead of Gmail's long google.com/url redirect.
 const LINKEDIN_URL = 'https://www.linkedin.com/in/soham-shah-uconn';
-function mailBodies(body) {
+// Open tracking: each sent email carries a 1x1 image whose address names that
+// email (settings.tracking_url is the open tracker in tracker/open-tracker.js).
+// Drafts never carry one, since opening your own draft would count.
+function trackingUrl() { return String(settings().tracking_url || '').trim().replace(/\/+$/, ''); }
+function newTrackId(p, kind) { return `${String(p.id).slice(0, 60)}.${kind}${Date.now().toString(36)}`; }
+const trackedPatch = (p, id, kind, at) => (id ? { tracked: [...(p.tracked || []), { id, kind, at }].slice(-20) } : {});
+function mailBodies(body, trackId) {
+  const pixel = trackId && trackingUrl() ? `<img src="${trackingUrl()}/o/${encodeURIComponent(trackId)}.gif" width="1" height="1" alt="" style="width:1px;height:1px;border:0;display:block">` : '';
   const html = esc(body)
     .replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, `<a href="${LINKEDIN_URL}">LinkedIn</a>`)
     .replace(/soham\.shah@uconn\.edu/g, '<a href="mailto:soham.shah@uconn.edu">soham.shah@uconn.edu</a>')
     .replace(/\n/g, '<br>');
-  return { body: body.replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, LINKEDIN_URL), htmlBody: `<div>${html}</div>` };
+  return { body: body.replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, LINKEDIN_URL), htmlBody: `<div>${html}</div>${pixel}` };
 }
 const OLD_SIGNATURES = ['Thanks,\nSoham Shah\nUniversity of Connecticut', 'Thanks,\nSoham Shah\nConnect.AI, University of Connecticut\nconnect-ai.world'];
 let stripping = false;
@@ -1290,6 +1303,15 @@ function renderNotice() {
   $('#notice').innerHTML = html;
 }
 
+// Opens come from the open tracker via the sync job (scripts/outreach-opens.js),
+// which leaves out loads in the first few minutes after sending (your own
+// copy, mail scanners) and marks ones that are likely automatic.
+const realOpens = p => (p.opens || []).filter(o => !o.likely_auto);
+function openedText(p) {
+  const o = realOpens(p);
+  if (!o.length) return null;
+  return `Opened${o.length > 1 ? ` ${o.length}×` : ''} · ${ago(o[o.length - 1].at)}`;
+}
 function renderStats() {
   const ps = S.prospects;
   const c = st => ps.filter(p => st.includes(p.status)).length;
@@ -1301,6 +1323,7 @@ function renderStats() {
     { n: ps.filter(p => p.status !== 'skipped').length, l: 'Businesses found' },
     { n: c(['ready']), l: 'Ready for review', hot: c(['ready']) > 0 },
     { n: emailed, l: 'Emailed' },
+    ...(trackingUrl() ? [{ n: ps.filter(p => SENT.has(p.status) && realOpens(p).length).length, l: 'Opened', small: emailed ? `${Math.round(ps.filter(p => SENT.has(p.status) && realOpens(p).length).length / emailed * 100)}%` : '' }] : []),
     { n: replied, l: ps.some(needsAnswer) ? `Replied · ${ps.filter(needsAnswer).length} waiting on you` : 'Replied', small: emailed ? `${rate}%` : '', hot: ps.some(needsAnswer) },
     { n: ps.filter(followupDue).length, l: 'Follow-ups due' },
     { n: sentToday(), l: 'Sent today', small: `/ ${settings().daily_cap}` },
@@ -1384,7 +1407,7 @@ function cardHtml(p, sel = false) {
   return `<button class="card${sel ? ' sel' : ''}" data-id="${esc(p.id)}">
     <div class="nm">${esc(p.name)}</div>
     <div class="mt">${esc([p.category, placeLabel(p)].filter(Boolean).join(' · '))}${inClassArea(p) ? '' : ' · <span title="Outside the class area: stays on this desk, not in the class CRM">desk only</span>'}</div>
-    <div class="ft"><span class="who">${esc(who)}</span>${fit}</div>
+    <div class="ft"><span class="who">${esc(who)}</span>${openedText(p) ? `<span class="opened" title="${esc(openedText(p))}">Opened${realOpens(p).length > 1 ? ` ${realOpens(p).length}×` : ''}</span>` : ''}${fit}</div>
   </button>`;
 }
 
@@ -1802,6 +1825,13 @@ function detailHtml(id) {
         ${f.description && factUrl(p, 'description') ? `<div class="section"><span class="eyebrow">How they describe themselves</span><div class="kv"><span>${esc(f.description)} ${srcA(factUrl(p, 'description'), '(their website ↗)')}</span></div></div>` : ''}
         ${(f.pages_read || []).length ? `<div class="section"><span class="eyebrow">Pages read</span><div class="kv">${f.pages_read.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(String(u).replace(/^https?:\/\/(www\.)?/, ''))}</a>`).join('')}</div></div>` : ''}
         ${(f.enrich_notes || []).length ? `<div class="section"><span class="eyebrow">Notes</span><div class="kv">${f.enrich_notes.map(n => `<span>${esc(n)}</span>`).join('')}</div></div>` : ''}
+        ${(p.tracked || []).length ? `<div class="section"><span class="eyebrow">Opens</span><div class="kv">${(() => {
+          const real = realOpens(p), auto = (p.opens || []).filter(o => o.likely_auto);
+          const rows = real.slice(-8).reverse().map(o => `<span><b style="font-weight:600">${esc(when(o.at))}</b> <span style="color:var(--muted)">· ${esc(o.what || 'opened')}${o.where ? ` · ${esc(o.where)}` : ''}</span></span>`);
+          return (rows.length ? rows.join('') : `<span style="color:var(--muted)">Not opened yet, as far as we can tell. Many mail apps block images, so an email can be read without showing up here.</span>`)
+            + (auto.length ? `<span style="color:var(--muted)">${auto.length} more load${auto.length === 1 ? '' : 's'} left out: your own copy, a mail scanner, or Apple Mail loading it in the background.</span>` : '')
+            + (p.opens_synced_at ? `<span style="color:var(--muted)">Checked ${esc(ago(p.opens_synced_at))}.</span>` : '');
+        })()}</div></div>` : ''}
         ${(p.log || []).length ? `<div class="section"><span class="eyebrow">History</span><ul class="timeline">${p.log.slice().reverse().map(e => `<li><span class="t">${when(e.at)}</span>${esc(e.what)}</li>`).join('')}</ul></div>` : ''}
       </div>
     </div>

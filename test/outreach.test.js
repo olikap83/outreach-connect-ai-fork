@@ -615,3 +615,21 @@ test('Dr. is used only when a source shows the person is a doctor; otherwise a p
   assert.equal(doctorEvidence('Susan Davis', page('Susan Davis, office manager')), null);
   assert.equal(doctorEvidence('Susan Davis', page('Dr. Smith and Susan Davis')), null);
 });
+
+test('opens are matched to the email that was sent, and automatic loads are marked', () => {
+  const { opensFor } = require('../scripts/outreach-opens');
+  const doc = { tracked: [{ id: 'acme.i1', kind: 'intro', at: '2026-10-30T13:00:00.000Z' }] };
+  const hits = [
+    { id: 'acme.i1', at: '2026-10-30T13:01:00.000Z', network: 'Google LLC', agent: 'Mozilla/5.0 (via ggpht.com GoogleImageProxy)' },
+    { id: 'acme.i1', at: '2026-10-30T15:20:00.000Z', network: 'Microsoft Corporation', city: 'Hartford', agent: 'Mozilla/5.0' },
+    { id: 'acme.i1', at: '2026-10-30T16:00:00.000Z', network: 'Apple Inc.', agent: 'Mozilla/5.0' },
+    { id: 'other.i1', at: '2026-10-30T16:00:00.000Z', network: 'Google LLC', agent: 'x' },
+  ];
+  const opens = opensFor(doc, hits);
+  assert.equal(opens.length, 3);
+  assert.equal(opens[0].likely_auto, true, 'a minute after sending: your own copy or a scanner');
+  assert.equal(opens[1].likely_auto, undefined);
+  assert.equal(opens[1].where, 'Outlook / Microsoft, Hartford');
+  assert.equal(opens[1].what, 'intro email opened');
+  assert.equal(opens[2].likely_auto, true, 'Apple Mail privacy proxy');
+});
