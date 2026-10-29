@@ -426,6 +426,7 @@ const STATUS = {
   bounced: { label: 'Bounced', badge: 'red' },
   skipped: { label: 'Skipped', badge: 'gray' },
   no_email: { label: 'No email found', badge: 'gray' },
+  needs_check: { label: 'Needs a look', badge: 'warn' },
 };
 const COLUMNS = [
   { label: 'Ready for review', dot: 'dot f', statuses: ['ready'] },
@@ -437,10 +438,13 @@ const COLUMNS = [
 const CLOSED_COLUMNS = [
   { label: 'Not interested', dot: 'dot', statuses: ['not_interested'] },
   { label: 'Bounced', dot: 'dot', statuses: ['bounced'] },
+  { label: 'Needs a look', dot: 'dot', statuses: ['needs_check'] },
   { label: 'No email found', dot: 'dot', statuses: ['no_email'] },
   { label: 'Skipped', dot: 'dot', statuses: ['skipped'] },
 ];
-const CLOSED = new Set(['not_interested', 'bounced', 'skipped', 'no_email']);
+// "Needs a look": the research wasn't sure it had the right business, town
+// or email, so it's kept out of the review list.
+const CLOSED = new Set(['not_interested', 'bounced', 'skipped', 'no_email', 'needs_check']);
 const SENT = new Set(['sent', 'followed_up', 'replied', 'not_interested', 'bounced']);
 const EMAIL_SOURCE = {
   website: ['From their website', 'ok'], osm: ['From OpenStreetMap', 'info'], registry: ['Filed with the CT Secretary of State', 'info'],
@@ -1357,6 +1361,7 @@ function actionsHtml(p) {
       <button class="btn" data-act="save">Save edits</button><button class="btn" data-act="send">Send now</button><button class="btn ghost" data-act="unqueue">Back to review</button>`;
   if (p.status === 'sent' || p.status === 'followed_up') return `${followupDue(p) ? '<button class="btn solid" data-act="followup">Send follow-up</button>' : ''}<span class="spacer"></span>
       <button class="btn" data-mark="replied">They replied</button><button class="btn ghost" data-mark="not_interested">Not interested</button><button class="btn ghost" data-mark="bounced">Bounced</button>`;
+  if (p.status === 'needs_check') return `<span class="spacer"></span><button class="btn ghost" data-mark="ready" title="You checked it and it's right">It's right, move to review</button><button class="btn crimson" data-mark="skipped">Skip</button>`;
   if (CLOSED.has(p.status)) return `<span class="spacer"></span><button class="btn ghost" data-mark="ready">Move back to review</button>`;
   return '';
 }
@@ -1425,7 +1430,7 @@ function detailHtml(id) {
   const p = S.prospects.find(x => x.id === id);
   if (!p) return emptyView('Not found', 'This business may have been removed.');
   const f = p.facts || {};
-  const editable = ['ready', 'queued', 'no_email'].includes(p.status);
+  const editable = ['ready', 'queued', 'no_email', 'needs_check'].includes(p.status);
   const st = STATUS[p.status] || { label: p.status, badge: 'gray' };
   const src = EMAIL_SOURCE[p.email_source];
   const reasons = (p.fit_reasons || []).filter(r => r.pts !== 0 || /miles/.test(r.why));
@@ -1458,6 +1463,7 @@ function detailHtml(id) {
       <div class="d-main">
         ${inCrm ? `<div class="note red">Already in the class CRM${inCrm.owner ? ` (owner: ${esc(inCrm.owner.name)})` : ''}, stage ${esc(inCrm.stage_label || inCrm.stage)}. Someone may already be talking to them.</div>` : ''}
         ${p.crm_error ? `<div class="note red">${esc(p.crm_error)}</div>` : ''}
+        ${p.status === 'needs_check' ? `<div class="note">Kept out of your review list because the research wasn't sure about this one:<br>${(p.check_problems || []).map(x => `• ${esc(x)}`).join('<br>') || '• No reason recorded.'}</div>` : ''}
         ${p.email_source === 'guess' && editable ? '<div class="note">This address is a guess (first name @ their domain). Check it before sending; a bounce hurts how your other emails land.</div>' : ''}
         ${editable ? `<div class="section">
           <span class="eyebrow">Email</span>

@@ -25,6 +25,7 @@ const { scoreProspect } = require('../lib/outreach/score');
 const { composeInitial } = require('../lib/outreach/compose');
 const { buildCrmNotes, hasSubstance, cardLine } = require('../lib/outreach/crmnotes');
 const { mergeSettings } = require('../lib/outreach/settings');
+const { readinessProblems } = require('../lib/outreach/verify');
 const { nameKey, mapLimit, stateOf, inClassArea, parsePlace } = require('../lib/outreach/util');
 
 const TOWNS = [
@@ -132,6 +133,8 @@ async function research(list, settings, errors) {
 async function toDoc(p, settings) {
   const patch = await enrichProspect(p);
   const merged = { ...p, ...patch };
+  // Anything uncertain goes to "Needs a look" instead of the review list.
+  const problems = merged.email ? readinessProblems(merged) : [];
   Object.assign(merged, scoreProspect(merged));
   const draft = merged.email ? composeInitial({ ...merged, id: docId(merged) }, settings) : null;
   const f = merged.facts || {};
@@ -158,12 +161,13 @@ async function toDoc(p, settings) {
     crm_ok: hasSubstance(merged) && inClassArea(merged),
     crm_notes: buildCrmNotes(merged),
     card_line: cardLine(merged),
-    status: merged.email ? 'ready' : 'no_email',
+    status: !merged.email ? 'no_email' : problems.length ? 'needs_check' : 'ready',
+    check_problems: problems,
     subject: draft ? draft.subject : null,
     body: draft ? draft.body : null,
     created_at: now,
     updated_at: now,
-    log: [{ at: now, what: merged.email ? `Researched: fit ${merged.fit_score}/100, draft ready` : 'Researched: no email address found' }],
+    log: [{ at: now, what: !merged.email ? 'Researched: no email address found' : problems.length ? `Researched: needs a look (${problems[0]})` : `Researched: fit ${merged.fit_score}/100, draft ready` }],
   };
 }
 

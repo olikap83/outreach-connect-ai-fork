@@ -429,7 +429,7 @@ test('a listed website that is some other business is dropped, not trusted', asy
   assert.equal(patch.website_verified, false);
   assert.equal(patch.website, null);
   assert.equal(patch.facts.website_unverified, 'https://hartwellcpa.com/');
-  assert.ok(patch.facts.enrich_notes.some(n => /doesn't look like this business/.test(n)));
+  assert.ok(patch.facts.enrich_notes.some(n => /for a different business/.test(n)));
   const ok = await enrichProspect({ name: 'Willow Creek Family Dentistry', bucket: 'health', website: 'https://willowcreekdental.com/', domain: 'willowcreekdental.com', town: 'Mansfield', source: 'osm', facts: {} }, { fetchImpl: fakeFetch([]), resolver: okResolver });
   assert.equal(ok.website_verified, true);
 });
@@ -524,4 +524,20 @@ test("a website for a different business with a shared common word doesn't count
   const plumber = [{ title: 'Smith Plumbing', text: 'Smith Plumbing and Heating serves Coventry.' }];
   assert.equal(siteMatchesBusiness(plumber, 'Smith Plumbing & Heating LLC'), true);
   assert.equal(siteMatchesBusiness(plumber, 'Jones Plumbing LLC'), false);
+});
+
+test('drafts that might be the wrong business go to "needs a look", not review', () => {
+  const { readinessProblems } = require('../lib/outreach/verify');
+  const frog = { name: 'Call the Frog LLC', town: 'Williston', state: 'VT', source: 'registry', email: 'info@callthewhale.com', domain: null,
+    registry: { location_from: 'mailing', mailing_state: 'VT' } };
+  assert.equal(readinessProblems(frog).length, 2);
+  const frogCT = { ...frog, town: 'Groton', state: 'CT' };
+  assert.equal(readinessProblems(frogCT).length, 2);
+  assert.deepEqual(readinessProblems({ name: "Joe's Pizza LLC", town: 'Mansfield', state: 'CT', email: 'joe@joespizzact.com', domain: 'joespizzact.com' }), []);
+  assert.deepEqual(readinessProblems({ name: 'Smith Plumbing', town: 'Coventry', state: 'CT', email: 'smithplumbing@gmail.com' }), []);
+  assert.deepEqual(readinessProblems({ name: 'Brand Pet Company LLC', town: 'Vernon', state: 'CT', email: 'cbrandaci@gmail.com', source: 'registry', registry: { location_from: 'office' } }), []);
+  const { siteMatchesPlace } = require('../lib/outreach/enrich');
+  const whale = [{ title: 'Call the Whale', text: 'Serving the greater Burlington, Vermont area. 4735 Williston Rd #30, Williston, VT 05495' }];
+  assert.equal(siteMatchesPlace(whale, { town: 'Groton', state: 'CT' }), false);
+  assert.equal(siteMatchesPlace(whale, { town: 'Williston', state: 'VT' }), true);
 });
