@@ -803,7 +803,7 @@ const OLD_CLOSE = 'And if now isn\'t a good time, just tell me and I won\'t both
 const NEW_CLOSE = 'I appreciate you reading this. If now isn\'t a good time, no worries at all, just let me know.';
 function newSubject(p) {
   const biz = shortName(p.name);
-  const options = [`Question about ${biz} from a UConn student`, `UConn student question about ${biz}`, `${biz}: quick question from a UConn student`];
+  const options = [`Question about ${biz} from a UConn student`, `UConn student question about ${biz}`, `UConn student hoping to learn about ${biz}`];
   let h = 0; for (const c of String(p.id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   const pick = options[h % options.length];
   if (pick.length <= 60) return pick;
@@ -811,10 +811,11 @@ function newSubject(p) {
 }
 let migrating = false;
 async function migrateDrafts() {
-  if (migrating || !S.db || !S.loaded || !S.metaLoaded || (S.meta.migrations || {}).subjects_v2) return;
+  if (migrating || !S.db || !S.loaded || !S.metaLoaded || (S.meta.migrations || {}).subjects_v3) return;
   migrating = true;
   try {
-    const oldSubjects = p => ['A question from a UConn student', `Question about ${p.name}`, `UConn student hoping to learn from ${p.name}`];
+    // The first version also had "<business>: quick question from a UConn student", which reads like a sales email.
+    const oldSubjects = p => ['A question from a UConn student', `Question about ${p.name}`, `UConn student hoping to learn from ${p.name}`, `${shortName(p.name)}: quick question from a UConn student`];
     let n = 0;
     for (const p of S.prospects.filter(x => ['ready', 'queued', 'no_email'].includes(x.status))) {
       const fields = {};
@@ -822,7 +823,7 @@ async function migrateDrafts() {
       if ((p.body || '').includes(OLD_CLOSE)) fields.body = p.body.replace(OLD_CLOSE, NEW_CLOSE);
       if (Object.keys(fields).length) { await patch(p.id, fields).catch(() => {}); n++; }
     }
-    await S.db.doc('meta/status').update({ migrations: { ...(S.meta.migrations || {}), subjects_v2: nowIso() } });
+    await S.db.doc('meta/status').update({ migrations: { ...(S.meta.migrations || {}), subjects_v3: nowIso() } });
     if (n) toast(`Updated ${n} waiting drafts to the new subject lines and closing.`);
   } finally { migrating = false; }
 }
@@ -1032,7 +1033,9 @@ function ownersOwnEmail(p) {
   const parts = p.contact_name.toLowerCase().split(/\s+/).map(x => x.replace(/[^a-z]/g, '')).filter(x => x.length > 1);
   return parts.some(x => local.includes(x));
 }
-function readyAll() { return filtered({ includeClosed: false }).filter(p => p.status === 'ready').sort((a, b) => (b.fit_score ?? 0) - (a.fit_score ?? 0)); }
+// Class-area businesses (CT, Boston, NY, New England) come first; ones
+// elsewhere only show after them, or when you pick their state.
+function readyAll() { return filtered({ includeClosed: false }).filter(p => p.status === 'ready').sort((a, b) => (inClassArea(b) - inClassArea(a)) || (b.fit_score ?? 0) - (a.fit_score ?? 0)); }
 function chipFiltered(list) {
   return list.filter(p => (!S.rvBucket || (p.bucket || 'other') === S.rvBucket) && (!S.rvWeb || p.website) && (!S.rvOwner || ownersOwnEmail(p)));
 }
