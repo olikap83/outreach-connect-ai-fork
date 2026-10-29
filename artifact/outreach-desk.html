@@ -1459,6 +1459,18 @@ function nameConfirmed(p) {
   return local.includes(last) || local === first || local.startsWith(first[0] + last.slice(0, 4)) || (first.length >= 4 && local.startsWith(first));
 }
 
+// Links to the public Connecticut business registry (data.ct.gov), so a
+// name or address that came from a state filing can be checked in one click.
+const CT_SEARCH = 'https://service.ct.gov/business/s/onlinebusinesssearch?language=en_US';
+function filingUrl(p) {
+  const words = shortName(p.name).toUpperCase().replace(/[^A-Z0-9& ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return `https://data.ct.gov/resource/n7gp-d28j.json?$where=${encodeURIComponent(`upper(name) like '%${words.replace(/'/g, "''")}%'`)}`;
+}
+function personFilingUrl(name) {
+  return `https://data.ct.gov/resource/ka36-64k6.json?$q=${encodeURIComponent(name)}`;
+}
+const fromFiling = p => p.source === 'registry' || ((p.facts || {}).people || []).some(x => x.how === 'state filing');
+
 function detailHtml(id) {
   const p = S.prospects.find(x => x.id === id);
   if (!p) return emptyView('Not found', 'This business may have been removed.');
@@ -1487,6 +1499,7 @@ function detailHtml(id) {
           ${gmailUrl ? `<a href="${gmailUrl}" target="_blank" rel="noopener">Open in Gmail ↗</a>` : ''}
           ${p.gmail_draft_url ? `<a href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Gmail draft ↗</a>` : ''}
           ${crmUrl ? `<a href="${crmUrl}" target="_blank" rel="noopener">In class CRM ↗</a>` : ''}
+          ${fromFiling(p) ? `<a href="${filingUrl(p)}" target="_blank" rel="noopener" title="The business's Connecticut registration (public data)">CT filing ↗</a><a href="${CT_SEARCH}" target="_blank" rel="noopener" title="Connecticut's business search: type the business name">CT business search ↗</a>` : ''}
           ${p.phone ? `<span style="color:var(--muted)">${esc(p.phone)}</span>` : ''}
         </div>
       </div>
@@ -1502,7 +1515,7 @@ function detailHtml(id) {
           <span class="eyebrow">Email</span>
           <div class="row2">
             <div class="field"><label for="dTo">To ${src ? `· <span class="badge ${src[1]}" style="font-size:8.5px">${esc(src[0])}</span>` : ''}</label><input id="dTo" type="email" value="${esc(p.email || '')}" placeholder="Add an email address">${settings().cc_email ? `<div style="font-size:11px; color:var(--muted); margin-top:4px">cc ${esc(settings().cc_email)}</div>` : ''}</div>
-            <div class="field"><label for="dName">Their name${p.contact_name && !nameConfirmed(p) ? ' · <span class="badge warn" style="font-size:8.5px">from the state filing, not confirmed</span>' : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
+            <div class="field"><label for="dName">Their name${p.contact_name && !nameConfirmed(p) ? ` · <a class="badge warn" style="font-size:8.5px; text-decoration:none" href="${personFilingUrl(p.contact_name)}" target="_blank" rel="noopener" title="Open the state filing that lists this name">from the state filing, not confirmed ↗</a>` : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
           </div>
           <div class="field"><label for="dSubj">Subject</label><input id="dSubj" value="${esc(p.subject || '')}"></div>
           <div class="field"><label for="dBody">Message</label><textarea id="dBody" spellcheck="true">${esc(p.body || '')}</textarea></div>
@@ -1516,7 +1529,7 @@ function detailHtml(id) {
         ${reasons.length ? `<div class="section"><span class="eyebrow">Why this fit score</span>
           <ul class="reasons">${reasons.map(r => `<li><span class="p ${r.pts > 0 ? 'pos' : r.pts < 0 ? 'neg' : ''}">${r.pts > 0 ? '+' : ''}${r.pts}</span><span>${esc(r.why)}</span></li>`).join('')}</ul></div>` : ''}
         ${factChips(f).length ? `<div class="section"><span class="eyebrow">What we noticed</span><div class="chips">${factChips(f).map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div></div>` : ''}
-        ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} <span style="color:var(--muted)">(${esc(x.how)})</span></span>`).join('')}</div></div>` : ''}
+        ${(f.people || []).length ? `<div class="section"><span class="eyebrow">People found</span><div class="kv">${f.people.map(x => `<span>${esc(x.name)}${x.role ? ` · ${esc(x.role)}` : ''} ${x.how === 'state filing' ? `<a href="${personFilingUrl(x.name)}" target="_blank" rel="noopener">(state filing ↗)</a>` : `<span style="color:var(--muted)">(${esc(x.how)})</span>`}</span>`).join('')}</div></div>` : ''}
         ${(f.emails_found || []).length ? `<div class="section"><span class="eyebrow">Addresses found</span><div class="kv">${f.emails_found.map(x => `<span><b style="font-weight:500">${esc(x.email)}</b> <span style="color:var(--muted)">· ${esc(x.why)}</span></span>`).join('')}</div></div>` : ''}
         ${f.description ? `<div class="section"><span class="eyebrow">How they describe themselves</span><div class="kv"><span>${esc(f.description)}</span></div></div>` : ''}
         ${(f.pages_read || []).length ? `<div class="section"><span class="eyebrow">Pages read</span><div class="kv">${f.pages_read.map(u => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(String(u).replace(/^https?:\/\/(www\.)?/, ''))}</a>`).join('')}</div></div>` : ''}
