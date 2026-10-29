@@ -226,9 +226,9 @@ test('wording varies between businesses', () => {
   assert.ok(variants.size >= 3, `only ${variants.size} opener variants`);
 });
 
-test('no name found → "Hi there"; far away → no offer to drop by', () => {
+test('no name found → the team, never "Hi there"; far away → no offer to drop by', () => {
   const { body } = composeInitial({ ...dentist, contact_name: null, miles_from_storrs: 60, facts: {} }, settings);
-  assert.match(body, /^Hi there,/);
+  assert.match(body, /^Hi Willow Creek Family Dentistry team,/);
   assert.doesNotMatch(body, /in person/);
 });
 
@@ -547,8 +547,11 @@ test('greets by name only when the name is confirmed, not just from the state fi
   const { composeInitial } = require('../lib/outreach/compose');
   const base = { id: 'ac', name: 'Air Control Mechanical LLC', town: 'Ellington', bucket: 'trades', contact_name: 'Antonio Melendez' };
   const filingOnly = { ...base, email: 'office@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }, { name: 'Jordan Vallee', how: 'state filing' }] } };
-  assert.match(composeInitial(filingOnly, settings).body, /^Hi Air Control Mechanical team,/);
-  assert.match(composeInitial({ ...filingOnly, email: 'tony77@gmail.com' }, settings).body, /^Hi there,/);
+  assert.match(composeInitial(filingOnly, settings).body, /^Hi Antonio and Jordan,/);
+  assert.match(composeInitial({ ...filingOnly, email: 'jessicam@aircontrolmech.com' }, settings).body, /^Hi Air Control Mechanical team,/);
+  assert.match(composeInitial({ ...filingOnly, facts: { people: [] } }, settings).body, /^Hi Air Control Mechanical team,/);
+  assert.match(composeInitial({ ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } }, settings).body, /^Hi Antonio,/);
+  assert.match(composeInitial({ ...filingOnly, facts: { people: [{ name: 'A B', how: 'state filing' }, { name: 'C D', how: 'state filing' }, { name: 'E F', how: 'state filing' }] } }, settings).body, /^Hi Air Control Mechanical team,/);
   const onSite = { ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'site text' }] } };
   assert.match(composeInitial(onSite, settings).body, /^Hi Antonio,/);
   const ownEmail = { ...base, email: 'amelendez@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } };
