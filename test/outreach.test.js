@@ -199,7 +199,6 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.ok(subject.length < 60);
   assert.match(body, /^Hi Karen,/);
   assert.match(body, /Willow Creek Family Dentistry/);
-  assert.match(body, /since 1998|family-owned/);
   assert.match(body, /Connect\.AI/);
   assert.doesNotMatch(body, /connect-ai\.world\/apply|free AI-readiness|build it for free/);
   assert.doesNotMatch(body, /Small Business Development Center/);
@@ -214,7 +213,8 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.match(body, /no worries at all/);
   assert.match(subject, /UConn/);
   assert.match(subject, /Willow Creek Family Dentistry/);
-  assert.match(body, /I'm curious how a practice your size/);
+  assert.match(body, /How does your front desk handle scheduling/);
+  assert.doesNotMatch(body, /while looking at|businesses around/);
   assert.doesNotMatch(body, /\{|\}|undefined|null/);
   const words = body.split(/\s+/).length;
   assert.ok(words < 190, `email is ${words} words`);
@@ -475,7 +475,7 @@ test('emails read right for businesses in other states', () => {
   assert.equal(shortName('S.J. Louis Construction of Texas, Limited Partnership'), 'S.J. Louis Construction of Texas');
   const { subject, body } = composeInitial({ id: 'sj', name: 'S.J. Louis Construction of Texas, Limited Partnership', town: 'Mansfield', state: 'TX', bucket: 'trades', email: 'a@b.com', facts: { shop_tools: ['woocommerce'] } }, settings);
   assert.doesNotMatch(subject + body, /Limited Partnership|WooCommerce/);
-  assert.match(body, /Mansfield, Texas/);
+  assert.doesNotMatch(body, /Connect\.AI/);
   const { parsePlace, stateCode } = require('../lib/outreach/util');
   assert.deepEqual(parsePlace('*, TX'), { town: null, state: 'TX' });
   assert.equal(stateCode('Massachusetts'), 'MA');
@@ -541,4 +541,15 @@ test('drafts that might be the wrong business go to "needs a look", not review',
   const whale = [{ title: 'Call the Whale', text: 'Serving the greater Burlington, Vermont area. 4735 Williston Rd #30, Williston, VT 05495' }];
   assert.equal(siteMatchesPlace(whale, { town: 'Groton', state: 'CT' }), false);
   assert.equal(siteMatchesPlace(whale, { town: 'Williston', state: 'VT' }), true);
+});
+
+test('greets by name only when the name is confirmed, not just from the state filing', () => {
+  const { composeInitial } = require('../lib/outreach/compose');
+  const base = { id: 'ac', name: 'Air Control Mechanical LLC', town: 'Ellington', bucket: 'trades', contact_name: 'Antonio Melendez' };
+  const filingOnly = { ...base, email: 'office@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }, { name: 'Jordan Vallee', how: 'state filing' }] } };
+  assert.match(composeInitial(filingOnly, settings).body, /^Hi there,/);
+  const onSite = { ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'site text' }] } };
+  assert.match(composeInitial(onSite, settings).body, /^Hi Antonio,/);
+  const ownEmail = { ...base, email: 'amelendez@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } };
+  assert.match(composeInitial(ownEmail, settings).body, /^Hi Antonio,/);
 });

@@ -745,7 +745,7 @@ Write Soham's reply to their latest message:
 - Only if they asked about Connect.AI, asked how it works, or said they'd like help: add that the easiest next step is a short form at connect-ai.world/apply (about 3 minutes, and they get a free AI-readiness report), and that the call still comes first. Otherwise don't mention the form.` : ''}
 - If they said not now, thank them warmly, say no problem, and leave the door open in one line. Don't push.
 - If they pointed him to someone else, thank them and ask for the best way to reach that person.
-Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi ${p.contact_name ? p.contact_name.split(' ')[0] : 'there'}," and end with "Thanks,\\nSoham". Reply with only the email body.`;
+Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi" and the first name they signed their email with (or "Hi there," if they didn't sign it); don't assume any other name. End with "Thanks,\\nSoham". Reply with only the email body.`;
   ta.value = '';
   const out = await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
   const text = (out && out.text) || ta.value;
