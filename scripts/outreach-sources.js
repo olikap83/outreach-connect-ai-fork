@@ -135,7 +135,8 @@ async function source(doc, restore) {
     || (doc.email_source === 'osm' && (doc.source_ref || data.source_ref));
   const phoneOk = !doc.phone || doc.phone_url || data.phone_url;
   const thrownOut = [];
-  if (!emailOk) {
+  // Already emailed: the address stays, since the conversation runs on it.
+  if (!emailOk && UNSENT.has(doc.status)) {
     thrownOut.push(`email ${doc.email}`);
     Object.assign(data, { email: null, email_source: null, email_confidence: null, email_url: null });
     if (['ready', 'queued', 'needs_check'].includes(doc.status)) data.status = 'no_email';
