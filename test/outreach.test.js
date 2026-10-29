@@ -204,7 +204,8 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.doesNotMatch(body, /connect-ai\.world\/apply|free AI-readiness|build it for free/);
   assert.doesNotMatch(body, /Small Business Development Center/);
   assert.match(body, /accounting major/);
-  assert.match(body, /linkedin\.com\/in\/soham-shah-uconn/);
+  assert.doesNotMatch(body.split('Thanks,')[0], /https?:|linkedin/i);
+  assert.match(body, /soham\.shah@uconn\.edu · linkedin\.com\/in\/soham-shah-uconn$/);
   assert.match(body, /Henkel/);
   assert.match(body, /Andersen/);
   assert.match(body, /start my own/);

@@ -814,6 +814,24 @@ function newSubject(p) {
   if (pick.length <= 60) return pick;
   return options[1].length <= 60 ? options[1] : 'A question from a UConn student';
 }
+// First emails no longer carry a LinkedIn link (no links at all in a first
+// email). Checked on every load, so drafts rewritten elsewhere get it too.
+const LINKEDIN_LINE = /\n\n(More about me: |If you want to know a bit more about me first, here's my LinkedIn: )https?:\/\/\S+\n\n/;
+// The signature carries his UConn address and LinkedIn instead.
+const SIGNATURE = 'Thanks,\nSoham Shah\nAccounting, University of Connecticut\nsoham.shah@uconn.edu · linkedin.com/in/soham-shah-uconn';
+const OLD_SIGNATURES = ['Thanks,\nSoham Shah\nUniversity of Connecticut', 'Thanks,\nSoham Shah\nConnect.AI, University of Connecticut\nconnect-ai.world'];
+let stripping = false;
+async function stripLinkedIn() {
+  if (stripping || !S.db || !S.loaded) return;
+  stripping = true;
+  try {
+    for (const p of S.prospects.filter(x => ['ready', 'queued', 'needs_check', 'no_email'].includes(x.status) && x.body)) {
+      let body = p.body.replace(LINKEDIN_LINE, '\n\n');
+      for (const old of OLD_SIGNATURES) if (body.endsWith(old)) body = body.slice(0, -old.length) + SIGNATURE;
+      if (body !== p.body) await patch(p.id, { body }).catch(() => {});
+    }
+  } finally { stripping = false; }
+}
 let migrating = false;
 async function migrateDrafts() {
   if (migrating || !S.db || !S.loaded || !S.metaLoaded || (S.meta.migrations || {}).subjects_v3) return;
@@ -1654,7 +1672,7 @@ ${JSON.stringify({ business: p.name, town: p.town, category: p.category, contact
 Current draft:
 ${ta.value}
 
-Rewrite it so it reads like a real student wrote it, not a sales email: plain, warm, curious, specific to this business, under 150 words. Keep: the greeting; that he's an accounting major at UConn; one line that he interned in accounting at Henkel this summer and is headed to Andersen next, that's big-company work, and he wants to learn how a business like theirs runs, partly because he wants to start his own someday; one genuine question about how they run things; the ask for a 15-minute call; the line "More about me: https://www.linkedin.com/in/soham-shah-uconn/"; "If now isn't a good time, no worries at all."; and the signature. The LinkedIn link is the only link. No exclamation marks, no marketing words, no flattery beyond one light touch. Reply with only the email body.`;
+Rewrite it so it reads like a real student wrote it, not a sales email: plain, warm, curious, specific to this business, under 150 words. Keep: the greeting; that he's an accounting major at UConn; one line that he interned in accounting at Henkel this summer and is headed to Andersen next, that's big-company work, and he wants to learn how a business like theirs runs, partly because he wants to start his own someday; one genuine question about how they run things; the ask for a 15-minute call; "If now isn't a good time, no worries at all."; and the signature. No links at all. No exclamation marks, no marketing words, no flattery beyond one light touch. Reply with only the email body.`;
       ta.value = '';
       await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
       toast('Rewritten. Check it, then send or approve.');
@@ -1802,7 +1820,7 @@ render();
     db.collection('prospects').onSnapshot(snap => {
       S.prospects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       S.loaded = true; S.dbState = 'ok';
-      render(); watchReplies(); syncLeads(); autoSend(); migrateDrafts();
+      render(); watchReplies(); syncLeads(); autoSend(); migrateDrafts(); stripLinkedIn();
     }, () => { S.dbState = 'bad'; S.loaded = true; render(); });
     db.doc('meta/status').onSnapshot(snap => { S.meta = snap.exists ? (snap.data() || {}) : {}; S.metaLoaded = true; render(); migrateDrafts(); }, () => {});
   }
