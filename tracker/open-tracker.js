@@ -1,4 +1,4 @@
-// Open tracker for Main Street Radar, a Cloudflare Worker (free plan).
+// Open tracker for Main Street Outreach, a Cloudflare Worker (free plan).
 //
 // Every email the desk sends carries a 1x1 image whose address names that
 // email: https://<worker>/o/<email id>.gif. When the reader's mail app loads
@@ -57,6 +57,6 @@ export default {
       } while (cursor && out.length < 20000);
       return new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json' } });
     }
-    return new Response('Main Street Radar open tracker', { status: 200 });
+    return new Response('Main Street Outreach open tracker', { status: 200 });
   },
 };
