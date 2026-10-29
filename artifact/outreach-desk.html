@@ -1503,7 +1503,7 @@ function detailHtml(id) {
           ${gmailUrl ? `<a href="${gmailUrl}" target="_blank" rel="noopener">Open in Gmail ↗</a>` : ''}
           ${p.gmail_draft_url ? `<a href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Gmail draft ↗</a>` : ''}
           ${crmUrl ? `<a href="${crmUrl}" target="_blank" rel="noopener">In class CRM ↗</a>` : ''}
-          ${fromFiling(p) ? `<a href="${filingUrl(p)}" target="_blank" rel="noopener" title="The business's Connecticut registration (public data)">CT filing ↗</a><a href="${CT_SEARCH}" target="_blank" rel="noopener" title="Connecticut's business search: type the business name">CT business search ↗</a>` : ''}
+          ${fromFiling(p) ? `<a href="${filingUrl(p)}" target="_blank" rel="noopener" title="The business's Connecticut registration: address, email, date (public data)">CT filing ↗</a>${p.registry_id ? `<a href="${personFilingUrl('', p)}" target="_blank" rel="noopener" title="Everyone listed on this business's Connecticut filing (public data)">People on the filing ↗</a>` : ''}<a href="${CT_SEARCH}" target="_blank" rel="noopener" title="Connecticut's business search: type the business name">CT business search ↗</a>` : ''}
           ${p.phone ? `<span style="color:var(--muted)">${esc(p.phone)}</span>` : ''}
         </div>
       </div>
