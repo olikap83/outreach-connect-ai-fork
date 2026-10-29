@@ -66,7 +66,7 @@ async function main() {
     const real = opens.filter(o => !o.likely_auto);
     const before = (doc.opens || []).filter(o => !o.likely_auto).length;
     const data = { opens, opens_synced_at: now, opened_at: real.length ? real[0].at : null };
-    if (real.length > before) data.log = [...(doc.log || []), { at: now, what: `Opened ${real.length > 1 ? `${real.length} times` : 'the email'} (last ${real[real.length - 1].at.slice(0, 16).replace('T', ' ')} UTC)` }].slice(-40);
+    if (real.length > before) data.log = [...(doc.log || []), { at: now, what: `Opened ${real.length > 1 ? `${real.length} times` : 'the email'} (last ${new Date(real[real.length - 1].at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} Eastern)` }].slice(-40);
     updates.push({ id: doc.id, data });
   }
   fs.writeFileSync(path.join(outDir, 'opens.json'), JSON.stringify(updates, null, 2));
