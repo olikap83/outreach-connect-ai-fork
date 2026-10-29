@@ -51,7 +51,7 @@ async function osmRef(doc) {
   if (!st || !doc.name) return null;
   const name = String(doc.name).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const q = `[out:json][timeout:25];area["ISO3166-2"="US-${st}"]->.a;nwr["name"="${name}"](area.a);out tags 10;`;
-  const res = await runOverpass(q).catch(() => null);
+  const res = await runOverpass(q); // a network error fails the business, which is then left as is
   const els = (res && res.elements) || [];
   const digits = x => String(x || '').replace(/\D/g, '').slice(-10);
   const pick = els.length === 1 ? els[0] : els.find(e => doc.phone && digits((e.tags || {}).phone || (e.tags || {})['contact:phone']) === digits(doc.phone));
@@ -127,6 +127,21 @@ async function source(doc, restore) {
     if (osm) data.source_ref = osm;
   }
 
+  // Contact details we can't link to a source are thrown out. A business with
+  // no usable email left moves to "No email" so it can't be sent.
+  const emailOk = !doc.email || doc.email_source === 'manual'
+    || (doc.email_source === 'website' && (doc.email_url || data.email_url))
+    || (doc.email_source === 'registry' && (doc.registry_id || data.registry_id))
+    || (doc.email_source === 'osm' && (doc.source_ref || data.source_ref));
+  const phoneOk = !doc.phone || doc.phone_url || data.phone_url;
+  const thrownOut = [];
+  if (!emailOk) {
+    thrownOut.push(`email ${doc.email}`);
+    Object.assign(data, { email: null, email_source: null, email_confidence: null, email_url: null });
+    if (['ready', 'queued', 'needs_check'].includes(doc.status)) data.status = 'no_email';
+  }
+  if (!phoneOk) { thrownOut.push(`phone ${doc.phone}`); data.phone = null; }
+
   const { _restored, ...plain } = doc;
   const next = { ...plain, ...data };
   if (UNSENT.has(doc.status) && /^Hi [^\n]*,\n/.test(doc.body || '')) {
@@ -136,15 +151,17 @@ async function source(doc, restore) {
   }
   const peopleChanged = JSON.stringify(kept) !== JSON.stringify(facts.people || []);
   if (!peopleChanged) delete data.facts;
-  const changed = peopleChanged || data.registry_id || data.body || 'contact_name' in data || data.email_url || data.phone_url || data.source_ref;
+  const changed = peopleChanged || data.registry_id || data.body || 'contact_name' in data || data.email_url || data.phone_url || data.source_ref || thrownOut.length;
   if (!changed) return null;
   const now = new Date().toISOString();
   data.updated_at = now;
   const what = dropped.length
     ? `Names checked against sources; dropped ${dropped.join(', ')} (no source found)`
     : 'Names, email and phone checked against sources: each links to where it was found';
-  data.log = [...(doc.log || []), { at: now, what }].slice(-40);
-  return { id: doc.id, data, dropped };
+  const log = [{ at: now, what }];
+  if (thrownOut.length) log.push({ at: now, what: `Removed ${thrownOut.join(' and ')}: couldn't link it to a source` });
+  data.log = [...(doc.log || []), ...log].slice(-40);
+  return { id: doc.id, data, dropped, thrownOut };
 }
 
 async function main() {
@@ -160,7 +177,7 @@ async function main() {
   const updates = (await mapLimit(todo, 4, async d => {
     try {
       const u = await source(d, restore);
-      console.log(`  [${++i}/${todo.length}] ${d.name}: ${u ? (u.dropped.length ? `dropped ${u.dropped.join(', ')}` : 'sources added') : 'already sourced'}`);
+      console.log(`  [${++i}/${todo.length}] ${d.name}: ${u ? [u.dropped.length ? `dropped ${u.dropped.join(', ')}` : 'sources added', ...u.thrownOut.map(x => `removed ${x}`)].join('; ') : 'already sourced'}`);
       return u;
     } catch (err) {
       console.log(`  [${++i}/${todo.length}] ${d.name}: failed (${err.message}); left as is`);
@@ -169,7 +186,9 @@ async function main() {
   })).filter(Boolean);
   fs.writeFileSync(path.join(outDir, 'sources.json'), JSON.stringify(updates.map(({ id, data }) => ({ id, data })), null, 2));
   const dropped = updates.filter(u => u.dropped.length);
-  console.log(`${updates.length} updated; ${dropped.length} had a name with no source (dropped). Wrote ${path.join(outDir, 'sources.json')}`);
+  const emails = updates.filter(u => u.thrownOut.some(x => x.startsWith('email'))).length;
+  const phones = updates.filter(u => u.thrownOut.some(x => x.startsWith('phone'))).length;
+  console.log(`${updates.length} updated; ${dropped.length} had a name with no source (dropped); ${emails} emails and ${phones} phone numbers removed for having no source. Wrote ${path.join(outDir, 'sources.json')}`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

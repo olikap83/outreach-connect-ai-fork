@@ -464,9 +464,9 @@ const DEFAULTS = { daily_cap: 20, followup_after_days: 4, sender_name: 'Soham Sh
 // Every email Soham sends from the desk copies his UConn address.
 function ccList() { const c = String(settings().cc_email || '').trim(); return c ? { cc: [c] } : {}; }
 
-// Owners mostly read email first thing, so approved emails go out on
-// weekday mornings (New York time), whenever this page is open then.
-const SEND_FROM = 8, SEND_UNTIL = 12;
+// Emails go out during business hours (8am to 6pm New York time, weekdays);
+// anything approved after hours waits for the next morning.
+const SEND_FROM = 8, SEND_UNTIL = 18;
 const WEEKEND = new Set(['Sat', 'Sun']);
 const DAY_NAMES = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' };
 function nyClock(d = new Date()) {
@@ -652,7 +652,7 @@ async function sendInitial(p, vals) {
   const pl = res.payload || {};
   const sentAt = nowIso();
   await patch(p.id, {
-    status: 'sent', sent_at: sentAt, email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body,
+    status: 'sent', sent_at: sentAt, ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body,
     thread_id: pl.threadId || null, message_id: pl.id || null,
   }, `Emailed ${vals.contact_name ? vals.contact_name + ' at ' : ''}${vals.email}`);
   S.gmailState = 'ok';
@@ -800,7 +800,7 @@ Under 300 words. No markdown symbols other than "- ". No intro or sign-off.`;
 
 async function saveGmailDraft(p, vals) {
   const res = await S.mcp.callTool(GMAIL, 'create_draft', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body) });
-  await patch(p.id, { email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body, gmail_draft_url: (res.payload || {}).viewUrl || null }, 'Saved as a Gmail draft');
+  await patch(p.id, { ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body, gmail_draft_url: (res.payload || {}).viewUrl || null }, 'Saved as a Gmail draft');
 }
 
 // ---------- one-time update of waiting drafts ----------
@@ -1113,7 +1113,7 @@ function renderNotice() {
   }
   const queued = S.prospects.filter(p => p.status === 'queued').length;
   if (queued && !inSendWindow() && S.tab !== 'review') {
-    html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>Weekday mornings are when owners are most likely to read email. They send when this page is open between 8am and noon on a weekday.</p></div></div>`;
+    html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>It's outside business hours, so they wait until then. They send when this page is open between 8am and 6pm on a weekday.</p></div></div>`;
   }
   if (S.dbState === 'bad') {
     html = `<div class="banner warn"><div><b>This page can't reach its data.</b><p>Open it on claude.ai while signed in to your account. The businesses, drafts and history live with the page there.</p></div></div>`;
@@ -1231,8 +1231,8 @@ function renderReview() {
   const qbar = !n ? '' : S.sendingQueue
     ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Gmail. Keep this page open until it finishes.</span></div>`
     : inSendWindow()
-      ? `<div class="queue-bar"><button class="btn solid" id="sendQueue">Send ${n} approved email${s}</button><span class="help" style="margin:0">It's a weekday morning, so they'll start going out on their own in a minute. Keep this page open.</span></div>`
-      : `<div class="queue-bar"><span class="badge warn">${n} approved · going out ${esc(nextSendWindow())}</span><span class="help" style="margin:0">Owners mostly read email on weekday mornings. They send when this page is open between 8am and noon.</span><button class="btn ghost sm" id="sendQueue">Send now anyway</button></div>`;
+      ? `<div class="queue-bar"><button class="btn solid" id="sendQueue">Send ${n} approved email${s}</button><span class="help" style="margin:0">It's business hours, so they'll start going out on their own in a minute. Keep this page open.</span></div>`
+      : `<div class="queue-bar"><span class="badge warn">${n} approved · going out ${esc(nextSendWindow())}</span><span class="help" style="margin:0">It's outside business hours. They send when this page is open between 8am and 6pm on a weekday.</span><button class="btn ghost sm" id="sendQueue">Send now anyway</button></div>`;
 
   const done = handledToday();
   const counts = {};
@@ -1509,6 +1509,10 @@ function sourceLink(name, p) {
 }
 // Where the email address and phone number came from, as links. A phone
 // number with no source isn't shown at all.
+// An address you type in yourself counts as its own source ("Added by you").
+function emailFields(p, email) {
+  return email && email !== p.email ? { email, email_source: 'manual', email_url: null, email_confidence: 'high' } : { email };
+}
 function emailSource(p) {
   if (p.email_url) return p.email_url;
   if (p.email_source === 'registry') return filingUrl(p);
@@ -1704,14 +1708,14 @@ async function onAction(root, act, confirmed) {
     return;
   }
   if ((act === 'send' || act === 'followup') && !confirmed) {
-    if (vals) await patch(id, { email: vals.email, contact_name: vals.contact_name, subject: vals.subject, body: vals.body }).catch(() => {});
+    if (vals) await patch(id, { ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body }).catch(() => {});
     const to = vals ? vals.email : p.email;
     const cc = settings().cc_email ? ` (cc ${settings().cc_email})` : '';
     S.confirming = act === 'followup'
       ? { id, act, text: `Send a short follow-up to ${p.email} in the same thread?`, yes: 'Yes, follow up' }
       : inSendWindow() || !vals
         ? { id, act, text: `Send this to ${to}${cc} from your Gmail now? It also gets logged in the class CRM.`, yes: 'Yes, send it' }
-        : { id, act: 'approve', text: `Owners mostly read email on weekday mornings. Send this to ${to}${cc} ${nextSendWindow()} instead? It goes out when this page is open then.`, yes: `Send ${nextSendWindow()}`, alt: { act: 'send', yes: 'Send right now' } };
+        : { id, act: 'approve', text: `It's outside business hours, so this goes to ${to}${cc} ${nextSendWindow()}, when this page is open then.`, yes: `Send ${nextSendWindow()}` };
     rerenderDetail(root);
     return;
   }
@@ -1803,7 +1807,7 @@ async function sendQueue() {
   }
 }
 
-// On weekday mornings, approved emails go out by themselves while the page
+// During business hours, approved emails go out by themselves while the page
 // is open. If two tabs are open, the one that claimed the send lock sends.
 const TAB_ID = Math.random().toString(36).slice(2);
 let autoTried = '';
