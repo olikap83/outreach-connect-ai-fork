@@ -197,7 +197,7 @@ const dentist = { id: 'abc', name: 'Willow Creek Family Dentistry', town: 'Mansf
 test('initial email is personal, honest, short, and has an easy no', () => {
   const { subject, body } = composeInitial(dentist, settings);
   assert.ok(subject.length < 60);
-  assert.match(body, /^Hi Karen,/);
+  assert.match(body, /^Hi Dr. Whitfield,/);
   assert.match(body, /Willow Creek Family Dentistry/);
   assert.match(body, /Connect\.AI/);
   assert.doesNotMatch(body, /connect-ai\.world\/apply|free AI-readiness|build it for free/);
@@ -596,4 +596,13 @@ test('every fact read off a website keeps the page it came from; facts with no p
   const kept = keepSourced({ ...facts, catering: true, sources: { ...facts.sources } });
   assert.equal(kept.catering, undefined, 'no page says it, so it goes');
   assert.equal(kept.family_owned, true);
+});
+
+test('doctors, dentists and other practitioners are greeted as Dr. Lastname', () => {
+  const { greeting } = require('../lib/outreach/compose');
+  const filed = (...names) => ({ people: names.map(name => ({ name, how: 'state filing', role: 'principal', business_id: 'x' })) });
+  assert.equal(greeting({ name: 'Mansfield Orthodontics PLLC', category: 'Dentist', email: 'info@mansfieldorthodonticsct.com', facts: filed('Susan Davis') }), 'Hi Dr. Davis,');
+  assert.equal(greeting({ name: 'Ralph J Laguardia M.D.', email: 'r@gmail.com', facts: filed('Ralph Laguardia') }), 'Hi Dr. Laguardia,');
+  assert.equal(greeting({ name: 'Eastside Family Dental', email: 'office@eastside.com', facts: filed('Ann Lee', 'Raj Patel') }), 'Hi Dr. Lee and Dr. Patel,');
+  assert.equal(greeting({ name: 'Air Control Mechanical LLC', email: 'office@aircontrolmech.com', facts: filed('Antonio Melendez', 'Jordan Vallee') }), 'Hi Antonio and Jordan,', 'everyone else keeps first names');
 });
