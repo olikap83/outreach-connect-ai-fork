@@ -663,6 +663,9 @@ test('reply check: people count, auto-responders do not, and Soham gets an email
   assert.match(buzz.subject, /Karen Santiago at Buzz Beads replied/);
   assert.match(buzz.body, /mail\.google\.com\/mail\/u\/0\/#all\/t2/);
   assert.equal(buzz.crm.org, 'org1');
+  const fixed = planReplies([{ id: 'r', name: 'RAB', email: 'shop@rab.org', status: 'replied', replied_at: '2026-10-30T14:30:00Z', reply_snippet: 'Thank you for contacting RAB! Re: UConn student', reply_msg_ids: ['x'], log: [] }], [], '2026-10-30T15:00:00Z');
+  assert.equal(fixed.notify.length, 0, 'no email about an auto-reply');
+  assert.equal(fixed.updates[0].data.status, 'sent');
   // Running again finds nothing new.
   const after = docs.map(d => ({ ...d, ...(updates.find(u => u.id === d.id) || {}).data }));
   assert.equal(planReplies(after, threads).notify.length, 0);
