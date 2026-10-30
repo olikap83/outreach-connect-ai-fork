@@ -206,8 +206,8 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.match(body, /accounting major/);
   assert.doesNotMatch(body.split('Thanks,')[0], /https?:|linkedin/i);
   assert.match(body, /soham\.shah@uconn\.edu · linkedin\.com\/in\/soham-shah-uconn$/);
-  assert.match(body, /Henkel/);
-  assert.match(body, /Andersen/);
+  assert.doesNotMatch(body, /Henkel|Andersen|big[- ]compan/i, 'no big-company comparison');
+  assert.doesNotMatch(body, /hiring/i, 'never claims they are hiring');
   assert.match(body, /start (my own|something of my own)|run my own business/);
   assert.match(body, /15 minutes/);
   assert.match(body, /stop by|come by/);
