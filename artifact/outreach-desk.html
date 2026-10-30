@@ -122,6 +122,8 @@ em.acc{color:var(--crimson); font-style:italic;}
 .tab b{font-weight:500; color:var(--muted); margin-left:5px;}
 .tab[aria-selected="true"]{background:var(--navy); border-color:var(--navy); color:var(--paper);}
 .tab[aria-selected="true"] b{color:var(--paper); opacity:.7;}
+.filters[hidden]{display:none;}
+button.stat{font:inherit; color:inherit; text-align:left; cursor:pointer; width:100%;}
 .filters{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;}
 .filters input[type=search]{flex:1 1 280px; min-width:0; border:1px solid var(--line-strong); border-radius:999px; padding:9px 16px; background:var(--paper);}
 .filters select{border:1px solid var(--line-strong); border-radius:999px; padding:8px 30px 8px 14px; background:var(--paper); font-size:13px; appearance:none;
@@ -605,6 +607,12 @@ const EMAIL_SOURCE = {
 };
 const TOOL_NAMES = { calendly: 'Calendly', acuity: 'Acuity', square: 'Square', vagaro: 'Vagaro', mindbody: 'Mindbody', schedulicity: 'Schedulicity', zocdoc: 'Zocdoc', nexhealth: 'NexHealth', localmed: 'LocalMed', solutionreach: 'Solutionreach', weave: 'Weave', opentable: 'OpenTable', resy: 'Resy', tock: 'Tock', toast: 'Toast', chownow: 'ChowNow', housecallpro: 'Housecall Pro', servicetitan: 'ServiceTitan', jobber: 'Jobber', setmore: 'Setmore', simplybook: 'SimplyBook', booksy: 'Booksy', glossgenius: 'GlossGenius', fresha: 'Fresha', janeapp: 'Jane', boulevard: 'Boulevard', practicebetter: 'Practice Better', wellnessliving: 'WellnessLiving', clover: 'Clover', shopify: 'Shopify', woocommerce: 'WooCommerce', bigcommerce: 'BigCommerce', ecwid: 'Ecwid', square_online: 'Square Online', tawk: 'Tawk chat', intercom: 'Intercom', drift: 'Drift', livechat: 'LiveChat', tidio: 'Tidio', podium: 'Podium', birdeye: 'Birdeye', hubspot: 'HubSpot', zendesk: 'Zendesk', wix: 'Wix', squarespace: 'Squarespace', godaddy: 'GoDaddy', weebly: 'Weebly', wordpress: 'WordPress', duda: 'Duda', webflow: 'Webflow' };
 const toolName = k => TOOL_NAMES[k] || k;
+// Auto-responders ("Thank you for contacting RAB!", out of office). These aren't
+// a person writing back, so they never count as a reply. A thank-you line only
+// counts when the subject was replaced: people replying keep "Re: <subject>".
+const AUTO_STRONG = /(auto(matic|mated)?[- ]?(reply|response)|out of (the )?office|this is an automated|do not reply to this|away from (my|the) (desk|office|email) until)/i;
+const AUTO_SUBJECT = /(thank(s| you) for (contacting|reaching out|your (e-?mail|message|inquiry|note))|we('ve| have) received your (e-?mail|message|inquiry))/i;
+const isAutoReply = m => AUTO_STRONG.test(`${m.subject || ''} ${m.snippet || ''}`) || (!/^\s*re:/i.test(m.subject || '') && AUTO_SUBJECT.test(m.subject || ''));
 const OPT_OUT = /\b(unsubscribe|remove me|take me off|stop (emailing|contacting)|not interested|no thanks|no thank you|please don'?t (email|contact)|do not (email|contact)|we('| a)re all set|we'?ll pass|not at this time)\b/i;
 // The class works in Connecticut, Boston, New York and the rest of New England.
 // Businesses there go in the class CRM; anywhere else stays on this desk only.
@@ -1206,12 +1214,22 @@ async function handleReplies(threads) {
     if (!p || S.busy.has(p.id)) continue;
     const theirs = msgs.filter(m => fromThem(p, m));
     const keys = theirs.map(m => m.id || String(m.snippet || '').slice(0, 80));
-    const latest = theirs[theirs.length - 1];
     const seen = new Set(p.reply_msg_ids || []);
-    if (p.status === 'replied') {
-      if (!p.reply_msg_ids) { patch(p.id, { reply_msg_ids: keys }).catch(() => {}); continue; } // first look at an older reply
-      if (!keys.some(k => !seen.has(k))) continue;
+    if (p.status === 'replied' && !p.reply_msg_ids) { patch(p.id, { reply_msg_ids: keys }).catch(() => {}); continue; } // first look at an older reply
+    const fresh = theirs.filter((m, i) => !seen.has(keys[i]));
+    if (!fresh.length) continue;
+    const people = fresh.filter(m => !isAutoReply(m));
+    if (!people.length) {
+      // Only an auto-responder: note it, but the email still counts as unanswered.
+      const auto = fresh[fresh.length - 1];
+      S.busy.add(p.id);
+      try {
+        await patch(p.id, { reply_msg_ids: keys, auto_reply_at: nowIso(), auto_reply_snippet: unentity(auto.snippet || auto.subject || '').slice(0, 300) },
+          `Got an automatic reply from ${p.email} (not a person)`);
+      } finally { S.busy.delete(p.id); }
+      continue;
     }
+    const latest = people[people.length - 1];
     S.busy.add(p.id);
     const snippet = unentity(latest.snippet || latest.subject || '').slice(0, 600);
     const status = OPT_OUT.test(snippet) ? 'not_interested' : 'replied';
@@ -1325,12 +1343,12 @@ function renderStats() {
     { n: c(['ready']), l: 'Ready for review', hot: c(['ready']) > 0 },
     { n: emailed, l: 'Emailed' },
     ...(trackingUrl() ? [{ n: ps.filter(p => SENT.has(p.status) && realOpens(p).length).length, l: 'Opened', small: emailed ? `${Math.round(ps.filter(p => SENT.has(p.status) && realOpens(p).length).length / emailed * 100)}%` : '' }] : []),
-    { n: replied, l: ps.some(needsAnswer) ? `Replied · ${ps.filter(needsAnswer).length} waiting on you` : 'Replied', small: emailed ? `${rate}%` : '', hot: ps.some(needsAnswer) },
+    { n: replied, l: ps.some(needsAnswer) ? `Replied · ${ps.filter(needsAnswer).length} waiting on you` : 'Replied', small: emailed ? `${rate}%` : '', hot: ps.some(needsAnswer), tab: 'replies' },
     { n: ps.filter(followupDue).length, l: 'Follow-ups due' },
     { n: sentToday(), l: 'Sent today', small: `/ ${settings().daily_cap}` },
     { n: mine ?? '–', l: 'Mine in class CRM' },
   ];
-  $('#stats').innerHTML = tiles.map(t => `<div class="stat${t.hot ? ' hot' : ''}"><div class="n">${t.n}${t.small ? `<small>${esc(t.small)}</small>` : ''}</div><div class="l eyebrow">${esc(t.l)}</div></div>`).join('');
+  $('#stats').innerHTML = tiles.map(t => { const tag = t.tab ? 'button' : 'div'; return `<${tag} class="stat${t.hot ? ' hot' : ''}"${t.tab ? ` data-tab="${t.tab}" title="See the replies"` : ''}><div class="n">${t.n}${t.small ? `<small>${esc(t.small)}</small>` : ''}</div><div class="l eyebrow">${esc(t.l)}</div></${tag}>`; }).join('');
 }
 
 function renderChart() {
@@ -1382,11 +1400,12 @@ function renderTabs() {
     ['review', 'Review', ps.filter(p => p.status === 'ready').length],
     ['pipeline', 'Pipeline', ps.filter(p => !CLOSED.has(p.status)).length],
     ['list', 'All businesses', ps.length],
+    ['replies', 'Replies', ps.filter(p => p.status === 'replied' || (p.status === 'not_interested' && p.replied_at)).length],
     ['activity', 'Activity', null],
     ['crm', 'My CRM', S.crmMine ? S.crmMine.length : null],
   ];
   $('#tabs').innerHTML = tabs.map(([k, l, n]) => `<button class="tab" role="tab" aria-selected="${S.tab === k}" data-tab="${k}">${l}${n != null ? `<b>${n}</b>` : ''}</button>`).join('');
-  $('#filters').hidden = S.tab === 'activity' || S.tab === 'crm';
+  $('#filters').hidden = S.tab === 'activity' || S.tab === 'crm' || S.tab === 'replies';
   $('#fClosed').closest('label').hidden = S.tab === 'review';
   const states = [...new Set(ps.map(stateOf))].sort((a, b) => (a === 'CT' ? -1 : b === 'CT' ? 1 : a.localeCompare(b)));
   const outside = ps.filter(p => !inClassArea(p)).length;
@@ -1522,6 +1541,23 @@ function subjectStatsHtml() {
   </table></div><p class="help">Reply rates mean more after 20 or so emails per subject line.</p>`;
 }
 
+function renderReplies() {
+  const by = k => (a, b) => String(b[k] || '').localeCompare(String(a[k] || ''));
+  const ps = S.prospects;
+  const groups = [
+    ['Waiting on you', 'They wrote back and you haven\'t answered yet.', ps.filter(needsAnswer).sort(by('replied_at')), 'replied_at', 'reply_snippet', ['Reply', 'ok']],
+    ['Answered', 'You\'ve written back. Waiting on them.', ps.filter(p => p.status === 'replied' && !needsAnswer(p)).sort(by('answered_at')), 'replied_at', 'reply_snippet', ['Answered', 'info']],
+    ['Said no thanks', '', ps.filter(p => p.status === 'not_interested' && p.replied_at).sort(by('replied_at')), 'replied_at', 'reply_snippet', ['No thanks', 'red']],
+    ['Automatic replies', 'An auto-responder answered, not a person. These still count as no reply yet.', ps.filter(p => p.auto_reply_at && ['sent', 'followed_up'].includes(p.status)).sort(by('auto_reply_at')), 'auto_reply_at', 'auto_reply_snippet', ['Automatic', 'gray']],
+  ];
+  if (!groups.some(g => g[2].length)) return emptyView('No replies yet.', 'When someone writes back to one of your emails it shows up here, usually within a few minutes while this page is open.');
+  return groups.filter(g => g[2].length).map(([title, help, list, atKey, snipKey, [lab, cls]]) => `
+    <h3 style="margin:18px 0 4px">${title} <span style="color:var(--muted); font-weight:400">${list.length}</span></h3>
+    ${help ? `<p class="help" style="margin:0 0 8px">${help}</p>` : ''}
+    <ul class="feed">${list.map(p => `<li><span class="t">${ago(p[atKey])}</span><span><span class="badge ${cls}">${lab}</span></span>
+      <span><span class="who" data-id="${esc(p.id)}">${esc(p.name)}</span> · ${esc(p.contact_name || p.email || '')}<br><span class="body">${esc(p[snipKey] || '')}</span></span></li>`).join('')}</ul>`).join('');
+}
+
 function renderActivity() {
   const ev = [];
   for (const p of S.prospects) for (const l of (p.log || [])) ev.push({ ...l, p });
@@ -1529,7 +1565,7 @@ function renderActivity() {
   ev.sort((a, b) => String(b.at).localeCompare(String(a.at)));
   if (!ev.length) return emptyView('No activity yet.', 'Research runs, emails sent, replies and CRM updates all show up here.');
   const stats = subjectStatsHtml();
-  const kind = w => /^answered/i.test(w) ? ['Email', 'info'] : /prep sheet/i.test(w) ? ['Update', 'gray'] : /replied|wrote back/i.test(w) ? ['Replied', 'ok'] : /no thanks|bounced|couldn't/i.test(w) ? ['Heads up', 'red'] : /^emailed|followed up/i.test(w) ? ['Email', 'info'] : /crm/i.test(w) ? ['CRM', 'gray'] : ['Update', 'gray'];
+  const kind = w => /^answered/i.test(w) ? ['Email', 'info'] : /prep sheet/i.test(w) ? ['Update', 'gray'] : /replied|wrote back/i.test(w) ? ['Replied', 'ok'] : /automatic reply/i.test(w) ? ['Automatic', 'gray'] : /no thanks|bounced|couldn't/i.test(w) ? ['Heads up', 'red'] : /^emailed|followed up/i.test(w) ? ['Email', 'info'] : /crm/i.test(w) ? ['CRM', 'gray'] : ['Update', 'gray'];
   return `${stats}<ul class="feed">${ev.slice(0, 200).map(e => {
     const [lab, cls] = e.run ? ['Research', 'gray'] : kind(e.what || '');
     return `<li><span class="t">${ago(e.at)}</span><span><span class="badge ${cls}">${lab}</span></span>
@@ -1844,6 +1880,7 @@ function renderView() {
   const v = $('#view');
   if (S.tab === 'pipeline') v.innerHTML = renderPipeline();
   else if (S.tab === 'list') v.innerHTML = renderList();
+  else if (S.tab === 'replies') v.innerHTML = renderReplies();
   else if (S.tab === 'activity') v.innerHTML = renderActivity();
   else if (S.tab === 'crm') v.innerHTML = renderCrm();
   else v.innerHTML = renderReview();
