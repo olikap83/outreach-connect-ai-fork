@@ -636,3 +636,34 @@ test('opens are matched to the email that was sent, and automatic loads are mark
   assert.equal(opens[1].what, 'intro email opened');
   assert.equal(opens[2].likely_auto, true, 'Apple Mail privacy proxy');
 });
+
+test('reply check: people count, auto-responders do not, and Soham gets an email', () => {
+  const { planReplies } = require('../lib/outreach/replies');
+  const docs = [
+    { id: 'rab', name: 'Recycle-a-Bike', email: 'shop@recycleabike.org', status: 'sent', log: [] },
+    { id: 'buzz', name: 'Buzz Beads, LLC', email: 'kts.santiago@gmail.com', contact_name: 'Karen Santiago', status: 'sent', crm_org_id: 'org1', log: [] },
+    { id: 'kl', name: 'Katie Louise Photography LLC', email: 'katie@katielouise.co', status: 'sent', log: [] },
+    { id: 'old', name: 'Old Reply Co', email: 'a@old.com', status: 'replied', replied_at: '2026-10-30T10:00:00Z', reply_snippet: 'Sure', reply_msg_ids: ['m0'], log: [] },
+  ];
+  const threads = [
+    { id: 't1', messages: [{ id: 'm1', sender: 'shop@recycleabike.org', subject: 'Thank you for contacting RAB! Re: UConn student', snippet: 'We got your message' }] },
+    { id: 't2', messages: [{ id: 'm2', sender: 'Karen <kts.santiago@gmail.com>', subject: 'Re: UConn student question about Buzz Beads', snippet: 'Thanks for reaching out! Tuesday works.' }] },
+    { id: 't3', messages: [{ id: 'm3', sender: 'katie@katielouise.co', subject: 'Re: UConn student', snippet: 'No thanks, we are all set.' }] },
+  ];
+  const { updates, notify } = planReplies(docs, threads, '2026-10-30T15:00:00.000Z');
+  const by = id => updates.find(u => u.id === id).data;
+  assert.equal(by('rab').status, undefined, 'auto-reply leaves the status alone');
+  assert.ok(by('rab').auto_reply_at);
+  assert.equal(by('buzz').status, 'replied');
+  assert.equal(by('kl').status, 'not_interested');
+  assert.equal(by('old').reply_notified_at, '2026-10-30T15:00:00.000Z', 'a reply the desk caught earlier still gets an email');
+  assert.deepEqual(notify.map(n => n.id).sort(), ['buzz', 'kl', 'old']);
+  const buzz = notify.find(n => n.id === 'buzz');
+  assert.deepEqual(buzz.to, ['soham.shah@uconn.edu', 'shahsoham689@gmail.com']);
+  assert.match(buzz.subject, /Karen Santiago at Buzz Beads replied/);
+  assert.match(buzz.body, /mail\.google\.com\/mail\/u\/0\/#all\/t2/);
+  assert.equal(buzz.crm.org, 'org1');
+  // Running again finds nothing new.
+  const after = docs.map(d => ({ ...d, ...(updates.find(u => u.id === d.id) || {}).data }));
+  assert.equal(planReplies(after, threads).notify.length, 0);
+});

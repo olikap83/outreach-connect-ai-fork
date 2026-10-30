@@ -1207,6 +1207,22 @@ async function handleBounces(threads) {
   }
 }
 
+// When someone writes back, email Soham at both addresses (the reply check
+// that runs without this page does the same: lib/outreach/replies.js).
+const NOTIFY_TO = ['soham.shah@uconn.edu', 'shahsoham689@gmail.com'];
+async function notifyReply(p, snippet, threadId, noThanks) {
+  const biz = shortName(p.name);
+  const who = p.contact_name ? `${p.contact_name} at ${biz}` : biz;
+  const body = [
+    noThanks ? `${who} (${p.email}) wrote back and isn't interested:` : `${who} (${p.email}) wrote back:`,
+    `"${snippet}"`,
+    threadId ? `Read the whole email: https://mail.google.com/mail/u/0/#all/${threadId}` : null,
+    noThanks ? 'The desk has moved them to "Not interested".' : 'Open the desk to read it and get a reply drafted: https://claude.ai/artifact/N7EfQ9VJAebmCponFGYdKW',
+  ].filter(Boolean).join('\n\n');
+  await S.mcp.callTool(GMAIL, 'send_message', { to: NOTIFY_TO, subject: noThanks ? `${biz} said no thanks` : `${who} replied to your email`, body });
+  await patch(p.id, { reply_notified_at: nowIso() });
+}
+
 async function handleReplies(threads) {
   for (const t of threads) {
     const msgs = t.messages || [];
@@ -1243,6 +1259,7 @@ async function handleReplies(threads) {
       logToCrm(p, 'email', `${status === 'replied' ? 'Replied' : 'Replied (not interested)'} from ${p.email}:\n\n${snippet}`,
         { update: status === 'replied' ? { next_step: `Reply to ${p.contact_name || shortName(p.name)}`, next_step_due: dayKey(new Date()) } : { stage: 'passed', next_step: null, next_step_due: null } })
         .then(() => patch(p.id, { crm_reply_logged: true })).catch(() => {});
+      notifyReply(p, snippet, t.id, status === 'not_interested').catch(() => {});
     } finally { S.busy.delete(p.id); }
   }
 }
