@@ -571,6 +571,7 @@ const GMAIL = 'Gmail';
 const STATUS = {
   ready: { label: 'Ready for review', badge: 'info' },
   queued: { label: 'Approved · waiting to send', badge: 'warn' },
+  sending: { label: 'Sending now', badge: 'warn' },
   sent: { label: 'Emailed', badge: 'gray' },
   followed_up: { label: 'Followed up', badge: 'gray' },
   replied: { label: 'Replied', badge: 'ok' },
@@ -628,11 +629,11 @@ function nyClock(d = new Date()) {
 function inSendWindow() { const c = nyClock(); return !WEEKEND.has(c.wd) && c.hour >= SEND_FROM && c.hour < SEND_UNTIL; }
 function nextSendWindow() {
   const c = nyClock();
-  if (!WEEKEND.has(c.wd) && c.hour < SEND_FROM) return 'at 8am this morning';
+  if (!WEEKEND.has(c.wd) && c.hour < SEND_FROM) return 'at 8:15am this morning';
   const order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   let i = order.indexOf(c.wd), n = 0;
   do { i = (i + 1) % 7; n++; } while (WEEKEND.has(order[i]));
-  return n === 1 ? 'at 8am tomorrow' : `${DAY_NAMES[order[i]]} at 8am`;
+  return n === 1 ? 'at 8:15am tomorrow' : `${DAY_NAMES[order[i]]} at 8:15am`;
 }
 // The next few weekdays, for proposing call times: "Thursday, Oct 30".
 function nextWeekdays(n) {
@@ -1293,7 +1294,7 @@ function renderNotice() {
   }
   const queued = S.prospects.filter(p => p.status === 'queued').length;
   if (queued && !inSendWindow() && S.tab !== 'review') {
-    html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>It's outside business hours, so they wait until then. They send when this page is open between 8am and 6pm on a weekday.</p></div></div>`;
+    html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>It's outside business hours, so they wait until then. They go out on their own at about 8:15am on weekdays, whether or not this page is open.</p></div></div>`;
   }
   if (S.dbState === 'bad') {
     html = `<div class="banner warn"><div><b>This page can't reach its data.</b><p>Open it on claude.ai while signed in to your account. The businesses, drafts and history live with the page there.</p></div></div>`;
@@ -1422,7 +1423,7 @@ function renderReview() {
     ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Gmail. Keep this page open until it finishes.</span></div>`
     : inSendWindow()
       ? `<div class="queue-bar"><button class="btn solid" id="sendQueue">Send ${n} approved email${s}</button><span class="help" style="margin:0">It's business hours, so they'll start going out on their own in a minute. Keep this page open.</span></div>`
-      : `<div class="queue-bar"><span class="badge warn">${n} approved · going out ${esc(nextSendWindow())}</span><span class="help" style="margin:0">It's outside business hours. They send when this page is open between 8am and 6pm on a weekday.</span><button class="btn ghost sm" id="sendQueue">Send now anyway</button></div>`;
+      : `<div class="queue-bar"><span class="badge warn">${n} approved · going out ${esc(nextSendWindow())}</span><span class="help" style="margin:0">It's outside business hours. They go out on their own at about 8:15am, page open or not.</span><button class="btn ghost sm" id="sendQueue">Send now anyway</button></div>`;
 
   const done = handledToday();
   const counts = {};
@@ -2098,7 +2099,7 @@ async function onAction(root, act, confirmed) {
       ? { id, act, text: `Send a short follow-up to ${p.email} in the same thread?`, yes: 'Yes, follow up' }
       : inSendWindow() || !vals
         ? { id, act, text: `Send this to ${to}${cc} from your Gmail now? It also gets logged in the class CRM.`, yes: 'Yes, send it' }
-        : { id, act: 'approve', text: `It's outside business hours, so this goes to ${to}${cc} ${nextSendWindow()}, when this page is open then.`, yes: `Send ${nextSendWindow()}` };
+        : { id, act: 'approve', text: `It's outside business hours, so this goes to ${to}${cc} ${nextSendWindow()}. It goes out on its own then; you don't need this page open.`, yes: `Send ${nextSendWindow()}` };
     rerenderDetail(root);
     return;
   }
