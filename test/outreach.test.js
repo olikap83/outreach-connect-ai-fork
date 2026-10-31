@@ -240,7 +240,7 @@ test('follow-up threads under the first subject', () => {
   const fu = composeFollowup(dentist, settings, 'A question for Willow Creek Family Dentistry');
   assert.equal(fu.subject, 'Re: A question for Willow Creek Family Dentistry');
   assert.match(fu.body, /bumping/);
-  assert.match(fu.body, /call/);
+  assert.match(fu.body, /bumping this/);
 });
 
 test('Gemini output is rejected if it invents numbers or sounds like marketing', () => {
@@ -669,4 +669,25 @@ test('reply check: people count, auto-responders do not, and Soham gets an email
   // Running again finds nothing new.
   const after = docs.map(d => ({ ...d, ...(updates.find(u => u.id === d.id) || {}).data }));
   assert.equal(planReplies(after, threads).notify.length, 0);
+});
+
+test('follow-ups: one, in the same thread, after 4 business days with no reply', () => {
+  const { planFollowups } = require('../scripts/outreach-followups');
+  const now = new Date('2026-11-03T13:15:00Z'); // Tuesday
+  const base = { email: 'x@y.com', thread_id: 't', subject: 'UConn student question about Buzz Beads', body: 'Dr. Smith,\n\nhi', log: [] };
+  const docs = [
+    { ...base, id: 'due', name: 'Buzz Beads, LLC', status: 'sent', sent_at: '2026-10-28T12:20:00Z', body: 'Hi Karen,\n\nI\'m Soham', crm_org_id: 'o1' },
+    { ...base, id: 'fresh', name: 'Fresh', status: 'sent', sent_at: '2026-10-30T12:20:00Z' },
+    { ...base, id: 'replied', name: 'Replied', status: 'replied', sent_at: '2026-10-20T12:20:00Z' },
+    { ...base, id: 'done', name: 'Done', status: 'followed_up', sent_at: '2026-10-20T12:20:00Z', followup_at: '2026-10-26T12:00:00Z' },
+  ];
+  const plan = planFollowups(docs, { now });
+  assert.deepEqual(plan.map(p => p.id), ['due']);
+  const f = plan[0];
+  assert.equal(f.subject, 'Re: UConn student question about Buzz Beads');
+  assert.equal(f.thread_id, 't');
+  assert.match(f.body, /^Hi Karen,\n\nJust bumping this/);
+  assert.doesNotMatch(f.body, /;/);
+  assert.equal(f.after.status, 'followed_up');
+  assert.equal(f.crm.update.next_step_due, '2026-11-10');
 });

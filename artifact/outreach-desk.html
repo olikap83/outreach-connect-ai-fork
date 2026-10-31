@@ -830,7 +830,7 @@ async function sendInitial(p, vals) {
 async function sendFollowup(p) {
   if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails.`);
   const greet = (/^Hi [^\n]+,/.exec(p.body || '') || [`Hi ${shortName(p.name)} team,`])[0];
-  const body = `${greet}\n\nJust bumping this in case it got buried. Even a 10-minute call would help me a lot; I'm trying to learn how businesses like yours actually run, whether or not we ever work together.\n\nAnd if now isn't a good time, no worries at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
+  const body = `${greet}\n\nJust bumping this in case it got buried. If you have 10 minutes sometime in the next couple of weeks, I'd still really like to hear how you got started.\n\nIf now isn't a good time, no worries at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
   const subject = /^re:/i.test(p.subject || '') ? p.subject : `Re: ${p.subject || p.name}`;
   const trackId = trackingUrl() ? newTrackId(p, 'f') : null;
   await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body, trackId), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
