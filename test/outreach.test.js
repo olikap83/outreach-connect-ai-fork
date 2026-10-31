@@ -705,3 +705,10 @@ test('pre-send check: names must fit the address, and nothing passes without loa
     await assert.rejects(preflight({ id: 'x', name: 'X Co', town: 'Mansfield', state: 'CT', source: 'osm', website: 'https://x.example', email: 'info@x.example', email_source: 'website', status: 'ready', body: 'Hi X team,\n\nhi', log: [] }, {}), /couldn't load/);
   } finally { global.fetch = realFetch; }
 });
+
+test('greeting uses the short name the business goes by, never a random word', () => {
+  const { greeting } = require('../lib/outreach/compose');
+  const g = (n, c) => greeting({ name: n, contact_name: c, email: 'a@gmail.com', facts: { people: [{ name: c, how: 'state filing', business_id: 'x' }] }, registry_id: 'x' });
+  assert.equal(g('Doug Victor Electric LLC', 'Douglas Victor'), 'Hi Doug,');
+  assert.equal(g('Man Cave Barbershop', 'Manuel Ortiz'), 'Hi Manuel,');
+});

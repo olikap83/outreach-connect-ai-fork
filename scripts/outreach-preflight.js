@@ -125,6 +125,15 @@ async function preflight(doc, settings) {
     }
   }
   if (/hi there/i.test(body) || !/^Hi [^\n]+,/.test(body)) problems.push('The greeting is missing or generic.');
+  // A name in the greeting has to be someone we can link to: the proven
+  // contact, or a person on the state filing.
+  const greetName = ((/^Hi ([^\n,]+),/.exec(body) || [])[1] || '').replace(/^Dr\.\s+/, '');
+  if (greetName && !/ team$/.test(greetName) && !contact) {
+    const filed = ((next.facts || {}).people || []).find(x => x.how === 'state filing' && String(x.name || '').toLowerCase().split(/\s+/).some(w => w.startsWith(greetName.toLowerCase().slice(0, 3))));
+    const url = filed ? sourceUrl({ ...next, contact_name: filed.name }, 'contact') : null;
+    if (url) checks.push({ what: `Name ${filed.name} (on the state filing)`, url });
+    else problems.push(`The email says "Hi ${greetName}", but that name can't be linked to their website or filing.`);
+  }
 
   const log = what => [...(doc.log || []), { at: now, what }].slice(-40);
   if (problems.length) {
