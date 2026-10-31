@@ -200,7 +200,7 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.ok(subject.length < 60);
   assert.match(body, /^Hi Dr. Whitfield,/);
   assert.match(body, /Willow Creek Family Dentistry/);
-  assert.match(body, /Connect\.AI/);
+  assert.doesNotMatch(body, /Connect\.AI/, "no class pitch in a first email");
   assert.doesNotMatch(body, /connect-ai\.world\/apply|free AI-readiness|build it for free/);
   assert.doesNotMatch(body, /Small Business Development Center/);
   assert.match(body, /accounting major/);
@@ -690,4 +690,18 @@ test('follow-ups: one, in the same thread, after 4 business days with no reply',
   assert.doesNotMatch(f.body, /;/);
   assert.equal(f.after.status, 'followed_up');
   assert.equal(f.crm.update.next_step_due, '2026-11-10');
+});
+
+test('pre-send check: names must fit the address, and nothing passes without loading the site', async () => {
+  const { nameFitsAddress, preflight } = require('../scripts/outreach-preflight');
+  assert.equal(nameFitsAddress('Steve Smith', 'barry@fentonrivergrill.com'), false);
+  assert.equal(nameFitsAddress('Karen Santiago', 'kts.santiago@gmail.com'), true);
+  assert.equal(nameFitsAddress('Jennifer Dubois', 'jenn@mindoverbody-fitness.com'), true);
+  assert.equal(nameFitsAddress('Katie Wilcock', 'katie@katielouise.co'), true);
+  assert.equal(nameFitsAddress('Michael Lamothe', 'info@pizzamikes.com'), true);
+  const realFetch = global.fetch;
+  global.fetch = async () => { throw new Error('blocked'); };
+  try {
+    await assert.rejects(preflight({ id: 'x', name: 'X Co', town: 'Mansfield', state: 'CT', source: 'osm', website: 'https://x.example', email: 'info@x.example', email_source: 'website', status: 'ready', body: 'Hi X team,\n\nhi', log: [] }, {}), /couldn't load/);
+  } finally { global.fetch = realFetch; }
 });
