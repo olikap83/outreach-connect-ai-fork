@@ -1740,15 +1740,47 @@ function samePerson(a, b) {
   const A = nameWords(a), B = nameWords(b);
   return !!(A.length && B.length && A[0] === B[0] && A[A.length - 1] === B[B.length - 1]);
 }
+// Is this name confirmed as someone who reads this email? Same rule as
+// confirmName in lib/outreach/factsources.js. A name that isn't confirmed is
+// left out of the email (the team greeting is used instead).
+function emailMatchesName(email, name) {
+  const local = String(email || '').split('@')[0].toLowerCase().replace(/[^a-z]/g, '');
+  const parts = nameWords(name);
+  if (!local || parts.length < 2) return false;
+  const first = parts[0], last = parts[parts.length - 1];
+  return local.includes(last) || local === first || local.startsWith(first[0] + last.slice(0, 4)) || (first.length >= 4 && local.startsWith(first));
+}
+const ROLE_LOCAL_NAME = /^(info|office|contact|hello|hi|admin|sales|support|team|shop|store|mail|email|inquiries|inquiry|booking|bookings|appointments|service|frontdesk|reception|orders|help|marketing|general|main|business|manager|owner|accounts|billing|jobs|careers)$/;
+function addressIsSomeoneElse(email, name, businessName) {
+  const local = String(email || '').split('@')[0].toLowerCase().replace(/[^a-z]/g, '');
+  if (!local || local.length < 3 || local.length > 8 || ROLE_LOCAL_NAME.test(local)) return false;
+  if (emailMatchesName(email, name)) return false;
+  const words = nameWords(businessName);
+  if (words.some(w => w.length >= 3 && (local.includes(w) || w.includes(local)))) return false;
+  const initials = String(businessName || '').toLowerCase().split(/[^a-z]+/).filter(Boolean).map(w => w[0]).join('');
+  if (initials.length >= 2 && local.startsWith(initials.slice(0, 2))) return false;
+  const first = nameWords(name)[0] || '';
+  return !(first && (local.startsWith(first.slice(0, 3)) || first.startsWith(local.slice(0, 3))));
+}
 function nameSource(name, p) {
   if (!name) return null;
-  const people = ((p.facts || {}).people || []).filter(x => samePerson(x.name, name));
-  const site = people.find(x => x.url);
-  if (site) return { href: site.url, label: 'from their website', ok: true };
+  const all = (p.facts || {}).people || [];
+  if (addressIsSomeoneElse(p.email, name, p.name)) {
+    const any = all.find(x => samePerson(x.name, name));
+    return { href: (any && (any.url || (any.how === 'state filing' ? personFilingUrl(name, p, any.business_id) : null))) || p.website || CT_SEARCH, label: `${p.email} looks like someone else's inbox, so this name isn't used`, ok: false };
+  }
+  const people = all.filter(x => samePerson(x.name, name));
+  const site = people.find(x => x.url || x.doctor_url);
+  if (site) return { href: site.url || site.doctor_url, label: 'named on their website', ok: true };
   const filed = people.find(x => x.how === 'state filing' && (x.business_id || p.registry_id));
-  if (filed) return { href: personFilingUrl(name, p, filed.business_id), label: 'from the state filing', ok: false };
-  if (nameConfirmed(p) && samePerson(p.contact_name, name) && p.website) return { href: p.website, label: 'matches their email address', ok: true };
-  return null;
+  if (!filed) return emailMatchesName(p.email, name) && p.website ? { href: p.website, label: 'matches their email address', ok: true } : null;
+  const href = personFilingUrl(name, p, filed.business_id);
+  const last = nameWords(name).slice(-1)[0];
+  if (last && last.length >= 4 && nameWords(p.name).includes(last)) return { href, label: 'business is named after them, on the state filing', ok: true };
+  if (emailMatchesName(p.email, name)) return { href, label: 'on the state filing, and the email is theirs', ok: true };
+  const onFiling = new Set(all.filter(x => x.how === 'state filing').map(x => nameWords(x.name).join(' '))).size;
+  if (p.email_source === 'registry' && onFiling <= 2) return { href, label: onFiling === 1 ? 'only person on the state filing, which lists this email' : 'one of two on the state filing, which lists this email', ok: true };
+  return { href, label: 'on the state filing but not tied to this email, so not used', ok: false };
 }
 function sourceLink(name, p) {
   const s = nameSource(name, p);
@@ -1861,7 +1893,7 @@ function detailHtml(id) {
           <span class="eyebrow">Email</span>
           <div class="row2">
             <div class="field"><label for="dTo">To ${src ? `· ${emailSource(p) ? `<a class="badge ${src[1]}" style="font-size:8.5px; text-decoration:none" href="${esc(emailSource(p))}" target="_blank" rel="noopener" title="Open where this address was found">${esc(src[0])} ↗</a>` : `<span class="badge ${src[1]}" style="font-size:8.5px">${esc(src[0])}</span>`}` : ''}</label><input id="dTo" type="email" value="${esc(p.email || '')}" placeholder="Add an email address">${settings().cc_email ? `<div style="font-size:11px; color:var(--muted); margin-top:4px">cc ${esc(settings().cc_email)}</div>` : ''}</div>
-            <div class="field"><label for="dName">Their name${p.contact_name ? (() => { const ns = nameSource(p.contact_name, p); return ns ? ` · <a class="badge ${ns.ok ? 'ok' : 'warn'}" style="font-size:8.5px; text-decoration:none" href="${esc(ns.href)}" target="_blank" rel="noopener" title="Open where this name came from">${ns.ok ? ns.label : 'from the state filing, not confirmed'} ↗</a>` : ' · <span class="badge red" style="font-size:8.5px">no source found, check before sending</span>'; })() : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
+            <div class="field"><label for="dName">Their name${p.contact_name ? (() => { const ns = nameSource(p.contact_name, p); return ns ? ` · <a class="badge ${ns.ok ? 'ok' : 'warn'}" style="font-size:8.5px; text-decoration:none" href="${esc(ns.href)}" target="_blank" rel="noopener" title="Open where this name came from">${ns.label} ↗</a>` : ' · <span class="badge red" style="font-size:8.5px">no source found, check before sending</span>'; })() : ''}</label><input id="dName" value="${esc(p.contact_name || '')}" placeholder="Unknown"></div>
           </div>
           <div class="field"><label for="dSubj">Subject</label><input id="dSubj" value="${esc(p.subject || '')}"></div>
           <div class="field"><label for="dBody">Message</label><div class="help" style="margin:0 0 6px">Make it yours: add one line only you could write, like why this kind of business interests you or something you noticed when you looked them up.</div><textarea id="dBody" spellcheck="true">${esc(p.body || '')}</textarea></div>

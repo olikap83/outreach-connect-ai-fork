@@ -559,14 +559,17 @@ test('drafts that might be the wrong business go to "needs a look", not review',
 
 test('greets by name only when the name is confirmed, not just from the state filing', () => {
   const { composeInitial } = require('../lib/outreach/compose');
-  const base = { id: 'ac', name: 'Air Control Mechanical LLC', town: 'Ellington', bucket: 'trades', contact_name: 'Antonio Melendez' };
+  const base = { id: 'ac', name: 'Air Control Mechanical LLC', town: 'Ellington', bucket: 'trades', contact_name: 'Antonio Melendez', registry_id: 'r1' };
   const filingOnly = { ...base, email: 'office@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }, { name: 'Jordan Vallee', how: 'state filing' }] } };
-  assert.match(composeInitial(filingOnly, settings).body, /^Hi Antonio and Jordan,/);
+  // On the filing but not tied to office@: not used.
+  assert.match(composeInitial(filingOnly, settings).body, /^Hi Air Control Mechanical team,/);
+  // The filing also lists this email, and it has two people: both are greeted.
+  assert.match(composeInitial({ ...filingOnly, email_source: 'registry' }, settings).body, /^Hi Antonio and Jordan,/);
   assert.match(composeInitial({ ...filingOnly, email: 'jessicam@aircontrolmech.com' }, settings).body, /^Hi Air Control Mechanical team,/);
   assert.match(composeInitial({ ...filingOnly, facts: { people: [] } }, settings).body, /^Hi Air Control Mechanical team,/);
-  assert.match(composeInitial({ ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } }, settings).body, /^Hi Antonio,/);
+  assert.match(composeInitial({ ...filingOnly, email_source: 'registry', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } }, settings).body, /^Hi Antonio,/);
   assert.match(composeInitial({ ...filingOnly, facts: { people: [{ name: 'A B', how: 'state filing' }, { name: 'C D', how: 'state filing' }, { name: 'E F', how: 'state filing' }] } }, settings).body, /^Hi Air Control Mechanical team,/);
-  const onSite = { ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'site text' }] } };
+  const onSite = { ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'site text', url: 'https://aircontrolmech.com/about' }] } };
   assert.match(composeInitial(onSite, settings).body, /^Hi Antonio,/);
   const ownEmail = { ...base, email: 'amelendez@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } };
   assert.match(composeInitial(ownEmail, settings).body, /^Hi Antonio,/);
@@ -611,7 +614,7 @@ test('Dr. is used only when a source shows the person is a doctor; otherwise a p
   assert.equal(greeting({ ...ortho, facts: filed({ name: 'Susan Davis', doctor_url: 'https://mansfieldorthodonticsct.com/about' }) }), 'Hi Dr. Davis,');
   assert.equal(greeting({ name: 'Ralph J Laguardia M.D.', email: 'r@gmail.com', facts: filed('Ralph Laguardia') }), 'Hi Dr. Laguardia,', 'the registered business name says M.D.');
   assert.equal(greeting({ name: 'Eastside Family Dental', email: 'office@eastside.com', facts: filed({ name: 'Ann Lee', doctor_url: 'u' }, { name: 'Raj Patel', doctor_url: 'u' }) }), 'Hi Dr. Lee and Dr. Patel,');
-  assert.equal(greeting({ name: 'Air Control Mechanical LLC', email: 'office@aircontrolmech.com', facts: filed('Antonio Melendez', 'Jordan Vallee') }), 'Hi Antonio and Jordan,', 'everyone else keeps first names');
+  assert.equal(greeting({ name: 'Air Control Mechanical LLC', email: 'office@aircontrolmech.com', email_source: 'registry', facts: filed('Antonio Melendez', 'Jordan Vallee') }), 'Hi Antonio and Jordan,', 'everyone else keeps first names');
   const page = text => [{ url: 'https://x.com/team', text }];
   assert.equal(doctorEvidence('Susan Davis', page('Meet Dr. Susan Davis, our orthodontist')), 'https://x.com/team');
   assert.equal(doctorEvidence('Susan Davis', page('Susan M. Davis, D.M.D.')), 'https://x.com/team');
@@ -708,7 +711,27 @@ test('pre-send check: names must fit the address, and nothing passes without loa
 
 test('greeting uses the short name the business goes by, never a random word', () => {
   const { greeting } = require('../lib/outreach/compose');
-  const g = (n, c) => greeting({ name: n, contact_name: c, email: 'a@gmail.com', facts: { people: [{ name: c, how: 'state filing', business_id: 'x' }] }, registry_id: 'x' });
+  const g = (n, c) => greeting({ name: n, contact_name: c, email: 'a@gmail.com', email_source: 'registry', facts: { people: [{ name: c, how: 'state filing', business_id: 'x' }] }, registry_id: 'x' });
   assert.equal(g('Doug Victor Electric LLC', 'Douglas Victor'), 'Hi Doug,');
   assert.equal(g('Man Cave Barbershop', 'Manuel Ortiz'), 'Hi Manuel,');
 });
+
+test('a name from the state filing is used only when it can be tied to the email address', () => {
+  const { confirmName } = require('../lib/outreach/factsources');
+  const fp = [{ name: 'Julie Gauthier', how: 'state filing', business_id: 'b' }];
+  assert.match(confirmName({ email: 'juliegauthiernyc@gmail.com', email_source: 'website', facts: { people: fp } }, 'Julie Gauthier').how, /email address is theirs/);
+  assert.equal(confirmName({ email: 'info@x.com', email_source: 'website', facts: { people: fp } }, 'Julie Gauthier'), null);
+  assert.match(confirmName({ email: 'x@gmail.com', email_source: 'registry', facts: { people: fp } }, 'Julie Gauthier').how, /only person on the state filing/);
+  const three = ['A Bee', 'C Dee', 'E Eff'].map(name => ({ name, how: 'state filing', business_id: 'b' }));
+  assert.equal(confirmName({ email: 'x@gmail.com', email_source: 'registry', facts: { people: three } }, 'A Bee'), null);
+});
+
+test('a name is never used when the address is clearly someone else\'s', () => {
+  const { confirmName } = require('../lib/outreach/factsources');
+  const steve = { name: 'Fenton River Grill, LLC', email: 'barry@fentonrivergrill.com', facts: { people: [{ name: 'Steve Smith', url: 'https://fentonrivergrill.com/about' }] } };
+  assert.equal(confirmName(steve, 'Steve Smith'), null);
+  assert.ok(confirmName({ ...steve, email: 'info@fentonrivergrill.com' }, 'Steve Smith'));
+  const doc = { name: 'Ralph J Laguardia M.D.', email: 'rjlpc7@gmail.com', email_source: 'registry', facts: { people: [{ name: 'Ralph Laguardia', how: 'state filing', business_id: 'b' }] } };
+  assert.ok(confirmName(doc, 'Ralph Laguardia'), 'initials of the business name');
+});
+

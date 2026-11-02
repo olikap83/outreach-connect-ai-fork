@@ -25,7 +25,7 @@ const { enrichProspect } = require('../lib/outreach/enrich');
 const { registryLookup } = require('../lib/outreach/sources');
 const { readinessProblems } = require('../lib/outreach/verify');
 const { composeInitial, greeting } = require('../lib/outreach/compose');
-const { sourceUrl, samePerson } = require('../lib/outreach/factsources');
+const { sourceUrl, samePerson, confirmName } = require('../lib/outreach/factsources');
 const { mergeSettings } = require('../lib/outreach/settings');
 const { mapLimit, stateOf, stateCode } = require('../lib/outreach/util');
 
@@ -97,9 +97,9 @@ async function preflight(doc, settings) {
   let contact = fresh.contact_name || null;
   if (doc.contact_name && !samePerson(doc.contact_name, contact || '')) contact = null; // the name we had wasn't found again
   if (contact && !nameFitsAddress(contact, doc.email)) contact = null;
-  const contactUrl = contact ? sourceUrl({ ...fresh, contact_name: contact }, 'contact') : null;
-  if (contact && !contactUrl) contact = null;
-  if (contact) checks.push({ what: `Name ${contact}`, url: contactUrl });
+  const confirmed = contact ? confirmName({ ...fresh, email: doc.email }, contact) : null;
+  if (contact && !confirmed) contact = null;
+  if (contact) checks.push({ what: `Name ${contact} (${confirmed.how})`, url: confirmed.url });
 
   problems.push(...readinessProblems({ ...fresh, email: doc.email }));
 
@@ -130,8 +130,8 @@ async function preflight(doc, settings) {
   const greetName = ((/^Hi ([^\n,]+),/.exec(body) || [])[1] || '').replace(/^Dr\.\s+/, '');
   if (greetName && !/ team$/.test(greetName) && !contact) {
     const filed = ((next.facts || {}).people || []).find(x => x.how === 'state filing' && String(x.name || '').toLowerCase().split(/\s+/).some(w => w.startsWith(greetName.toLowerCase().slice(0, 3))));
-    const url = filed ? sourceUrl({ ...next, contact_name: filed.name }, 'contact') : null;
-    if (url) checks.push({ what: `Name ${filed.name} (on the state filing)`, url });
+    const ok = filed ? confirmName(next, filed.name) : null;
+    if (ok) checks.push({ what: `Name ${filed.name} (${ok.how})`, url: ok.url });
     else problems.push(`The email says "Hi ${greetName}", but that name can't be linked to their website or filing.`);
   }
 
