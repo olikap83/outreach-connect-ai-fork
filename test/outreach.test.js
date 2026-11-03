@@ -735,3 +735,35 @@ test('a name is never used when the address is clearly someone else\'s', () => {
   assert.ok(confirmName(doc, 'Ralph Laguardia'), 'initials of the business name');
 });
 
+
+test('emails are spread across the day, a share per hourly run', () => {
+  const { sendSlot } = require('../scripts/send-slot');
+  const at = h => new Date(`2026-11-09T${String(h + 5).padStart(2, '0')}:17:00Z`); // EST
+  const first = sendSlot({ limit: 40, sentToday: 0, followupsDue: 9, now: at(8), random: () => 0.5 });
+  assert.equal(first.slots_left, 8);
+  assert.equal(first.first_quota, 5);
+  assert.equal(first.followup_quota, 2);
+  assert.equal(first.gaps_min.length, 6);
+  assert.ok(first.gaps_min.every(g => g >= 3 && g <= 8));
+  assert.ok(first.first_run && !first.last_run);
+  const last = sendSlot({ limit: 40, sentToday: 37, followupsDue: 1, now: at(15) });
+  assert.equal(last.first_quota, 3);
+  assert.ok(last.last_run);
+  assert.equal(sendSlot({ limit: 30, sentToday: 30, now: at(12) }).first_quota, 0);
+});
+
+test('CRM notes say the email went out, and the timeline gets the whole email', () => {
+  const { crmNotesNow, emailStatus } = require('../lib/outreach/crmnotes');
+  const { crmEntry } = require('../scripts/crm-entry');
+  const p = { name: 'Car Corner LLC', email: 'carcorner@aol.com', subject: 'UConn student question about Car Corner', body: 'Hi Car Corner team,\n\nHello.',
+    crm_notes: "What they do: used cars (source: x)\nFound by Soham's outreach research (fit 70/100). Intro email drafted; not sent yet." };
+  assert.match(emailStatus({ ...p, sent_at: '2026-11-02T14:00:00Z', status: 'sent' }), /Intro email sent Nov 2 to carcorner@aol.com\. No reply yet\./);
+  const notes = crmNotesNow({ ...p, sent_at: '2026-11-02T14:00:00Z', followup_at: '2026-11-06T15:00:00Z', status: 'followed_up' });
+  assert.doesNotMatch(notes, /not sent yet/);
+  assert.match(notes, /fit 70\/100\)\. Intro email sent Nov 2 to carcorner@aol\.com\. Followed up Nov 6\. No reply yet\.$/);
+  const e = crmEntry(p, { sentAt: '2026-11-02T14:00:00Z' });
+  assert.match(e.touchpoint.body, /Subject: UConn student question about Car Corner\n\nHi Car Corner team,/);
+  assert.equal(e.add_contact.full_name, 'Car Corner (main email)');
+  assert.equal(e.add_contact.email, 'carcorner@aol.com');
+  assert.equal(crmEntry(p, { hasContacts: true }).add_contact, null);
+});

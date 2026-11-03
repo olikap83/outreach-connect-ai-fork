@@ -775,7 +775,7 @@ async function logToCrm(p, kind, body, extra = {}) {
       next_step: extra.stage === 'lead' ? leadNextStep(p) : 'Follow up on intro email if no reply',
       // crm_create_org rejects a null date; leads simply get none.
       ...(extra.stage === 'lead' ? {} : { next_step_due: addDays(6) }),
-      notes: (p.crm_notes || fallbackNotes(p)).slice(0, 3900),
+      notes: crmNotesNow(p),
       ...(p.contact_name ? { contact: { full_name: p.contact_name, ...(p.email ? { email: p.email } : {}), ...(p.contact_title ? { title: p.contact_title } : {}), is_primary: true } } : {}),
     });
     const pl = res.payload || {};
@@ -820,7 +820,7 @@ async function sendInitial(p, vals) {
   S.gmailState = 'ok';
   try {
     const orgId = await logToCrm({ ...p, ...vals }, 'email', `Intro email sent to ${vals.email}.\nSubject: ${vals.subject}\n\n${vals.body}`,
-      { update: { stage: 'contacted', next_step: 'Follow up on intro email if no reply', next_step_due: addDays(6) } });
+      { update: { stage: 'contacted', next_step: 'Follow up on intro email if no reply', next_step_due: addDays(6), notes: crmNotesNow({ ...p, ...vals, status: 'sent', sent_at: sentAt }) } });
     await patch(p.id, { crm_org_id: orgId, crm_stage: 'contacted', crm_error: null }, 'Class CRM: moved to Contacted, email logged');
   } catch (e) {
     await patch(p.id, { crm_error: mcpMessage(e, CRM) }, 'Couldn\'t log to the CRM');
@@ -836,7 +836,7 @@ async function sendFollowup(p) {
   await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body, trackId), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
   const fAt = nowIso();
   await patch(p.id, { status: 'followed_up', followup_at: fAt, followup_body: body, ...trackedPatch(p, trackId, 'follow-up', fAt) }, `Followed up with ${p.email}`);
-  if (p.crm_org_id) logToCrm(p, 'email', `Follow-up email sent to ${p.email}.\n\n${body}`).catch(() => {});
+  if (p.crm_org_id) logToCrm(p, 'email', `Follow-up email sent to ${p.email}.\n\n${body}`, { update: { notes: crmNotesNow({ ...p, status: 'followed_up', followup_at: fAt }) } }).catch(() => {});
 }
 
 // ---------- conversations ----------
@@ -1071,6 +1071,25 @@ function leadNextStep(p) {
   const c = String(p.category || '').trim();
   return c ? c[0].toUpperCase() + c.slice(1) : 'Local business';
 }
+// Where the emails stand, so the CRM page matches what went out
+// (same as lib/outreach/crmnotes.js emailStatus).
+const crmDay = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+function emailStatus(p) {
+  if (!p.email) return 'No email address found yet.';
+  if (!p.sent_at) return 'Intro email drafted; not sent yet.';
+  const parts = [`Intro email sent ${crmDay(p.sent_at)} to ${p.email}.`];
+  if (p.followup_at) parts.push(`Followed up ${crmDay(p.followup_at)}.`);
+  if (p.status === 'bounced') parts.push('The email bounced.');
+  else if (p.status === 'not_interested') parts.push(p.replied_at ? `Wrote back ${crmDay(p.replied_at)} and said no thanks.` : 'Wrote back and said no thanks.');
+  else if (p.replied_at && p.status === 'replied') parts.push(`Wrote back ${crmDay(p.replied_at)}.`);
+  else parts.push('No reply yet.');
+  return parts.join(' ');
+}
+// Stored notes end with the status line from when they were written; swap in today's.
+function crmNotesNow(p) {
+  const notes = p.crm_notes || fallbackNotes(p);
+  return notes.replace(/(Found by Soham's outreach research[^.\n]*\.)[^\n]*$/, `$1 ${emailStatus(p)}`).slice(0, 3900);
+}
 function fallbackNotes(p) {
   const f = p.facts || {};
   const line = (text, url) => text && url ? `${text} (source: ${url})` : null;
@@ -1081,7 +1100,7 @@ function fallbackNotes(p) {
     p.website ? `Website: ${p.website}` : null,
     line(p.contact_name && `Contact: ${p.contact_name}`, factUrl(p, 'contact')),
     line(p.email && `Email: ${p.email}`, factUrl(p, 'email')),
-    `Found by Soham's outreach research (fit ${p.fit_score ?? '?'}/100). Intro email drafted; not sent yet.`,
+    `Found by Soham's outreach research (fit ${p.fit_score ?? '?'}/100). ${emailStatus(p)}`,
   ].filter(Boolean).join('\n');
 }
 const CRM_LEADS_PER_DAY = 15;
@@ -1137,7 +1156,7 @@ async function syncNotes() {
   try {
     for (const p of todo) {
       const worthy = crmWorthy(p);
-      const update = { org: p.crm_org_id, notes: p.crm_notes.slice(0, 3900) };
+      const update = { org: p.crm_org_id, notes: crmNotesNow(p) };
       update.website = p.website || null; // a website we couldn't confirm doesn't stay in the CRM
       if ((p.facts || {}).team_size_text) update.headcount = String(p.facts.team_size_text);
       const stillLead = !p.crm_stage || p.crm_stage === 'lead';

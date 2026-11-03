@@ -13,6 +13,7 @@ const { composeFollowup } = require('../lib/outreach/compose');
 const { mergeSettings } = require('../lib/outreach/settings');
 const { businessDaysSince } = require('../lib/outreach/util');
 const { mailBodies } = require('./mail-bodies');
+const { crmNotesNow } = require('../lib/outreach/crmnotes');
 
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : dflt; };
 const addDays = (d, n) => { const x = new Date(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
@@ -36,7 +37,7 @@ function planFollowups(docs, { days = 4, max = 20, now = new Date(), settings = 
     return {
       id: p.id, to: [p.email], cc: ['soham.shah@uconn.edu'], subject, ...mailBodies(body), thread_id: p.thread_id, after,
       crm: p.crm_org_id ? { org: p.crm_org_id, body: `Follow-up email sent to ${p.email}.\n\n${body}`,
-        update: { next_step: 'No reply to the follow-up yet: try calling or stopping by', next_step_due: addDays(now, 7) } } : null,
+        update: { next_step: 'No reply to the follow-up yet: try calling or stopping by', next_step_due: addDays(now, 7), notes: crmNotesNow({ ...p, ...after }) } } : null,
     };
   });
 }
