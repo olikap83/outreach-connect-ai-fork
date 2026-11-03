@@ -804,3 +804,15 @@ test("open times come from Soham's calendar, skip busy blocks, and the reply doe
   assert.match(r.body, /Levareit got started/);
   assert.ok(meetingReply({ name: 'X', body: 'Hi X,' }, { busy, fetched_at: '2026-10-01T00:00:00Z' }, { now }).skip);
 });
+
+test('the reply-ready email shows the draft and carries an approve link tied to that one draft', () => {
+  const { replyNotice, CODE } = require('../scripts/reply-notice');
+  const p = { name: 'Levareit LLC', contact_name: 'Rene Burce', email: 'reneburce@yahoo.com', reply_draft: 'Hi Rene,\n\nHere are a few times...' };
+  const n = replyNotice(p, 'Hi Soham, sure, we can connect via Teams.', { draftId: 'r1', draftUrl: 'https://mail.google.com/x', code: 'A7K2Q9' });
+  assert.equal(n.subject, 'Rene Burce at Levareit wants to talk. Your reply is ready');
+  assert.match(n.body, /sure, we can connect via Teams/);
+  assert.match(n.body, /Here are a few times/);
+  assert.match(n.htmlBody, /mailto:shahsoham689@gmail\.com\?subject=Approve%20reply%20to%20Rene%20Burce%20%5BA7K2Q9%5D/);
+  assert.equal(CODE.exec('Approve reply to Rene Burce [A7K2Q9]')[1], 'A7K2Q9');
+  assert.deepEqual(n.to, ['soham.shah@uconn.edu', 'shahsoham689@gmail.com']);
+});

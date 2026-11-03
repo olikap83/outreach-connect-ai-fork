@@ -1,0 +1,55 @@
+// The email Soham gets when a business owner writes back and a reply is ready:
+// their message, the reply (with open times from his calendar), and two links:
+// "Approve and send" (opens a filled-in email to himself; the reply watch sees
+// it and sends the draft) and "Change it first" (opens the Gmail draft).
+//
+//   node scripts/reply-notice.js <prospect JSON> <their message text file> <draft id> <draft url> [code]
+//     → { to, subject, body, htmlBody, code }
+
+const fs = require('fs');
+const crypto = require('crypto');
+const { shortName } = require('../lib/outreach/crmnotes');
+const { NOTIFY_TO } = require('../lib/outreach/replies');
+
+const SELF = 'shahsoham689@gmail.com';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// "Approve reply to Rene Burce [A7K2Q9]": the code ties the approval to this
+// one draft, so an old or stray email can't send the wrong thing.
+function approvalSubject(p, code) {
+  return `Approve reply to ${p.contact_name || shortName(p.name)} [${code}]`;
+}
+const CODE = /\[([A-Z0-9]{6})\]/;
+
+function replyNotice(p, theirText, { draftId, draftUrl, code = crypto.randomBytes(4).toString('hex').slice(0, 6).toUpperCase() } = {}) {
+  const who = p.contact_name ? `${p.contact_name} at ${shortName(p.name)}` : shortName(p.name);
+  const subject = `${who} wants to talk. Your reply is ready`;
+  const approve = `mailto:${SELF}?subject=${encodeURIComponent(approvalSubject(p, code))}&body=${encodeURIComponent('Send it.')}`;
+  const said = String(theirText || '').trim();
+  const body = [
+    `${who} (${p.email}) wrote back:`,
+    `"${said}"`,
+    "Here's the reply I wrote, with times you're free:",
+    p.reply_draft,
+    `To approve, reply to this email with "send" (or send yourself an email with the subject "${approvalSubject(p, code)}"). It goes out at the next check, within the hour.`,
+    `To change it first, open the draft in Gmail: ${draftUrl}`,
+  ].join('\n\n');
+  const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">
+<p>${esc(who)} (${esc(p.email)}) wrote back:</p>
+<blockquote style="margin:0 0 12px;padding:8px 12px;border-left:3px solid #ccc;color:#333">${esc(said).replace(/\n/g, '<br>')}</blockquote>
+<p>Here's the reply I wrote, with times you're free:</p>
+<div style="margin:0 0 16px;padding:12px;border:1px solid #ddd;border-radius:8px">${esc(p.reply_draft).replace(/\n/g, '<br>')}</div>
+<p><a href="${esc(approve)}" style="display:inline-block;padding:10px 18px;background:#1a7f37;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Approve and send</a>
+&nbsp; <a href="${esc(draftUrl)}" style="display:inline-block;padding:10px 18px;border:1px solid #999;color:#333;text-decoration:none;border-radius:6px">Change it first</a></p>
+<p style="color:#666;font-size:12px">"Approve and send" opens a short email to yourself; hit send and the reply goes out at the next check, within the hour. Replying "send" to this email works too.</p>
+</div>`;
+  return { to: NOTIFY_TO, subject, body, htmlBody, code, draft_id: draftId };
+}
+
+if (require.main === module) {
+  const [doc, msgFile, draftId, draftUrl, code] = process.argv.slice(2);
+  const j = JSON.parse(fs.readFileSync(doc, 'utf8'));
+  const p = j.data || j;
+  process.stdout.write(JSON.stringify(replyNotice(p, fs.readFileSync(msgFile, 'utf8'), { draftId, draftUrl, ...(code ? { code } : {}) })));
+}
+module.exports = { replyNotice, approvalSubject, CODE };
