@@ -30,6 +30,7 @@ const { mergeSettings } = require('../lib/outreach/settings');
 const { mapLimit, stateOf, stateCode } = require('../lib/outreach/util');
 
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : dflt; };
+const PUT_DOWN = /\b(big chains|big-box|dealerships|stay competitive|compete with|against the (big|larger)|big-company)\b/i;
 const HAND_EDITED = /^(Edited the draft|Saved as a Gmail draft)/;
 const GENERIC_LOCAL = /^(info|office|contact|hello|hi|admin|sales|support|team|shop|store|mail|email|inquiries|inquiry|booking|bookings|appointments|service|frontdesk|reception|orders|help|marketing|general|main|business|manager|owner)\d*$/;
 
@@ -125,6 +126,8 @@ async function preflight(doc, settings) {
     }
   }
   if (/hi there/i.test(body) || !/^Hi [^\n]+,/.test(body)) problems.push('The greeting is missing or generic.');
+  // Soham's rule: never set them against bigger companies or competitors.
+  if (PUT_DOWN.test(body)) problems.push('The email compares them to big chains or competitors, which reads as a put-down.');
   // A name in the greeting has to be someone we can link to: the proven
   // contact, or a person on the state filing.
   const greetName = ((/^Hi ([^\n,]+),/.exec(body) || [])[1] || '').replace(/^Dr\.\s+/, '');
@@ -184,4 +187,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch(e => { console.error(e); process.exit(1); });
-module.exports = { preflight, nameFitsAddress };
+module.exports = { preflight, nameFitsAddress, PUT_DOWN };

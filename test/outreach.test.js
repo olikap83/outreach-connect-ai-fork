@@ -767,3 +767,12 @@ test('CRM notes say the email went out, and the timeline gets the whole email', 
   assert.equal(e.add_contact.email, 'carcorner@aol.com');
   assert.equal(crmEntry(p, { hasContacts: true }).add_contact, null);
 });
+
+test('no email line compares a business to big chains or competitors', () => {
+  const { PUT_DOWN } = require('../scripts/outreach-preflight');
+  const { BUCKETS } = require('../lib/outreach/industries');
+  const lines = Object.entries(BUCKETS).map(([k, v]) => [k, v.interest || '']);
+  assert.ok(lines.length > 3);
+  for (const [k, line] of lines) assert.doesNotMatch(line, PUT_DOWN, k);
+  assert.match('how independent shops keep going against the big chains and online stores', PUT_DOWN);
+});
