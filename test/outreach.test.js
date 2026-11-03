@@ -794,10 +794,10 @@ test("open times come from Soham's calendar, skip busy blocks, and the reply men
   assert.ok(busy.some(b => b.start === '2026-11-05T19:00:00.000Z'), 'Thursday class at 2pm');
   assert.ok(!JSON.stringify(busy).includes('Private'), 'no event names');
   const slots = openSlots(busy, { now }).map(slotText);
-  assert.deepEqual(slots, ['Wednesday, Nov 4 at 4pm', 'Thursday, Nov 5 at 4pm']);
+  assert.deepEqual(slots, ['Wednesday, Nov 4 at 3:30pm', 'Thursday, Nov 5 at 3:30pm']);
   const r = meetingReply({ name: 'Levareit LLC', body: 'Hi Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now });
   assert.match(r.body, /^Hi Rene,/);
-  assert.match(r.body, /Wednesday, Nov 4 at 4pm or Thursday, Nov 5 at 4pm/);
+  assert.match(r.body, /Wednesday, Nov 4 at 3:30pm or Thursday, Nov 5 at 3:30pm/);
   assert.match(r.body, /Connect\.AI/);
   assert.match(r.body, /Levareit got started/);
   assert.ok(meetingReply({ name: 'X', body: 'Hi X,' }, { busy, fetched_at: '2026-10-01T00:00:00Z' }, { now }).skip);
