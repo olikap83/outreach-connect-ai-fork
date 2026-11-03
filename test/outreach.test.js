@@ -785,7 +785,7 @@ test('a CT business id in source_ref links to the filing, never to a fake map UR
   assert.match(String(u), /data\.ct\.gov.*0018y00000Ab6epAAB/);
 });
 
-test("open times come from Soham's calendar, skip busy blocks, and the reply mentions Connect.AI", () => {
+test("open times come from Soham's calendar, skip busy blocks, and the reply doesn't pitch Connect.AI", () => {
   const { busyBlocks, openSlots, slotText } = require('../lib/outreach/calendar');
   const { meetingReply } = require('../scripts/meeting-reply');
   const ics = 'BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a\r\nDTSTART;TZID=Eastern Standard Time:20260901T140000\r\nDTEND;TZID=Eastern Standard Time:20260901T151500\r\nRRULE:FREQ=WEEKLY;UNTIL=20261211T050000Z;BYDAY=TU,TH\r\nEND:VEVENT\r\nBEGIN:VEVENT\r\nUID:b\r\nSUMMARY:Private thing\r\nDTSTART;TZID=Eastern Standard Time:20261104T140000\r\nDTEND;TZID=Eastern Standard Time:20261104T150000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n';
@@ -794,13 +794,13 @@ test("open times come from Soham's calendar, skip busy blocks, and the reply men
   assert.ok(busy.some(b => b.start === '2026-11-05T19:00:00.000Z'), 'Thursday class at 2pm');
   assert.ok(!JSON.stringify(busy).includes('Private'), 'no event names');
   const slots = openSlots(busy, { now }).map(slotText);
-  assert.deepEqual(slots, ['Wednesday, Nov 4 at 3:30pm', 'Thursday, Nov 5 at 3:30pm']);
+  assert.deepEqual(slots, ['Wednesday, Nov 4 at 4pm', 'Thursday, Nov 5 at 4pm']);
   const r = meetingReply({ name: 'Levareit LLC', body: 'Hi Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now });
   assert.match(r.body, /^Hi Rene,/);
-  assert.match(r.body, /- Wednesday, Nov 4 at 3:30pm\n- Thursday, Nov 5 at 3:30pm/);
+  assert.match(r.body, /- Wednesday, Nov 4 at 4pm\n- Thursday, Nov 5 at 4pm/);
   assert.equal(r.slot_text.length, 3);
   assert.match(r.slot_text.join(' '), /at (6|6:30|7)pm/);
-  assert.match(r.body, /Connect\.AI/);
+  assert.doesNotMatch(r.body, /Connect\.AI/);
   assert.match(r.body, /Levareit got started/);
   assert.ok(meetingReply({ name: 'X', body: 'Hi X,' }, { busy, fetched_at: '2026-10-01T00:00:00Z' }, { now }).skip);
 });
