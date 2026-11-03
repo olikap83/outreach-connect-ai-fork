@@ -776,3 +776,11 @@ test('no email line compares a business to big chains or competitors', () => {
   for (const [k, line] of lines) assert.doesNotMatch(line, PUT_DOWN, k);
   assert.match('how independent shops keep going against the big chains and online stores', PUT_DOWN);
 });
+
+test('a CT business id in source_ref links to the filing, never to a fake map URL', () => {
+  const { sourceUrl } = require('../lib/outreach/factsources');
+  const p = { source: 'registry', source_ref: '0018y00000Ab6epAAB', address: '57 Parker Road', facts: {} };
+  const u = sourceUrl(p, 'address');
+  assert.doesNotMatch(String(u), /openstreetmap/);
+  assert.match(String(u), /data\.ct\.gov.*0018y00000Ab6epAAB/);
+});
