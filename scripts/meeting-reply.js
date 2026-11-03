@@ -27,7 +27,7 @@ function meetingReply(p, cal, { now = new Date() } = {}) {
   const texts = slots.map(slotText);
   const body = [
     name ? `Hi ${name},` : 'Hi,',
-    `Thanks so much for getting back to me! Here are a few times that work on my end:\n\n${texts.map(t => `- ${t}`).join('\n')}\n\nIf none of those fit, just send me a time that's better for you and I'll make it work. Teams, Zoom or phone all work for me, and I'm happy to send the invite.`,
+    `Thanks so much for getting back to me! Here are a few times that work on my end:\n\n${texts.map(t => `- ${t}`).join('\n')}\n\nIf none of those fit, just let me know what works better for you. Teams, Zoom or phone all work for me, and I'm happy to send the invite.`,
     `Really looking forward to hearing how ${biz} got started.`,
     'Thanks,\nSoham',
   ].join('\n\n');
