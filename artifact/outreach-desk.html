@@ -1016,7 +1016,7 @@ function mailBodies(body, trackId) {
     .replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, `<a href="${LINKEDIN_URL}">LinkedIn</a>`)
     .replace(/soham\.shah@uconn\.edu/g, '<a href="mailto:soham.shah@uconn.edu">soham.shah@uconn.edu</a>')
     .replace(/\n/g, '<br>');
-  return { body: body.replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, LINKEDIN_URL), htmlBody: `<div>${html}</div>${pixel}` };
+  return { body: body.replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, 'linkedin.com/in/soham-shah-uconn'), htmlBody: `<div>${html}</div>${pixel}` };
 }
 const OLD_SIGNATURES = ['Thanks,\nSoham Shah\nUniversity of Connecticut', 'Thanks,\nSoham Shah\nConnect.AI, University of Connecticut\nconnect-ai.world'];
 let stripping = false;
