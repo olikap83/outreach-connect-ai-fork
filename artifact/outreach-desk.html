@@ -1476,9 +1476,7 @@ function renderReview() {
   const n = queued.length, s = n === 1 ? '' : 's';
   const qbar = !n ? '' : S.sendingQueue
     ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Gmail. Keep this page open until it finishes.</span></div>`
-    : inSendWindow()
-      ? `<div class="queue-bar"><button class="btn solid" id="sendQueue">Send ${n} approved email${s}</button><span class="help" style="margin:0">It's business hours, so they'll start going out on their own in a minute. Keep this page open.</span></div>`
-      : `<div class="queue-bar"><span class="badge warn">${n} approved · going out ${esc(nextSendWindow())}</span><span class="help" style="margin:0">It's outside business hours. They go out on their own at about 8:15am, page open or not.</span><button class="btn ghost sm" id="sendQueue">Send now anyway</button></div>`;
+    : `<div class="queue-bar"><span class="badge warn">${n} approved</span><span class="help" style="margin:0">These go out on their own a few at a time, every hour from 8:17am to 3:17pm on weekdays, page open or not. Spacing them out keeps Gmail from treating them as spam.</span></div>`;
 
   const done = handledToday();
   const counts = {};
@@ -1655,7 +1653,7 @@ function actionsHtml(p) {
       ${S.sample ? '<button class="btn ghost" data-act="rewrite">Rewrite with Claude</button>' : ''}
       <button class="btn ghost" data-act="draft">Save as Gmail draft</button>
       <button class="btn crimson" data-act="skip">Skip</button>`;
-  if (p.status === 'queued') return `<span class="badge warn">Approved · send it from the Review tab's button</span><span class="spacer"></span>
+  if (p.status === 'queued') return `<span class="badge warn">Approved · goes out with the next hourly send</span><span class="spacer"></span>
       <button class="btn" data-act="save">Save edits</button><button class="btn" data-act="send">Send now</button><button class="btn ghost" data-act="unqueue">Back to review</button>`;
   if (p.status === 'sent' || p.status === 'followed_up') return `${followupDue(p) ? '<button class="btn solid" data-act="followup">Send follow-up</button>' : ''}<span class="spacer"></span>
       <button class="btn" data-mark="replied">They replied</button><button class="btn ghost" data-mark="not_interested">Not interested</button><button class="btn ghost" data-mark="bounced">Bounced</button>`;
@@ -2301,6 +2299,9 @@ async function sendQueue() {
 const TAB_ID = Math.random().toString(36).slice(2);
 let autoTried = '';
 async function autoSend() {
+  // Off: the hourly scheduled send spreads emails through the day. Sending
+  // the whole queue at once from an open page is what Gmail flags as spam.
+  return;
   if (S.autoOff || !S.loaded || !S.mcp || !S.db || S.sendingQueue || !inSendWindow()) return;
   if (!S.prospects.some(p => p.status === 'queued') || sentToday() >= settings().daily_cap) return;
   const lock = S.meta.send_lock || {};
