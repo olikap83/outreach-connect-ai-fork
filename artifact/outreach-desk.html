@@ -937,6 +937,8 @@ Keep it short (under 120 words), plain and warm, like a real student wrote it. N
 async function sendReply(p, body) {
   if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
   if (!body.trim()) throw new Error('Write a reply first.');
+  // The reply check's draft, unchanged: send that Gmail draft so it doesn't linger.
+  if (p.reply_draft_id && body.trim() === String(p.reply_draft || '').trim()) return sendReadyReply(p);
   const tid = threadIdOf(p);
   if (!tid) throw new Error('Couldn\'t find this conversation in Gmail. Answer it from Gmail instead.');
   if (!Array.isArray(S.threads[tid])) await loadThread(p, { force: true });
@@ -1575,6 +1577,33 @@ function subjectStatsHtml() {
   </table></div><p class="help">Reply rates mean more after 20 or so emails per subject line.</p>`;
 }
 
+// A reply the reply check already wrote (with open times from Soham's
+// calendar) and saved as a Gmail draft: one tap sends it.
+function readyReply(p) {
+  if (!needsAnswer(p) || !p.reply_draft_id || !p.reply_draft) return '';
+  const busy = S.working[p.id] === 'gdraft';
+  return `<div class="ready-reply"><div class="help" style="margin:8px 0 4px">Your reply is written and waiting:</div>
+    <pre style="white-space:pre-wrap; font:inherit; margin:0 0 8px; padding:10px; border:1px solid var(--line); border-radius:8px">${esc(p.reply_draft)}</pre>
+    <button class="btn solid" data-gdraft="${esc(p.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Sending…' : 'Send it'}</button>
+    ${p.reply_draft_url ? `<a class="btn ghost" href="${esc(p.reply_draft_url)}" target="_blank" rel="noopener">Change it in Gmail ↗</a>` : ''}</div>`;
+}
+
+async function sendReadyReply(p) {
+  if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
+  S.working[p.id] = 'gdraft'; render();
+  try {
+    await S.mcp.callTool(GMAIL, 'send_message', { draftId: p.reply_draft_id });
+    const at = nowIso();
+    await patch(p.id, { answered_at: at, reply_draft: null, reply_draft_id: null, reply_draft_url: null,
+      my_replies: [...(p.my_replies || []), { at, body: p.reply_draft }].slice(-10) }, `Answered ${p.contact_name || p.email} with times for a call`);
+    const who = p.contact_name || shortName(p.name);
+    logToCrm(p, 'email', `Soham answered ${who} with times for a call:\n\n${p.reply_draft}`, { update: { stage: 'talks', next_step: `Wait for ${who} to pick a time`, next_step_due: addDays(3) } }).catch(() => {});
+    toast(`Sent to ${p.email}.`);
+  } finally {
+    delete S.working[p.id]; render();
+  }
+}
+
 function renderReplies() {
   const by = k => (a, b) => String(b[k] || '').localeCompare(String(a[k] || ''));
   const ps = S.prospects;
@@ -1589,7 +1618,7 @@ function renderReplies() {
     <h3 style="margin:18px 0 4px">${title} <span style="color:var(--muted); font-weight:400">${list.length}</span></h3>
     ${help ? `<p class="help" style="margin:0 0 8px">${help}</p>` : ''}
     <ul class="feed">${list.map(p => `<li><span class="t">${ago(p[atKey])}</span><span><span class="badge ${cls}">${lab}</span></span>
-      <span><span class="who" data-id="${esc(p.id)}">${esc(p.name)}</span> · ${esc(p.contact_name || p.email || '')}<br><span class="body">${esc(p[snipKey] || '')}</span></span></li>`).join('')}</ul>`).join('');
+      <span><span class="who" data-id="${esc(p.id)}">${esc(p.name)}</span> · ${esc(p.contact_name || p.email || '')}<br><span class="body">${esc(p[snipKey] || '')}</span>${readyReply(p)}</span></li>`).join('')}</ul>`).join('');
 }
 
 function renderActivity() {
@@ -2322,7 +2351,8 @@ document.addEventListener('click', async e => {
   const t = e.target;
   const tab = t.closest('[data-tab]');
   if (tab) { S.tab = tab.dataset.tab; lsSet('outreach-tab', S.tab); render(); return; }
-  if (t.closest('#sendQueue')) { sendQueue(); return; }
+  const gd = t.closest('[data-gdraft]');
+  if (gd) { const p = S.prospects.find(x => x.id === gd.dataset.gdraft); if (p) sendReadyReply(p).catch(err => toast(err && err.code ? mcpMessage(err, GMAIL) : err.message, { err: true })); return; }
   const opener = t.closest('[data-open]');
   if (opener) { openDrawer(opener.dataset.open); return; }
   const mode = t.closest('[data-rvmode]');
