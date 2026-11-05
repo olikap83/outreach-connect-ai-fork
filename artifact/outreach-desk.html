@@ -476,6 +476,9 @@ table.list th{font-size:11px;}
 .prep-text{font-size:15px;}
 .toast{font-size:14.5px; border-radius:12px;}
 footer{font-size:11px;}
+/* View-only (anyone but Soham): same data, no buttons that change anything. */
+body.ro [data-act], body.ro [data-mark], body.ro [data-gdraft], body.ro #skipWeak, body.ro #sendQueue, body.ro .queue-bar, body.ro .confirm { display: none !important; }
+body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane input, body.ro #reviewPane textarea { pointer-events: none; background: var(--wash, transparent); }
 </style>
 
 <div class="wrap">
@@ -658,7 +661,7 @@ const needsAnswer = p => p.status === 'replied' && (!p.answered_at || String(p.a
 
 // ---------- state ----------
 const S = {
-  db: null, mcp: null, sample: null,
+  db: null, mcp: null, sample: null, readOnly: false,
   prospects: [], meta: {}, loaded: false, dbState: 'connecting',
   crmAll: null, crmMine: null, crmState: 'connecting', crmError: '', gmailState: 'unknown',
   tab: lsGet('outreach-tab') || 'review',
@@ -855,6 +858,13 @@ function freshPart(text) {
   return (cut > 0 ? lines.slice(0, cut) : lines).filter(l => !/^>/.test(l)).join('\n').trim();
 }
 
+// Soham's copy of each conversation, kept on the desk so people he shares it
+// with (who can't read his Gmail) see the same thread he does.
+function saveThreadCopy(tid, msgs) {
+  if (S.readOnly || !S.db || !Array.isArray(msgs)) return;
+  const messages = msgs.map(m => ({ sender: m.sender || '', date: m.date || '', plaintextBody: String(msgText(m)).slice(0, 20000) }));
+  S.db.doc(`threads/${tid}`).set({ messages, saved_at: nowIso() }).catch(() => {});
+}
 async function loadThread(p, { force = false } = {}) {
   const tid = threadIdOf(p);
   if (!tid || !S.mcp || S.threadLoading.has(tid) || (S.threads[tid] && !force)) return;
@@ -862,6 +872,7 @@ async function loadThread(p, { force = false } = {}) {
   try {
     const res = await S.mcp.callTool(GMAIL, 'get_thread', { threadId: tid, messageFormat: 'PLAIN_TEXT' });
     S.threads[tid] = (res.payload || {}).messages || [];
+    saveThreadCopy(tid, S.threads[tid]);
   } catch (e) {
     S.threads[tid] = { error: mcpMessage(e, GMAIL) };
   } finally {
@@ -1370,6 +1381,7 @@ function renderNotice() {
   if (queued && !inSendWindow() && S.tab !== 'review') {
     html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>It's outside business hours, so they wait until then. They go out on their own at about 8:15am on weekdays, whether or not this page is open.</p></div></div>`;
   }
+  if (S.readOnly) html = `<div class="banner"><div><b>View only</b><p>This is Soham's outreach desk, shared with you to look at. You see the same businesses, emails and CRM list he does; nothing can be sent or changed from here.</p></div></div>` + html;
   if (S.dbState === 'bad') {
     html = `<div class="banner warn"><div><b>This page can't reach its data.</b><p>Open it on claude.ai while signed in to your account. The businesses, drafts and history live with the page there.</p></div></div>`;
   } else if (S.loaded && !S.prospects.length && !S.meta.progress) {
@@ -1607,6 +1619,7 @@ function readyReply(p) {
 }
 
 async function sendReadyReply(p) {
+  if (S.readOnly) return;
   if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
   S.working[p.id] = 'gdraft'; render();
   try {
@@ -2206,6 +2219,7 @@ function rerenderDetail(root) {
 
 // ---------- actions ----------
 async function onAction(root, act, confirmed) {
+  if (S.readOnly) return;
   const id = root.dataset.detail;
   const p = S.prospects.find(x => x.id === id);
   if (!p) return;
@@ -2367,6 +2381,7 @@ setInterval(autoSend, 60 * 1000);
 
 document.addEventListener('click', async e => {
   const t = e.target;
+  if (S.readOnly && t.closest('[data-act], [data-mark], [data-gdraft], #skipWeak, #sendQueue')) { e.preventDefault(); toast('View only: this desk is shared for looking, not sending.'); return; }
   const tab = t.closest('[data-tab]');
   if (tab) { S.tab = tab.dataset.tab; lsSet('outreach-tab', S.tab); render(); return; }
   const gd = t.closest('[data-gdraft]');
@@ -2436,23 +2451,62 @@ $('#fState').addEventListener('change', e => { S.state = e.target.value; S.town 
 $('#fFit').addEventListener('change', e => { S.fit = Number(e.target.value); renderView(); });
 $('#fClosed').addEventListener('change', e => { S.closed = e.target.checked; renderView(); });
 
+// A db that reads like the real one but refuses every write.
+function readOnlyDb(db) {
+  if (!db) return null;
+  const no = () => Promise.reject(new Error('View only: nothing can be changed from here.'));
+  const wrap = ref => new Proxy({}, { get(_, k) {
+    if (k === 'set' || k === 'update' || k === 'delete' || k === 'add') return no;
+    const v = ref[k];
+    if (typeof v !== 'function') return v;
+    if (['doc', 'collection', 'where', 'orderBy', 'limit'].includes(k)) return (...a) => wrap(v.apply(ref, a));
+    return v.bind(ref);
+  } });
+  return wrap(db);
+}
+let lastCrmView = '';
+
 // ---------- boot ----------
 render();
 (async () => {
+  const user = window.claude ? await window.claude.use('user') : null;
+  const owner = user ? await user.isOwner() : false;
+  // Anyone but Soham gets a view-only desk: his data, but no Gmail, no CRM
+  // calls, no Claude, and no writes (the db rules block writes too).
+  S.readOnly = !owner;
+  document.body.classList.toggle('ro', S.readOnly);
   const [db, mcp, sample] = await Promise.all([
     window.claude ? window.claude.use('db') : null,
-    window.claude ? window.claude.use('mcp') : null,
-    window.claude ? window.claude.use('sample') : null,
+    window.claude && owner ? window.claude.use('mcp') : null,
+    window.claude && owner ? window.claude.use('sample') : null,
   ]);
-  S.db = db; S.mcp = mcp; S.sample = sample;
+  S.db = S.readOnly ? readOnlyDb(db) : db; S.mcp = mcp; S.sample = sample;
   if (!db) { S.dbState = 'bad'; S.loaded = true; render(); }
   else {
+    let backfilled = false;
     db.collection('prospects').onSnapshot(snap => {
       S.prospects = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       S.loaded = true; S.dbState = 'ok';
-      render(); watchReplies(); syncLeads(); autoSend(); migrateDrafts(); stripLinkedIn();
+      render();
+      if (S.readOnly) return;
+      watchReplies(); syncLeads(); autoSend(); migrateDrafts(); stripLinkedIn();
+      // Keep a copy of every conversation where someone wrote back, for the people he shares the desk with.
+      if (!backfilled) { backfilled = true; S.prospects.filter(p => ['replied', 'not_interested'].includes(p.status)).forEach(p => loadThread(p)); }
     }, () => { S.dbState = 'bad'; S.loaded = true; render(); });
-    db.doc('meta/status').onSnapshot(snap => { S.meta = snap.exists ? (snap.data() || {}) : {}; S.metaLoaded = true; render(); migrateDrafts(); }, () => {});
+    db.doc('meta/status').onSnapshot(snap => { S.meta = snap.exists ? (snap.data() || {}) : {}; S.metaLoaded = true; render(); if (!S.readOnly) migrateDrafts(); }, () => {});
+    if (S.readOnly) {
+      db.doc('meta/crm_view').onSnapshot(snap => {
+        const d = snap.exists ? (snap.data() || {}) : {};
+        S.crmMine = d.orgs || []; S.crmAll = S.crmMine; S.crmState = 'ok'; S.crmError = ''; S.gmailState = 'ok';
+        render();
+      }, () => {});
+      db.collection('threads').onSnapshot(snap => {
+        for (const d of snap.docs) S.threads[d.id] = (d.data() || {}).messages || [];
+        render();
+      }, () => {});
+      render();
+      return;
+    }
   }
   if (!mcp) { S.crmState = 'bad'; S.gmailState = 'bad'; S.crmError = 'Connectors aren\'t available in this view. Open the page on claude.ai.'; render(); return; }
   const crmHandler = which => ev => {
@@ -2466,6 +2520,10 @@ render();
     S.crmState = 'ok'; S.crmError = '';
     const orgs = (ev.result.payload || {}).orgs || [];
     if (which === 'mine') S.crmMine = orgs; else S.crmAll = orgs;
+    if (which === 'mine' && S.db) {
+      const view = orgs.map(o => ({ id: o.id, url: o.url, name: o.name, stage: o.stage, stage_label: o.stage_label, city: o.city, next_step: o.next_step, next_step_due: o.next_step_due, touches: o.touches, last_touch_at: o.last_touch_at }));
+      if (JSON.stringify(view) !== lastCrmView) { lastCrmView = JSON.stringify(view); S.db.doc('meta/crm_view').set({ orgs: view, saved_at: nowIso() }).catch(() => {}); }
+    }
     syncLeads();
     // Hand the CRM's names to the research runs (they can't reach the CRM themselves) so they skip businesses a classmate already has.
     if (which === 'all' && S.db && orgs.length) {
