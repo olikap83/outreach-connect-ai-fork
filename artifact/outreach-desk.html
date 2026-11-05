@@ -855,20 +855,35 @@ async function findSent(to, subject) {
   }
   return null;
 }
+// Every email sent from here copies the student's school address (settings.cc_email,
+// else school_email), unless that address is already a recipient.
+function withSchoolCc(a) {
+  const cc = String(me().cc || me().schoolEmail || '').trim().toLowerCase();
+  if (!cc) return a;
+  const to = (a.to || []).map(x => String(x).toLowerCase());
+  const list = [...new Set([...(a.cc || []).map(x => String(x).toLowerCase()), cc])].filter(x => !to.includes(x));
+  return { ...a, cc: list };
+}
 async function mailCall(tool, a = {}) {
   const call = (t, args) => S.mcp.callTool(MAIL, t, args);
   const content = x => x.htmlBody ? { body: outlookHtml(x.htmlBody), bodyType: 'html' } : { body: x.body || ' ', bodyType: 'text' };
-  if (tool === 'send_message' && a.draftId) { await call('outlook_send_draft', { messageId: a.draftId }); return { payload: { id: a.draftId } }; }
+  a = withSchoolCc(a);
+  if (tool === 'send_message' && a.draftId) {
+    // A draft the reply check wrote: make sure the school address is on it before it goes.
+    if (a.cc.length) await call('outlook_update_draft', { messageId: a.draftId, cc: a.cc });
+    await call('outlook_send_draft', { messageId: a.draftId });
+    return { payload: { id: a.draftId } };
+  }
   if (tool === 'send_message' || tool === 'reply') {
     const base = tool === 'reply' ? a.messageId : a.replyThreadId;
     let draft;
     if (base) {
       draft = idOf(await call(tool === 'reply' ? 'outlook_create_reply_draft' : 'outlook_create_reply_all_draft', { messageId: base, ...content(a) }));
       if (!draft) throw new Error('Outlook didn\'t return the reply draft.');
-      const fix = { ...(a.to ? { to: a.to } : {}), ...(a.cc ? { cc: a.cc } : {}), ...(a.subject ? { subject: a.subject } : {}) };
+      const fix = { ...(a.to ? { to: a.to } : {}), ...(a.cc && a.cc.length ? { cc: a.cc } : {}), ...(a.subject ? { subject: a.subject } : {}) };
       if (Object.keys(fix).length) await call('outlook_update_draft', { messageId: draft, ...fix });
     } else {
-      draft = idOf(await call('outlook_create_draft', { to: a.to, ...(a.cc ? { cc: a.cc } : {}), subject: a.subject, ...content(a) }));
+      draft = idOf(await call('outlook_create_draft', { to: a.to, ...(a.cc && a.cc.length ? { cc: a.cc } : {}), subject: a.subject, ...content(a) }));
       if (!draft) throw new Error('Outlook didn\'t return the draft.');
     }
     await call('outlook_send_draft', { messageId: draft });
@@ -878,7 +893,7 @@ async function mailCall(tool, a = {}) {
     return { payload: { id, threadId: id, webLink: (sent && sent.webLink) || null } };
   }
   if (tool === 'create_draft') {
-    const res = await call('outlook_create_draft', { to: a.to, ...(a.cc ? { cc: a.cc } : {}), subject: a.subject, ...content(a) });
+    const res = await call('outlook_create_draft', { to: a.to, ...(a.cc && a.cc.length ? { cc: a.cc } : {}), subject: a.subject, ...content(a) });
     const p = payloadOf(res);
     return { payload: { id: idOf(res), viewUrl: p.webLink || p.webUrl || outlookLink(idOf(res)) } };
   }
