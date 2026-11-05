@@ -224,7 +224,7 @@ function renderCard() {
   const k = STEPS[S.step].k;
   if (k === 'start') {
     c.innerHTML = `<div class="eyebrow">Step 1 of 5</div><h2>Set up takes about five minutes</h2>
-      <p class="sub">You fill in a few things about yourself here. Then one button starts Claude Code on your account and builds your desk.</p>
+      <p class="sub">You fill in a few things about yourself here. At the end you get one message to paste into Claude Code, and it builds your desk on your own account.</p>
       <div class="what">
         <div><b>Your desk</b><span>A private page on your claude.ai account with every business it finds, each with a draft email you can edit, approve or skip.</span></div>
         <div><b>Your Gmail</b><span>Emails go from your own Gmail and copy your UConn address. Nothing is sent until you approve it.</span></div>
@@ -264,6 +264,22 @@ function renderCard() {
     const p = S.p;
     const rows = [['Name', p.sender_name], ['Major', [p.sender_major, p.grad_year && `class of ${p.grad_year}`].filter(Boolean).join(', ')], ['UConn email', p.school_email], ['Sends from', p.sender_email], ['LinkedIn', p.linkedin_url || '—'], ['Experience', p.background || '—'], ['Why', p.why], ['States', p.states.join(', ')], ['Per day', `${p.daily_cap} emails`], ['Free for calls', p.free_times || '—'], ['Calendar', p.calendar_ics_url ? 'Linked' : 'Not linked']];
     const r = S.result;
+    // Opened from a shared link, this page can't reach the visitor's own
+    // Claude Code, so they paste the setup message into Claude Code instead.
+    if (!S.mcp) {
+      c.innerHTML = `<div class="eyebrow">Step 5 of 5</div><h2>Create your desk</h2>
+        <p class="sub">One message sets everything up on your own account. Claude Code builds your desk, saves this profile on it, and sets up the morning research and sends.</p>
+        <dl class="review">${rows.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join('')}</dl>
+        <ol class="steps">
+          <li>Press <b>Copy the setup message</b> below.</li>
+          <li>Open <a href="https://claude.ai/code" target="_blank" rel="noopener">claude.ai/code</a> and start a new session. You don't need to pick a repository.</li>
+          <li>Paste the message and send it. Stay on that tab for a few minutes: it may ask you to approve steps, and it tells you when your desk is ready.</li>
+        </ol>
+        <div class="copybox"><label for="promptBox">Setup message</label><textarea id="promptBox" readonly>${esc(setupPrompt())}</textarea>
+          <div class="actions"><button type="button" class="btn" data-nav="back">Back</button><span class="spacer"></span><span class="hint" id="copied"></span><button type="button" class="btn go" data-copy>Copy the setup message</button></div></div>
+        <p class="hint">Nothing is emailed during setup. Your answers stay in this browser if you come back later.</p>`;
+      return;
+    }
     c.innerHTML = `<div class="eyebrow">Step 5 of 5</div><h2>Create your desk</h2>
       <p class="sub">This starts a Claude Code session on your account. It builds your desk, saves this profile on it, and sets up the morning research and sends. Open the session when it starts; it may ask you to approve a few steps.</p>
       <dl class="review">${rows.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join('')}</dl>
