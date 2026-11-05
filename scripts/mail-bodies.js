@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const { profileOf, loadSettings } = require('../lib/outreach/settings');
+const { outlookHtml } = require('../lib/outreach/outlook');
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const reEsc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -23,7 +24,7 @@ function mailBodies(body, settings = {}) {
   html = html.replace(/\n/g, '<br>');
   // The plain-text copy keeps the short "linkedin.com/in/..." form: a full
   // https:// address there gets shown as a long redirect link, which looks like spam.
-  return { body: linkedin ? body.replace(linkedin, `linkedin.com${path}`) : body, htmlBody: `<div>${html}</div>` };
+  return { body: linkedin ? body.replace(linkedin, `linkedin.com${path}`) : body, htmlBody: outlookHtml(`<div>${html}</div>`) };
 }
 
 if (require.main === module) {

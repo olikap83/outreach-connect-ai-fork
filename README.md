@@ -1,16 +1,16 @@
 # Connect.AI Outreach Desk
 
-The outreach desk for Connect.AI, a UConn course where student teams help small businesses use AI. Each student in the class runs their own copy, on their own Claude account, and sends from their own Gmail.
+The outreach desk for Connect.AI, a UConn course where student teams help small businesses use AI. Each student in the class runs their own copy, on their own Claude account, and sends from their own Outlook.
 
 It finds small businesses, reads their websites for the owner and an email address, and writes each one a short, personal email in your voice. You review the drafts and send them yourself. Every business in the class area (Connecticut, Boston, New York and the rest of New England) is also added to the class CRM at connect-ai.world/crm.
 
 ## Your settings
 
-Nothing about you is built into the code. Your name, major, school email, the Gmail you send from, LinkedIn, calendar link and the one or two sentences about your background and why you're reaching out all live in the settings (`lib/outreach/settings.js` lists every field and its default). Leave a field blank and the emails simply leave it out. The scripts that write or send email take your settings as a JSON file (`--settings <file>`, or an extra argument; see the top of each script).
+Nothing about you is built into the code. Your name, major, school email, the Outlook address you send from, LinkedIn, calendar link and the one or two sentences about your background and why you're reaching out all live in the settings (`lib/outreach/settings.js` lists every field and its default). Leave a field blank and the emails simply leave it out. The scripts that write or send email take your settings as a JSON file (`--settings <file>`, or an extra argument; see the top of each script).
 
 ## How it fits together
 
-- **The desk** (`artifact/outreach-desk.html`) is a private page on claude.ai. It holds every business and draft, sends email through Gmail (cc your UConn address), sends approved emails on weekday mornings, shows replies, drafts answers and call prep sheets with Claude, and logs everything to the class CRM.
+- **The desk** (`artifact/outreach-desk.html`) is a private page on claude.ai. It holds every business and draft, sends email through Outlook (cc your UConn address), sends approved emails on weekday mornings, shows replies, drafts answers and call prep sheets with Claude, and logs everything to the class CRM.
 - **The daily research run** is a scheduled Claude session (weekdays, 7:47am New York). It checks out this repo, runs `scripts/outreach-batch.js` to find and research a few places, and writes the results onto the desk a few at a time.
 - **The research code** is in `lib/outreach/`:
   - `sources.js`: where businesses come from. OpenStreetMap (radius search around each town or city center) and the CT business registry on data.ct.gov (Connecticut towns only).

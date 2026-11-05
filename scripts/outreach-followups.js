@@ -1,5 +1,5 @@
 // Follow-ups that go out on their own: one short "just bumping this" in the
-// same Gmail thread for anyone who hasn't written back within
+// same email thread for anyone who hasn't written back within
 // followup_after_days business days (default 4). Used by the weekday
 // morning send, so you don't have to remember them. Your school address
 // (settings.school_email) is cc'd when it's set.

@@ -1,7 +1,7 @@
 // The email you get when a business owner writes back and a reply is ready:
 // their message, the reply (with open times from your calendar), and two links:
 // "Approve and send" (opens a filled-in email to yourself; the reply watch sees
-// it and sends the draft) and "Change it first" (opens the Gmail draft).
+// it and sends the draft) and "Change it first" (opens the Outlook draft).
 // Your addresses come from the settings: sender_email (the approve link) and
 // notify_emails (who it's sent to).
 //
@@ -13,6 +13,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { shortName } = require('../lib/outreach/crmnotes');
 const { profileOf, loadSettings } = require('../lib/outreach/settings');
+const { outlookHtml } = require('../lib/outreach/outlook');
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -36,7 +37,7 @@ function replyNotice(p, theirText, { draftId, draftUrl, code = crypto.randomByte
     "Here's the reply I wrote, with times you're free:",
     p.reply_draft,
     `To approve, reply to this email with "send" (or send yourself an email with the subject "${approvalSubject(p, code)}"). It goes out at the next check, within the hour.`,
-    `To change it first, open the draft in Gmail: ${draftUrl}`,
+    `To change it first, open the draft in Outlook: ${draftUrl}`,
   ].join('\n\n');
   const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">
 <p>${esc(who)} (${esc(p.email)}) wrote back:</p>
@@ -47,7 +48,7 @@ function replyNotice(p, theirText, { draftId, draftUrl, code = crypto.randomByte
 &nbsp; <a href="${esc(draftUrl)}" style="display:inline-block;padding:10px 18px;border:1px solid #999;color:#333;text-decoration:none;border-radius:6px">Change it first</a></p>
 <p style="color:#666;font-size:12px">"Approve and send" opens a short email to yourself; hit send and the reply goes out at the next check, within the hour. Replying "send" to this email works too.</p>
 </div>`;
-  return { to: prof.notify_emails, subject, body, htmlBody, code, draft_id: draftId };
+  return { to: prof.notify_emails, subject, body, htmlBody: outlookHtml(htmlBody), code, draft_id: draftId };
 }
 
 if (require.main === module) {

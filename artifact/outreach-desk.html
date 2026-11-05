@@ -526,7 +526,7 @@ body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane inp
           <div class="conn-chips" id="conn">
             <span class="cchip" id="cDb"><i></i>Dashboard data</span>
             <span class="cchip" id="cCrm"><i></i>Class CRM</span>
-            <span class="cchip" id="cGmail"><i></i>Gmail</span>
+            <span class="cchip" id="cGmail"><i></i>Outlook</span>
           </div>
         </div>
       </aside>
@@ -564,7 +564,7 @@ body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane inp
 
   <main class="view" id="view"></main>
 
-  <footer>Connect.AI · Outreach · Businesses from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> and the <a href="https://data.ct.gov/" target="_blank" rel="noopener">CT Open Data Portal</a> · Sent from your Gmail · Logged to <a href="https://connect-ai.world/crm/" target="_blank" rel="noopener">connect-ai.world/crm</a></footer>
+  <footer>Connect.AI · Outreach · Businesses from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> and the <a href="https://data.ct.gov/" target="_blank" rel="noopener">CT Open Data Portal</a> · Sent from your Outlook · Logged to <a href="https://connect-ai.world/crm/" target="_blank" rel="noopener">connect-ai.world/crm</a></footer>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -581,7 +581,11 @@ body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane inp
 
 // ---------- constants ----------
 const CRM = 'Connect AI';
-const GMAIL = 'Gmail';
+// Mail goes through Outlook (the Microsoft 365 connector). The rest of the page
+// still asks for Gmail-style actions (send_message, reply, get_thread...);
+// mailCall below turns each one into the matching Outlook calls.
+const MAIL = 'Microsoft 365';
+const GMAIL = MAIL;
 const STATUS = {
   ready: { label: 'Ready for review', badge: 'info' },
   queued: { label: 'Approved · waiting to send', badge: 'warn' },
@@ -750,6 +754,138 @@ function mcpMessage(e, server) {
   return `${server}: ${String((e && e.message) || e || 'something failed').slice(0, 200)}`;
 }
 
+// ---------- Outlook ----------
+// Outlook only accepts plain HTML (no images, spans, blockquotes or styles), so
+// every email body is cleaned down to that first.
+const OUT_TAGS = new Set(['p', 'br', 'a', 'div', 'b', 'strong', 'i', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'hr', 'pre', 'code', 'strike']);
+function outlookHtml(html) {
+  const doc = new DOMParser().parseFromString(`<div id="x">${html || ''}</div>`, 'text/html');
+  const root = doc.getElementById('x');
+  const it = doc.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  const comments = []; while (it.nextNode()) comments.push(it.currentNode);
+  comments.forEach(c => c.remove());
+  const walk = node => {
+    for (const el of [...node.children]) {
+      walk(el);
+      const tag = el.tagName.toLowerCase();
+      if (['img', 'style', 'script', 'iframe', 'object'].includes(tag)) { el.remove(); continue; }
+      if (tag === 'blockquote') { const d = doc.createElement('div'); d.append(...el.childNodes); el.replaceWith(d); continue; }
+      if (!OUT_TAGS.has(tag)) { el.replaceWith(...el.childNodes); continue; }
+      for (const a of [...el.attributes]) if (!(tag === 'a' && a.name === 'href' && /^(https?:|mailto:)/i.test(a.value))) el.removeAttribute(a.name);
+    }
+  };
+  walk(root);
+  return root.innerHTML;
+}
+const htmlToText = html => {
+  const d = new DOMParser().parseFromString(String(html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr|h\d)>/gi, '\n'), 'text/html');
+  return (d.body.textContent || '').replace(/ /g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+};
+// Outlook search results come back as one JSON block per email.
+function outlookItems(res) {
+  const out = [];
+  const take = v => {
+    if (Array.isArray(v)) v.forEach(take);
+    else if (v && typeof v === 'object') {
+      if (v.id && ('subject' in v || 'sender' in v)) out.push(v);
+      else if (Array.isArray(v.value)) take(v.value);
+      else if (Array.isArray(v.messages)) take(v.messages);
+    }
+  };
+  for (const b of (res && res.content) || []) if (b && b.type === 'text') { try { take(JSON.parse(b.text)); } catch (e) { /* not JSON */ } }
+  if (!out.length && res) take(res.structuredContent || res.payload);
+  return out;
+}
+const addrOf = v => String((v && typeof v === 'object' ? ((v.emailAddress || {}).address || v.address || '') : v) || '').toLowerCase();
+const toMsg = m => ({ id: m.id, sender: addrOf(m.sender || m.from), subject: m.subject || '', snippet: m.summary || m.bodyPreview || '', date: m.receivedDateTime || m.sentDateTime || '', conversationId: m.conversationId || null, webLink: m.webLink || null });
+const normSubject = s => { let x = String(s || '').trim(); while (/^(re|fw|fwd)\s*:\s*/i.test(x)) x = x.replace(/^(re|fw|fwd)\s*:\s*/i, ''); return x.toLowerCase(); };
+const byDate = (a, b) => String(a.date).localeCompare(String(b.date));
+// A link that opens one email in Outlook on the web (ids are base64url; the web link wants plain base64).
+const outlookLink = id => id ? `https://outlook.live.com/owa/?ItemID=${encodeURIComponent(String(id).replace(/-/g, '/').replace(/_/g, '+'))}&exvsurl=1&viewmodel=ReadMessageItem` : null;
+// Messages grouped into "threads", one per sender, oldest first, named by the newest message.
+function threadsFromItems(items) {
+  const by = new Map();
+  for (const m of items.map(toMsg)) { if (!m.sender) continue; if (!by.has(m.sender)) by.set(m.sender, new Map()); by.get(m.sender).set(m.id, m); }
+  return [...by.values()].map(mm => { const messages = [...mm.values()].sort(byDate); return { id: messages[messages.length - 1].id, messages }; });
+}
+const payloadOf = res => (res && res.payload && typeof res.payload === 'object') ? res.payload : (outlookItems(res)[0] || {});
+const idOf = res => { const p = payloadOf(res); return p.id || p.messageId || (p.message || {}).id || (p.draft || {}).id || null; };
+async function readMsg(id) {
+  const res = await S.mcp.callTool(MAIL, 'read_resource', { uri: `mail:///messages/${id}` });
+  const texts = ((res && res.content) || []).filter(b => b && b.type === 'text').map(b => b.text);
+  let o = null;
+  for (const t of texts) { try { const j = JSON.parse(t); if (j && typeof j === 'object') { o = j; break; } } catch (e) { /* plain text */ } }
+  if (!o && res && res.payload && typeof res.payload === 'object') o = res.payload;
+  if (o) {
+    const body = o.body && typeof o.body === 'object' ? o.body : { content: o.body || o.uniqueBody || o.content || o.bodyPreview || '', contentType: /<\w+[^>]*>/.test(String(o.body || o.content || '')) ? 'html' : 'text' };
+    const raw = String(body.content || '');
+    return { id, sender: addrOf(o.from || o.sender), subject: o.subject || '', date: o.receivedDateTime || o.sentDateTime || '', conversationId: o.conversationId || null, webLink: o.webLink || null,
+      snippet: o.bodyPreview || o.summary || '', plaintextBody: /html/i.test(body.contentType || '') ? htmlToText(raw) : raw };
+  }
+  const text = texts.join('\n');
+  return { id, sender: ((/^From:.*?([\w.+-]+@[\w-]+(\.[\w-]+)+)/mi.exec(text) || [])[1] || '').toLowerCase(), subject: (/^Subject:\s*(.+)$/mi.exec(text) || [])[1] || '', date: '', conversationId: null, snippet: text.slice(0, 300), plaintextBody: text };
+}
+async function outlookThread(tid) {
+  const base = await readMsg(tid);
+  const q = normSubject(base.subject).replace(/["()]/g, ' ').trim();
+  let msgs = [];
+  if (q) {
+    const res = await S.mcp.callTool(MAIL, 'outlook_email_search', { query: `"${q}"`, limit: 25 });
+    msgs = outlookItems(res).map(toMsg).filter(m => base.conversationId && m.conversationId ? m.conversationId === base.conversationId : normSubject(m.subject) === normSubject(base.subject));
+  }
+  if (!msgs.some(m => m.id === base.id)) msgs.push(base);
+  msgs.sort(byDate);
+  for (const m of msgs.slice(-8)) {
+    if (m.id === base.id) { m.plaintextBody = base.plaintextBody; if (!m.sender) m.sender = base.sender; continue; }
+    try { const full = await readMsg(m.id); m.plaintextBody = full.plaintextBody; } catch (e) { /* keep the preview */ }
+  }
+  return msgs;
+}
+// After sending, find the copy in Sent Items so follow-ups can reply to it.
+async function findSent(to, subject) {
+  if (!to) return null;
+  const want = normSubject(subject);
+  for (let i = 0; i < 3; i++) {
+    await new Promise(r => setTimeout(r, 2500 * (i + 1)));
+    try {
+      const res = await S.mcp.callTool(MAIL, 'outlook_email_search', { recipient: to, afterDateTime: new Date(Date.now() - 20 * 60000).toISOString(), limit: 10 });
+      const hit = outlookItems(res).map(toMsg).filter(m => m.sender !== String(to).toLowerCase()).sort(byDate).reverse().find(m => !want || normSubject(m.subject) === want);
+      if (hit) return hit;
+    } catch (e) { /* try again */ }
+  }
+  return null;
+}
+async function mailCall(tool, a = {}) {
+  const call = (t, args) => S.mcp.callTool(MAIL, t, args);
+  const content = x => x.htmlBody ? { body: outlookHtml(x.htmlBody), bodyType: 'html' } : { body: x.body || ' ', bodyType: 'text' };
+  if (tool === 'send_message' && a.draftId) { await call('outlook_send_draft', { messageId: a.draftId }); return { payload: { id: a.draftId } }; }
+  if (tool === 'send_message' || tool === 'reply') {
+    const base = tool === 'reply' ? a.messageId : a.replyThreadId;
+    let draft;
+    if (base) {
+      draft = idOf(await call(tool === 'reply' ? 'outlook_create_reply_draft' : 'outlook_create_reply_all_draft', { messageId: base, ...content(a) }));
+      if (!draft) throw new Error('Outlook didn\'t return the reply draft.');
+      const fix = { ...(a.to ? { to: a.to } : {}), ...(a.cc ? { cc: a.cc } : {}), ...(a.subject ? { subject: a.subject } : {}) };
+      if (Object.keys(fix).length) await call('outlook_update_draft', { messageId: draft, ...fix });
+    } else {
+      draft = idOf(await call('outlook_create_draft', { to: a.to, ...(a.cc ? { cc: a.cc } : {}), subject: a.subject, ...content(a) }));
+      if (!draft) throw new Error('Outlook didn\'t return the draft.');
+    }
+    await call('outlook_send_draft', { messageId: draft });
+    if (a.noFind) return { payload: { id: draft } };
+    const sent = await findSent((a.to || [])[0], a.subject);
+    const id = (sent && sent.id) || draft;
+    return { payload: { id, threadId: id, webLink: (sent && sent.webLink) || null } };
+  }
+  if (tool === 'create_draft') {
+    const res = await call('outlook_create_draft', { to: a.to, ...(a.cc ? { cc: a.cc } : {}), subject: a.subject, ...content(a) });
+    const p = payloadOf(res);
+    return { payload: { id: idOf(res), viewUrl: p.webLink || p.webUrl || outlookLink(idOf(res)) } };
+  }
+  if (tool === 'get_thread') return { payload: { messages: await outlookThread(a.threadId) } };
+  throw new Error(`Unknown mail action: ${tool}`);
+}
+
 // ---------- dates ----------
 function ago(iso) {
   if (!iso) return '';
@@ -835,11 +971,11 @@ function readEditor(root) {
 }
 
 async function sendInitial(p, vals) {
-  if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
+  if (!S.mcp) throw new Error('Outlook isn\'t available in this view.');
   if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(vals.email)) throw new Error('That email address doesn\'t look right.');
-  if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails. Sending more from a personal Gmail gets it flagged as spam.`);
+  if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails. Sending more from a personal Outlook account gets it flagged as spam.`);
   const trackId = trackingUrl() ? newTrackId(p, 'i') : null;
-  const res = await S.mcp.callTool(GMAIL, 'send_message', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body, trackId) });
+  const res = await mailCall('send_message', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body, trackId) });
   const pl = res.payload || {};
   const sentAt = nowIso();
   await patch(p.id, {
@@ -862,7 +998,7 @@ async function sendFollowup(p) {
   const body = `${greet}\n\nJust bumping this in case it got buried. If you have 10 minutes sometime in the next couple of weeks, I'd still really like to hear how you got started.\n\nIf now isn't a good time, no worries at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
   const subject = /^re:/i.test(p.subject || '') ? p.subject : `Re: ${p.subject || p.name}`;
   const trackId = trackingUrl() ? newTrackId(p, 'f') : null;
-  await S.mcp.callTool(GMAIL, 'send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body, trackId), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
+  await mailCall('send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body, trackId), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
   const fAt = nowIso();
   await patch(p.id, { status: 'followed_up', followup_at: fAt, followup_body: body, ...trackedPatch(p, trackId, 'follow-up', fAt) }, `Followed up with ${p.email}`);
   if (p.crm_org_id) logToCrm(p, 'email', `Follow-up email sent to ${p.email}.\n\n${body}`, { update: { notes: crmNotesNow({ ...p, status: 'followed_up', followup_at: fAt }) } }).catch(() => {});
@@ -880,23 +1016,23 @@ const msgText = m => unwrapLinks(String(m.plaintextBody ?? m.plaintext_body ?? u
 // Drop the quoted history Gmail appends under "On Tue, ... wrote:".
 function freshPart(text) {
   const lines = String(text || '').replace(/\r/g, '').split('\n');
-  const cut = lines.findIndex((l, i) => /^On .+wrote:\s*$/.test(l) || (/^On .+/.test(l) && /wrote:\s*$/.test(lines[i + 1] || '')) || /^-{2,}\s*Original Message/i.test(l) || /^From: .+/.test(l));
+  const cut = lines.findIndex((l, i) => /^On .+wrote:\s*$/.test(l) || (/^On .+/.test(l) && /wrote:\s*$/.test(lines[i + 1] || '')) || /^-{2,}\s*Original Message/i.test(l) || /^_{10,}\s*$/.test(l) || /^From: .+/.test(l));
   return (cut > 0 ? lines.slice(0, cut) : lines).filter(l => !/^>/.test(l)).join('\n').trim();
 }
 
 // the student's copy of each conversation, kept on the desk so people they shares it
-// with (who can't read his Gmail) see the same thread he does.
+// with (who can't read his email) see the same thread he does.
 function saveThreadCopy(tid, msgs) {
   if (S.readOnly || !S.db || !Array.isArray(msgs)) return;
   const messages = msgs.map(m => ({ sender: m.sender || '', date: m.date || '', plaintextBody: String(msgText(m)).slice(0, 20000) }));
-  S.db.doc(`threads/${tid}`).set({ messages, saved_at: nowIso() }).catch(() => {});
+  S.db.doc(`threads/${String(tid).replace(/[^A-Za-z0-9_\-.~:@+]/g, '_').slice(-200)}`).set({ tid, messages, saved_at: nowIso() }).catch(() => {});
 }
 async function loadThread(p, { force = false } = {}) {
   const tid = threadIdOf(p);
   if (!tid || !S.mcp || S.threadLoading.has(tid) || (S.threads[tid] && !force)) return;
   S.threadLoading.add(tid);
   try {
-    const res = await S.mcp.callTool(GMAIL, 'get_thread', { threadId: tid, messageFormat: 'PLAIN_TEXT' });
+    const res = await mailCall('get_thread', { threadId: tid, messageFormat: 'PLAIN_TEXT' });
     S.threads[tid] = (res.payload || {}).messages || [];
     saveThreadCopy(tid, S.threads[tid]);
   } catch (e) {
@@ -973,18 +1109,18 @@ Keep it short (under 120 words), plain and warm, like a real student wrote it. N
 }
 
 async function sendReply(p, body) {
-  if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
+  if (!S.mcp) throw new Error('Outlook isn\'t available in this view.');
   if (!body.trim()) throw new Error('Write a reply first.');
-  // The reply check's draft, unchanged: send that Gmail draft so it doesn't linger.
+  // The reply check's draft, unchanged: send that Outlook draft so it doesn't linger.
   if (p.reply_draft_id && body.trim() === String(p.reply_draft || '').trim()) return sendReadyReply(p);
   const tid = threadIdOf(p);
-  if (!tid) throw new Error('Couldn\'t find this conversation in Gmail. Answer it from Gmail instead.');
+  if (!tid) throw new Error('Couldn\'t find this conversation in Outlook. Answer it from Outlook instead.');
   if (!Array.isArray(S.threads[tid])) await loadThread(p, { force: true });
   const msgs = Array.isArray(S.threads[tid]) ? S.threads[tid] : [];
   const last = [...msgs].reverse().find(m => fromThem(p, m)) || msgs[msgs.length - 1];
-  if (!last || !last.id) throw new Error('Couldn\'t find their message in Gmail. Answer it from Gmail instead.');
+  if (!last || !last.id) throw new Error('Couldn\'t find their message in Outlook. Answer it from Outlook instead.');
   const trackId = trackingUrl() ? newTrackId(p, 'r') : null;
-  await S.mcp.callTool(GMAIL, 'reply', { messageId: last.id, ...mailBodies(body, trackId), ...ccList() });
+  await mailCall('reply', { messageId: last.id, ...mailBodies(body, trackId), ...ccList() });
   const at = nowIso();
   await patch(p.id, { answered_at: at, reply_draft: null, my_replies: [...(p.my_replies || []), { at, body }].slice(-10), ...trackedPatch(p, trackId, 'reply', at) }, `Answered ${p.contact_name || p.email}`);
   delete S.replyDrafts[p.id];
@@ -1018,8 +1154,8 @@ Under 350 words. No markdown symbols other than "- ". No intro or sign-off. Neve
 }
 
 async function saveGmailDraft(p, vals) {
-  const res = await S.mcp.callTool(GMAIL, 'create_draft', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body) });
-  await patch(p.id, { ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body, gmail_draft_url: (res.payload || {}).viewUrl || null }, 'Saved as a Gmail draft');
+  const res = await mailCall('create_draft', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body) });
+  await patch(p.id, { ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body, gmail_draft_url: (res.payload || {}).viewUrl || null }, 'Saved as an Outlook draft');
 }
 
 // ---------- one-time update of waiting drafts ----------
@@ -1236,23 +1372,29 @@ function watchReplies() {
   const key = emails.join(',');
   if (key === replyKey) return;
   replyKey = key;
-  replyUnsubs.forEach(u => u());
-  replyUnsubs = [];
-  for (let i = 0; i < emails.length; i += 20) {
-    const chunk = emails.slice(i, i + 20);
-    const input = { query: `from:(${chunk.join(' OR ')}) newer_than:60d -in:sent`, pageSize: 50, view: 'THREAD_VIEW_MINIMAL' };
-    replyUnsubs.push(S.mcp.watchTool(GMAIL, 'search_threads', input, ev => {
-      if (ev.type === 'error') { if (['needs_reauth', 'server_not_connected', 'not_in_manifest'].includes(ev.error.code)) { S.gmailState = 'bad'; renderConn(); } return; }
-      S.gmailState = 'ok'; renderConn();
-      handleReplies((ev.result.payload || {}).threads || []);
-    }, { refetchInterval: 5 * 60 * 1000 }));
-  }
+  if (!emails.length) return;
+  // New businesses to watch: re-check what's already been read.
+  if (replyUnsubs.length) { handleReplies(threadsFromItems([...inboxSeen.values()])); return; }
+  // Outlook can't search many senders at once, so watch the newest Inbox mail
+  // plus anything mentioning "UConn student" (the subject every first email
+  // has, kept in "RE: ..." replies). The hourly reply watch catches anything
+  // that comes in while this page is closed.
+  const onMail = ev => {
+    if (ev.type === 'error') { if (['needs_reauth', 'server_not_connected', 'not_in_manifest'].includes(ev.error.code)) { S.gmailState = 'bad'; renderConn(); } return; }
+    S.gmailState = 'ok'; renderConn();
+    for (const m of outlookItems(ev.result)) inboxSeen.set(m.id, m);
+    handleReplies(threadsFromItems([...inboxSeen.values()]));
+  };
+  const since = new Date(Date.now() - 60 * 86400000).toISOString();
+  replyUnsubs.push(S.mcp.watchTool(MAIL, 'outlook_email_search', { order: 'newest', limit: 25 }, onMail, { refetchInterval: 5 * 60 * 1000 }));
+  replyUnsubs.push(S.mcp.watchTool(MAIL, 'outlook_email_search', { query: '"UConn student"', afterDateTime: since, limit: 25 }, onMail, { refetchInterval: 10 * 60 * 1000 }));
   // Bounce notices come from the mail system, not the business; match them by the address in the snippet.
-  if (emails.length) replyUnsubs.push(S.mcp.watchTool(GMAIL, 'search_threads', { query: 'from:(mailer-daemon OR postmaster) newer_than:30d', pageSize: 50, view: 'THREAD_VIEW_MINIMAL' }, ev => {
+  replyUnsubs.push(S.mcp.watchTool(MAIL, 'outlook_email_search', { query: 'Undeliverable', afterDateTime: new Date(Date.now() - 30 * 86400000).toISOString(), limit: 25 }, ev => {
     if (ev.type === 'error') return;
-    handleBounces((ev.result.payload || {}).threads || []);
+    handleBounces([{ messages: outlookItems(ev.result).map(toMsg) }]);
   }, { refetchInterval: 10 * 60 * 1000 }));
 }
+const inboxSeen = new Map();
 
 async function handleBounces(threads) {
   for (const t of threads) {
@@ -1278,28 +1420,28 @@ async function notifyReply(p, snippet, threadId, noThanks) {
   let said = String(snippet || '');
   try {
     if (threadId) {
-      const res = await S.mcp.callTool(GMAIL, 'get_thread', { threadId, messageFormat: 'PLAIN_TEXT' });
+      const res = await mailCall('get_thread', { threadId, messageFormat: 'PLAIN_TEXT' });
       const msgs = (res.payload || {}).messages || [];
       const last = [...msgs].reverse().find(m => fromThem(p, m));
       if (last) said = freshPart(msgText(last)) || said;
     }
   } catch (e) { /* keep the snippet */ }
   said = said.slice(0, 1200);
-  const gmailUrl = threadId ? `https://mail.google.com/mail/u/0/#all/${threadId}` : null;
+  const gmailUrl = outlookLink(threadId);
   const desk = settings().desk_url || 'https://claude.ai/code/artifacts';
   const subject = noThanks ? `${who} said no thanks` : `${who} replied to your email`;
   const lead = noThanks ? `${who} (${p.email}) wrote back and isn't interested:` : `${who} (${p.email}) wrote back:`;
   const tail = noThanks ? 'The desk has moved them to "Not now". Nothing else to do.' : "Open the desk's Replies tab to answer them.";
-  const body = [lead, `"${said}"`, tail, gmailUrl ? `Read it in Gmail: ${gmailUrl}` : null].filter(Boolean).join('\n\n');
+  const body = [lead, `"${said}"`, tail, gmailUrl ? `Read it in Outlook: ${gmailUrl}` : null].filter(Boolean).join('\n\n');
   const h = x => esc(x).replace(/\n/g, '<br>');
   const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">
 <p>${h(lead)}</p>
 <blockquote style="margin:0 0 12px;padding:8px 12px;border-left:3px solid #ccc;color:#333">${h(said)}</blockquote>
 <p>${h(tail)}</p>
-<p>${gmailUrl ? `<a href="${esc(gmailUrl)}" style="display:inline-block;padding:10px 18px;border:1px solid #999;color:#333;text-decoration:none;border-radius:6px">Read it in Gmail</a> &nbsp; ` : ''}${noThanks ? '' : `<a href="${desk}" style="display:inline-block;padding:10px 18px;background:#1a7f37;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Open the desk</a>`}</p>
+<p>${gmailUrl ? `<a href="${esc(gmailUrl)}" style="display:inline-block;padding:10px 18px;border:1px solid #999;color:#333;text-decoration:none;border-radius:6px">Read it in Outlook</a> &nbsp; ` : ''}${noThanks ? '' : `<a href="${desk}" style="display:inline-block;padding:10px 18px;background:#1a7f37;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Open the desk</a>`}</p>
 </div>`;
   if (!me().notify.length) throw new Error('Add your email to your profile so the desk can tell you about replies.');
-  await S.mcp.callTool(GMAIL, 'send_message', { to: me().notify, subject, body, htmlBody });
+  await mailCall('send_message', { to: me().notify, subject, body, htmlBody, noFind: true });
   await patch(p.id, { reply_notified_at: nowIso() });
 }
 
@@ -1538,8 +1680,8 @@ function renderReview() {
   const queued = S.prospects.filter(p => p.status === 'queued');
   const n = queued.length, s = n === 1 ? '' : 's';
   const qbar = !n ? '' : S.sendingQueue
-    ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Gmail. Keep this page open until it finishes.</span></div>`
-    : `<div class="queue-bar"><span class="badge warn">${n} approved</span><span class="help" style="margin:0">These go out on their own a few at a time, every hour from 8:17am to 3:17pm on weekdays, page open or not. Spacing them out keeps Gmail from treating them as spam.</span></div>`;
+    ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Outlook. Keep this page open until it finishes.</span></div>`
+    : `<div class="queue-bar"><span class="badge warn">${n} approved</span><span class="help" style="margin:0">These go out on their own a few at a time, every hour from 8:17am to 3:17pm on weekdays, page open or not. Spacing them out keeps Outlook from treating them as spam.</span></div>`;
 
   const done = handledToday();
   const counts = {};
@@ -1639,22 +1781,22 @@ function subjectStatsHtml() {
 }
 
 // A reply the reply check already wrote (with open times from the student's
-// calendar) and saved as a Gmail draft: one tap sends it.
+// calendar) and saved as an Outlook draft: one tap sends it.
 function readyReply(p) {
   if (!needsAnswer(p) || !p.reply_draft_id || !p.reply_draft) return '';
   const busy = S.working[p.id] === 'gdraft';
   return `<div class="ready-reply"><div class="help" style="margin:8px 0 4px">Your reply is written and waiting:</div>
     <pre style="white-space:pre-wrap; font:inherit; margin:0 0 8px; padding:10px; border:1px solid var(--line); border-radius:8px">${esc(p.reply_draft)}</pre>
     <button class="btn solid" data-gdraft="${esc(p.id)}" ${busy ? 'disabled' : ''}>${busy ? 'Sending…' : 'Send it'}</button>
-    ${p.reply_draft_url ? `<a class="btn ghost" href="${esc(p.reply_draft_url)}" target="_blank" rel="noopener">Change it in Gmail ↗</a>` : ''}</div>`;
+    ${p.reply_draft_url ? `<a class="btn ghost" href="${esc(p.reply_draft_url)}" target="_blank" rel="noopener">Change it in Outlook ↗</a>` : ''}</div>`;
 }
 
 async function sendReadyReply(p) {
   if (S.readOnly) return;
-  if (!S.mcp) throw new Error('Gmail isn\'t available in this view.');
+  if (!S.mcp) throw new Error('Outlook isn\'t available in this view.');
   S.working[p.id] = 'gdraft'; render();
   try {
-    await S.mcp.callTool(GMAIL, 'send_message', { draftId: p.reply_draft_id });
+    await mailCall('send_message', { draftId: p.reply_draft_id });
     const at = nowIso();
     await patch(p.id, { answered_at: at, reply_draft: null, reply_draft_id: null, reply_draft_url: null,
       my_replies: [...(p.my_replies || []), { at, body: p.reply_draft }].slice(-10) }, `Answered ${p.contact_name || p.email} with times for a call`);
@@ -1787,7 +1929,7 @@ function actionsHtml(p) {
       <button class="btn" data-act="send">Send now</button>
       <span class="spacer"></span>
       ${S.sample ? '<button class="btn ghost" data-act="rewrite">Rewrite with Claude</button>' : ''}
-      <button class="btn ghost" data-act="draft">Save as Gmail draft</button>
+      <button class="btn ghost" data-act="draft">Save as Outlook draft</button>
       <button class="btn crimson" data-act="skip">Skip</button>`;
   if (p.status === 'queued') return `<span class="badge warn">Approved · goes out with the next hourly send</span><span class="spacer"></span>
       <button class="btn" data-act="save">Save edits</button><button class="btn" data-act="send">Send now</button><button class="btn ghost" data-act="unqueue">Back to review</button>`;
@@ -1798,11 +1940,11 @@ function actionsHtml(p) {
   return '';
 }
 
-// The whole email conversation, read from Gmail once someone has replied;
-// before that (or if Gmail can't be read) what the desk already knows.
+// The whole email conversation, read from Outlook once someone has replied;
+// before that (or if Outlook can't be read) what the desk already knows.
 function threadHtml(p) {
   const tid = threadIdOf(p);
-  const gmailLink = tid ? `<a style="color:var(--info); font-size:12.5px" href="https://mail.google.com/mail/u/0/#all/${encodeURIComponent(tid)}" target="_blank" rel="noopener">Open in Gmail ↗</a>` : '';
+  const gmailLink = tid ? `<a style="color:var(--info); font-size:12.5px" href="${esc(outlookLink(tid))}" target="_blank" rel="noopener">Open in Outlook ↗</a>` : '';
   const msgs = S.threads[tid];
   if (p.status === 'replied' && !msgs) queueMicrotask(() => loadThread(p));
   if (Array.isArray(msgs) && msgs.length) {
@@ -1816,7 +1958,7 @@ function threadHtml(p) {
     ${p.followup_at ? `<div class="msg"><div class="mh"><span class="sub">Follow-up</span><span class="mono">${when(p.followup_at)}</span></div><pre>${esc(p.followup_body || '')}</pre></div>` : ''}
     ${p.reply_snippet ? `<div class="msg in"><div class="mh"><span class="sub">Reply from ${esc(p.email)}</span><span class="mono">${when(p.replied_at)}</span></div><pre>${esc(p.reply_snippet)}</pre></div>` : ''}
     ${(p.my_replies || []).map(r => `<div class="msg"><div class="mh"><span class="sub">You</span><span class="mono">${when(r.at)}</span></div><pre>${esc(r.body)}</pre></div>`).join('')}
-    ${msgs && msgs.error ? `<p class="help">${esc(msgs.error)}</p>` : S.threadLoading.has(tid) ? '<p class="help">Loading the full conversation from Gmail…</p>' : ''}
+    ${msgs && msgs.error ? `<p class="help">${esc(msgs.error)}</p>` : S.threadLoading.has(tid) ? '<p class="help">Loading the full conversation from Outlook…</p>' : ''}
     <div>${gmailLink}</div>
   </div>`;
 }
@@ -1831,10 +1973,10 @@ function replyBoxHtml(p) {
     <div class="field"><label for="rBody">Reply to ${esc(p.email || '')}${settings().cc_email ? ` · cc ${esc(settings().cc_email)}` : ''}</label><textarea id="rBody" spellcheck="true" placeholder="${S.sample ? 'Press “Draft a reply” and Claude writes one from their email, or type your own.' : 'Type your reply.'}">${esc(draft)}</textarea></div>
     <div class="actions">
       ${S.confirming && S.confirming.id === p.id && S.confirming.act === 'send-reply'
-        ? `<div class="confirm"><span>Send this reply to ${esc(p.email)} in the same Gmail thread? It also gets logged in the class CRM.</span><button class="btn solid" data-act="send-reply" data-confirmed="1">Yes, send it</button><button class="btn ghost" data-act="cancel-confirm">Cancel</button></div>`
+        ? `<div class="confirm"><span>Send this reply to ${esc(p.email)} in the same email thread? It also gets logged in the class CRM.</span><button class="btn solid" data-act="send-reply" data-confirmed="1">Yes, send it</button><button class="btn ghost" data-act="cancel-confirm">Cancel</button></div>`
         : `<button class="btn solid" data-act="send-reply" ${busy ? 'disabled' : ''}>Send reply</button>
       ${S.sample ? `<button class="btn" data-act="draft-reply" ${busy ? 'disabled' : ''}>${busy === 'reply' ? 'Drafting…' : draft ? 'Redraft with Claude' : 'Draft a reply with Claude'}</button>` : ''}
-      ${waiting ? '<span class="spacer"></span><button class="btn ghost" data-act="mark-answered" title="You answered from Gmail or by phone">I answered another way</button>' : ''}`}
+      ${waiting ? '<span class="spacer"></span><button class="btn ghost" data-act="mark-answered" title="You answered from Outlook or by phone">I answered another way</button>' : ''}`}
     </div>
   </div>`;
 }
@@ -2009,7 +2151,7 @@ function detailHtml(id) {
     ? `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${p.contact_name} ${shortName(p.name)}`)}`
     : `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(shortName(p.name))}`;
   const inCrm = !p.crm_org_id && crmMatch(p.name);
-  const gmailUrl = p.thread_id ? `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(p.thread_id)}` : null;
+  const gmailUrl = p.thread_id ? outlookLink(p.thread_id) : null;
   const crmUrl = p.crm_org_id ? `https://connect-ai.world/crm/org/?id=${encodeURIComponent(p.crm_org_id)}` : null;
   return `<article class="detail" data-detail="${esc(p.id)}">
     <div class="d-head">
@@ -2026,8 +2168,8 @@ function detailHtml(id) {
           ${p.website ? `<a href="${esc(p.website)}" target="_blank" rel="noopener">${esc(p.domain || 'Website')} ↗</a>` : ''}
           <a href="${google}" target="_blank" rel="noopener">Google ↗</a>
           <a href="${linkedin}" target="_blank" rel="noopener">${p.contact_name ? `Find ${esc(p.contact_name.split(' ')[0])} on LinkedIn` : 'Search LinkedIn'} ↗</a>
-          ${gmailUrl ? `<a href="${gmailUrl}" target="_blank" rel="noopener">Open in Gmail ↗</a>` : ''}
-          ${p.gmail_draft_url ? `<a href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Gmail draft ↗</a>` : ''}
+          ${gmailUrl ? `<a href="${esc(gmailUrl)}" target="_blank" rel="noopener">Open in Outlook ↗</a>` : ''}
+          ${p.gmail_draft_url ? `<a href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Outlook draft ↗</a>` : ''}
           ${crmUrl ? `<a href="${crmUrl}" target="_blank" rel="noopener">In class CRM ↗</a>` : ''}
           ${fromFiling(p) ? `<a href="${filingUrl(p)}" target="_blank" rel="noopener" title="The business's Connecticut registration: address, email, date (public data)">CT filing ↗</a>${p.registry_id ? `<a href="${personFilingUrl('', p)}" target="_blank" rel="noopener" title="Everyone listed on this business's Connecticut filing (public data)">People on the filing ↗</a>` : ''}<a href="${CT_SEARCH}" target="_blank" rel="noopener" title="Connecticut's business search: type the business name">CT business search ↗</a>` : ''}
           ${phoneSource(p) ? `<span style="color:var(--muted)">${esc(p.phone)} <a href="${esc(phoneSource(p).href)}" target="_blank" rel="noopener">(${phoneSource(p).label} ↗)</a></span>` : ''}
@@ -2348,7 +2490,7 @@ async function onAction(root, act, confirmed) {
     S.confirming = act === 'followup'
       ? { id, act, text: `Send a short follow-up to ${p.email} in the same thread?`, yes: 'Yes, follow up' }
       : inSendWindow() || !vals
-        ? { id, act, text: `Send this to ${to}${cc} from your Gmail now? It also gets logged in the class CRM.`, yes: 'Yes, send it' }
+        ? { id, act, text: `Send this to ${to}${cc} from your Outlook now? It also gets logged in the class CRM.`, yes: 'Yes, send it' }
         : { id, act: 'approve', text: `It's outside business hours, so this goes to ${to}${cc} ${nextSendWindow()}. It goes out on its own then; you don't need this page open.`, yes: `Send ${nextSendWindow()}` };
     rerenderDetail(root);
     return;
@@ -2387,7 +2529,7 @@ async function onAction(root, act, confirmed) {
       await patch(id, { answered_at: nowIso() }, 'Marked as answered (outside the desk)');
     } else if (act === 'draft') {
       await saveGmailDraft(p, vals);
-      toast('Saved to your Gmail drafts.');
+      toast('Saved to your Outlook drafts.');
     } else if (act === 'rewrite') {
       const ta = root.querySelector('#dBody');
       const prompt = `You are editing a short cold email from a ${me().school} student (${me().name}) to the owner of a small business in ${placeLabel(p) || 'their town'}${stateOf(p) === 'CT' ? ', Connecticut' : ''}. The only goal of this first email is a 15-minute conversation so they can learn how the business runs. ${inClassArea(p) ? 'They are also in Connect.AI, a UConn course where students help small businesses with AI at no cost; mention it in one honest sentence at most, with no link, no form and no "free report", and say the call is really about learning from them. Do not claim any partnership with the CT Small Business Development Center or anyone else.' : 'This business is outside the area the course works in, so do NOT mention Connect.AI at all.'} ${stateOf(p) === 'CT' ? 'They are in Storrs, CT; for nearby businesses they can offer to stop by.' : 'Offer a phone or Zoom call.'}
@@ -2590,7 +2732,7 @@ render();
       }, () => {});
       db.doc('meta/crm_board').onSnapshot(snap => { S.crmBoard = snap.exists ? ((snap.data() || {}).orgs || []) : []; render(); }, () => {});
       db.collection('threads').onSnapshot(snap => {
-        for (const d of snap.docs) S.threads[d.id] = (d.data() || {}).messages || [];
+        for (const d of snap.docs) S.threads[(d.data() || {}).tid || d.id] = (d.data() || {}).messages || [];
         render();
       }, () => {});
       render();

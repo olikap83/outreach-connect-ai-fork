@@ -674,7 +674,7 @@ test('reply check: people count, auto-responders do not, and Soham gets an email
   const buzz = notify.find(n => n.id === 'buzz');
   assert.deepEqual(buzz.to, ['soham.shah@uconn.edu', 'shahsoham689@gmail.com']);
   assert.match(buzz.subject, /Karen Santiago at Buzz Beads replied/);
-  assert.match(buzz.body, /mail\.google\.com\/mail\/u\/0\/#all\/t2/);
+  assert.match(buzz.body, /outlook\.live\.com\/owa\/\?ItemID=t2/);
   assert.equal(buzz.crm.org, 'org1');
   const fixed = planReplies([{ id: 'r', name: 'RAB', email: 'shop@rab.org', status: 'replied', replied_at: '2026-10-30T14:30:00Z', reply_snippet: 'Thank you for contacting RAB! Re: UConn student', reply_msg_ids: ['x'], log: [] }], [], '2026-10-30T15:00:00Z');
   assert.equal(fixed.notify.length, 0, 'no email about an auto-reply');
@@ -917,4 +917,30 @@ test('an empty background (or an empty profile) is skipped cleanly', () => {
     assert.match(empty.body, /\n\nThanks,$/);
     assert.match(empty.subject, /UConn student/);
   }
+});
+
+test('outlook: email HTML is cleaned to what Outlook accepts', () => {
+  const { outlookHtml } = require('../lib/outreach/outlook');
+  const out = outlookHtml('<div style="font-family:Arial"><!-- x --><p>Hi</p><blockquote style="a">said</blockquote><span>s</span><img src="t.gif"><a href="https://x.com" style="c">Go</a><a href="javascript:alert(1)">no</a></div>');
+  assert.equal(out, '<div><p>Hi</p><div>said</div>s<a href="https://x.com">Go</a><a>no</a></div>');
+  const { replyNotice } = require('../scripts/reply-notice');
+  const n = replyNotice({ name: 'Buzz Beads', email: 'a@b.com', reply_draft: 'Hi' }, 'Sure', { draftId: 'd1', draftUrl: 'https://outlook.live.com/x', code: 'ABC123', settings: { sender_email: 'me@outlook.com' } });
+  assert.doesNotMatch(n.htmlBody, /style=|<blockquote|<span|<img/);
+  assert.match(n.htmlBody, /href="mailto:me@outlook\.com\?subject=/);
+});
+
+test('outlook: search results become one thread per sender, newest id last', () => {
+  const { readThreads } = require('../scripts/outreach-replies');
+  const dir = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'ol-'));
+  const file = path.join(dir, 't.json');
+  const a = { id: 'm1', subject: 'RE: Question', sender: 'owner@shop.com', summary: 'Sure, Tuesday', receivedDateTime: '2026-11-03T15:00:00Z' };
+  const b = { id: 'm2', subject: 'RE: Question', sender: 'Owner@Shop.com', summary: 'Or Wednesday', receivedDateTime: '2026-11-04T15:00:00Z' };
+  const c = { id: 'm3', subject: 'Hello', sender: 'other@x.com', summary: 'hi', receivedDateTime: '2026-11-04T16:00:00Z' };
+  fs.writeFileSync(file, [JSON.stringify(b), JSON.stringify([a, c]), JSON.stringify(a)].join('\n'));
+  const threads = readThreads(file);
+  const shop = threads.find(t => t.messages[0].sender === 'owner@shop.com');
+  assert.equal(threads.length, 2);
+  assert.equal(shop.id, 'm2');
+  assert.deepEqual(shop.messages.map(m => m.id), ['m1', 'm2']);
+  assert.equal(shop.messages[1].snippet, 'Or Wednesday');
 });

@@ -1,20 +1,22 @@
 // The reply check that runs without the desk open.
 //
 //   node scripts/outreach-replies.js queries --docs <dir of prospect JSON files>
-//     → prints the Gmail searches to run (one per line)
+//     → prints the addresses to search Outlook for (one per line)
 //
 //   node scripts/outreach-replies.js plan --docs <dir> --threads <file> --out <dir> [--settings <settings JSON file>]
-//     <file> holds the search results: the threads arrays from every search,
-//     either one JSON array or several, one per line.
+//     <file> holds the Outlook search results (outlook_email_search: one JSON
+//     object per email, or arrays of them, one per line, as many searches as you
+//     ran; duplicates are fine). Gmail-style threads arrays still work too.
 //     → writes <out>/updates/<id>.json (desk update for each business),
 //       <out>/plan.json ({ updates: [{id, file, crm_org_id}], notify: [...] })
 //       and prints a short summary. The "someone wrote back" emails go to
-//       settings.notify_emails (or your school + Gmail addresses).
+//       settings.notify_emails (or your school + Outlook addresses).
 
 const fs = require('fs');
 const path = require('path');
 const { planReplies } = require('../lib/outreach/replies');
 const { loadSettings } = require('../lib/outreach/settings');
+const { threadsFromOutlook, isOutlookItem } = require('../lib/outreach/outlook');
 
 const arg = name => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : null; };
 
@@ -27,14 +29,14 @@ function readThreads(file) {
   const text = fs.readFileSync(file, 'utf8').trim();
   if (!text) return [];
   const chunks = text.startsWith('[') && !text.includes('\n[') ? [text] : text.split('\n').filter(l => l.trim());
-  return chunks.flatMap(c => { const j = JSON.parse(c); return Array.isArray(j) ? j : j.threads || []; });
+  const all = chunks.flatMap(c => { const j = JSON.parse(c); return Array.isArray(j) ? j : j.threads || (j.messages ? [j] : [j]); });
+  const outlook = all.filter(isOutlookItem);
+  return [...all.filter(x => !isOutlookItem(x) && Array.isArray(x.messages)), ...threadsFromOutlook(outlook)];
 }
 
 function queries(docs) {
   const emails = [...new Set(docs.filter(p => ['sent', 'followed_up', 'replied'].includes(p.status) && p.email).map(p => p.email.toLowerCase()))].sort();
-  const out = [];
-  for (let i = 0; i < emails.length; i += 20) out.push(`from:(${emails.slice(i, i + 20).join(' OR ')}) newer_than:60d -in:sent`);
-  return out;
+  return emails;
 }
 
 function main() {
