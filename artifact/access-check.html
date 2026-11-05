@@ -1,0 +1,69 @@
+<title>Outreach Access Check</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow column, a list of checks with a pass/fail chip each. */
+:root { --bg:#f5f7fb; --card:#ffffff; --fg:#14213d; --muted:#5b6478; --line:#dde3ee; --ok:#1a7f37; --bad:#b42318; --navy:#1d3a6b;
+  --sans: "Public Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e1525; --card:#16203a; --fg:#e8edf7; --muted:#9aa5bd; --line:#2a3655; --ok:#4cc46d; --bad:#ff7a6b; --navy:#8fb0ff; color-scheme: dark } }
+:root[data-theme="dark"] { --bg:#0e1525; --card:#16203a; --fg:#e8edf7; --muted:#9aa5bd; --line:#2a3655; --ok:#4cc46d; --bad:#ff7a6b; --navy:#8fb0ff; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px; }
+main { max-width: 620px; margin: 0 auto; display: grid; gap: 18px; }
+h1 { font-size: 24px; margin: 0; text-wrap: balance; }
+p { margin: 0; color: var(--muted); line-height: 1.5; }
+ul { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-top: 1px solid var(--line); }
+li:first-child { border-top: 0; }
+li b { display: block; font-weight: 600; }
+li small { color: var(--muted); font-size: 12.5px; word-break: break-word; }
+.chip { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 99px; border: 1px solid var(--line); white-space: nowrap; color: var(--muted); }
+.chip.ok { color: var(--ok); border-color: var(--ok); } .chip.bad { color: var(--bad); border-color: var(--bad); }
+button { font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 8px; border: 0; background: var(--navy); color: var(--bg); cursor: pointer; justify-self: start; }
+button:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: default; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=IBM+Plex+Mono&display=swap">
+<main>
+  <h1>Can your own accounts work here?</h1>
+  <p>Soham is setting up the outreach desk so classmates can use it with their own Gmail, CRM login and Claude account. This page checks whether that works for you. It reads your Connect.AI name and lists your Claude Code environments. It sends nothing and changes nothing.</p>
+  <button id="run">Run the check</button>
+  <ul id="out"><li><span class="chip">waiting</span><div><b>Press "Run the check"</b><small>Then screenshot this page and send it to Soham.</small></div></li></ul>
+</main>
+<script>
+const out = document.getElementById('out');
+const rows = [];
+function row(name, ok, detail) {
+  rows.push({ name, ok, detail });
+  out.innerHTML = '';
+  for (const r of rows) {
+    const li = document.createElement('li');
+    const chip = document.createElement('span'); chip.className = 'chip ' + (r.ok === true ? 'ok' : r.ok === false ? 'bad' : ''); chip.textContent = r.ok === true ? 'works' : r.ok === false ? 'blocked' : 'note';
+    const d = document.createElement('div'); const b = document.createElement('b'); b.textContent = r.name; const s = document.createElement('small'); s.textContent = r.detail || '';
+    d.append(b, s); li.append(chip, d); out.append(li);
+  }
+}
+const err = e => (e && (e.code || '') + (e.message ? ': ' + e.message : '')) || String(e);
+document.getElementById('run').addEventListener('click', async ev => {
+  ev.target.disabled = true; rows.length = 0;
+  if (!window.claude) { row('Claude page features', false, 'Open this on claude.ai while signed in.'); return; }
+  const user = await window.claude.use('user');
+  const owner = user ? await user.isOwner() : false;
+  const me = user ? await user.me() : null;
+  row('Signed in', !!(me && me.id), owner ? 'You own this page (Soham).' : me && me.id ? 'Signed in as a visitor.' : 'No account id for this view.');
+  if (user) { const w = await user.can('data.write'); row('Can save your own settings', w === null ? null : !!w, w === null ? 'Not reported; the save test below decides.' : ''); }
+  const db = await window.claude.use('db');
+  if (db && me && me.id) {
+    try { await db.doc(`data/users/${me.id}/checks/last`).set({ at: new Date().toISOString() }); row('Save test', true, 'Saved a private test note only you can read.'); }
+    catch (e) { row('Save test', false, err(e)); }
+  } else row('Save test', false, db ? 'No account id.' : 'Storage not available in this view.');
+  const mcp = await window.claude.use('mcp');
+  if (!mcp) { row('Your connectors (Gmail, Connect AI, Claude Code)', false, 'Not available to you on this page.'); ev.target.disabled = false; return; }
+  row('Your connectors', true, 'Available on this page.');
+  try { const r = await mcp.callTool('Connect AI', 'whoami', {}); const t = JSON.stringify(r.payload || {}); row('Connect AI login', true, t.slice(0, 140)); }
+  catch (e) { row('Connect AI login', false, err(e)); }
+  try { const r = await mcp.callTool('Claude Code Remote', 'list_environments', { limit: 5 }); const n = ((r.payload || {}).environments || (r.payload || {}).data || []).length; row('Your Claude Code', true, `Found ${n} environment${n === 1 ? '' : 's'} on your own account.`); }
+  catch (e) { row('Your Claude Code', false, err(e)); }
+  try { const t = await mcp.listTools('Gmail'); row('Your Gmail', true, 'Connected.'); }
+  catch (e) { row('Your Gmail', false, err(e)); }
+  ev.target.disabled = false;
+});
+</script>

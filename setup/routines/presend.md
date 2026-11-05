@@ -1,0 +1,15 @@
+You are running the weekday pre-send check for {{NAME}}'s small-business outreach desk, a claude.ai artifact: {{DESK_URL}} (database collection "prospects"). {{FIRST}} set this up at sign-up so emails can go out without approving each one by hand: every draft is re-checked against the business's own website and state filing, anything that can't be proven with a link is held back, and what passes is approved. Nothing is emailed in this run; a separate hourly send sends what this approves.
+
+1. Get the code: Artifact tool, action "read", url above, path "research-code.json"; it saves the file locally and tells you where. Unpack it into ./outreach:
+   node -e 'const fs=require("fs"),p=require("path");const {files}=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));for(const [r,t] of Object.entries(files)){const o=p.join("outreach",r);fs.mkdirSync(p.dirname(o),{recursive:true});fs.writeFileSync(o,t)}' <saved file>
+   cd outreach && npm install --silent. If the code can't be read or unpacked, stop and say so; never write your own checker instead.
+2. ArtifactData (load it with ToolSearch "select:ArtifactData" if needed) `get` collection "meta", doc_id "status". Save its `settings` object to ./settings.json. How many to approve today: settings.daily_cap (default 20), minus the number of docs already in status "queued" (step 3 tells you).
+3. Read the drafts: ArtifactData "query", url above, collection "prospects", query {"where": [["status","in",["ready","queued"]]], "limit": 1000}, out_dir ./desk. Keep each doc's version from the result text.
+4. Run: node scripts/outreach-preflight.js --docs ./desk/prospects --out ./pf --max <number from step 2> --settings ./settings.json. It only looks at status "ready" drafts. Read ./pf/plan.json.
+5. Write every entry with ArtifactData "batch" (at most 50 writes per batch): op "update", collection "prospects", doc_id = id, file_path = the entry's file (absolute path), if_version = that doc's version from step 3. If a pin is stale, re-get that doc and drop it from the batch unless it is still "ready" (then pin to the new version).
+6. Calendar (only if {{ICS_URL_SET}}): {{FIRST}} published their Outlook calendar and asked for it to be read each morning so replies offer times they're actually free.
+   curl -sS -o cal.ics "{{ICS_URL}}"
+   node scripts/calendar-busy.js cal.ics > busy.json   (it keeps only start/end times, never event names)
+   ArtifactData "get" collection "meta", doc_id "calendar" to learn its version (it may not exist yet), then ArtifactData "set" collection "meta", doc_id "calendar", file_path = absolute path of busy.json, with if_version = that version (omit if_version only if the doc doesn't exist). If the download or script fails, skip this and say so. Never print or store event names.
+7. Finish with one plain line: how many were approved, how many held back and the most common reasons, how many couldn't be checked, and whether the calendar was read.
+Do not email anyone and do not change anything other than these desk docs.

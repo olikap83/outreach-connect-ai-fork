@@ -3,7 +3,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: a radar console. Storrs (and Soham) sit at the center of a live sweep of
+/* Layout: a radar console. Storrs (and the student) sit at the center of a live sweep of
    every business found; the work area below is a roomy, high-contrast desk.
    Husky navy ground, signal cyan for the sweep and sent mail, coral for replies. */
 :root{
@@ -376,7 +376,8 @@ h1,h2,h3{font-weight:600; letter-spacing:-.01em;}
 .hero h1 .acc{color:var(--signal); font-style:normal;}
 .lead{margin:0; font-size:18px; color:var(--ink-2); max-width:60ch;}
 .me-card{display:flex; align-items:center; gap:14px; border:1px solid var(--line); background:var(--wash); border-radius:22px; padding:10px 22px 10px 10px;}
-.me-card img{width:72px; height:72px; border-radius:16px; object-fit:cover;}
+.me-card img, .me-card .initials{width:72px; height:72px; border-radius:16px; object-fit:cover;}
+.me-card .initials{display:grid; place-items:center; background:var(--navy); color:var(--paper); font-family:var(--serif); font-size:28px; font-weight:700;}
 .me-card b{display:block; font-family:var(--serif); font-size:21px; font-weight:700; letter-spacing:-.01em;}
 .me-card span{display:block; font-size:14.5px; color:var(--muted); line-height:1.35;}
 .map-panel{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:0; border-radius:22px; overflow:hidden; background:var(--radar-bg); box-shadow:0 0 0 1px var(--line), 0 30px 70px -36px rgba(10,147,168,.6);}
@@ -476,7 +477,18 @@ table.list th{font-size:11px;}
 .prep-text{font-size:15px;}
 .toast{font-size:14.5px; border-radius:12px;}
 footer{font-size:11px;}
-/* View-only (anyone but Soham): same data, no buttons that change anything. */
+.cboard{display:grid; gap:14px; min-width:0;}
+.board-sum{display:flex; flex-wrap:wrap; gap:8px 22px; font-size:14px; color:var(--muted);}
+.board-sum b{font-family:var(--serif); font-size:22px; color:var(--ink, inherit); margin-right:4px; font-variant-numeric:tabular-nums;}
+.board-people{display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px;}
+.bperson{display:grid; gap:3px; text-align:left; font:inherit; color:inherit; background:var(--wash); border:1px solid var(--line); border-radius:14px; padding:12px 14px; cursor:pointer; min-width:0;}
+.bperson b{font-size:14.5px; overflow-wrap:anywhere;}
+.bperson b em{font-style:normal; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--navy); border:1px solid currentColor; border-radius:99px; padding:1px 6px; margin-left:4px; vertical-align:2px;}
+.bperson span{font-size:12.5px; color:var(--muted);}
+.bperson .mono{font-family:var(--mono); font-size:11px;}
+.bperson.on{border-color:var(--navy); box-shadow:0 0 0 1px var(--navy) inset;}
+.bperson:focus-visible{outline:2px solid var(--navy); outline-offset:2px;}
+/* View-only (anyone but the student): same data, no buttons that change anything. */
 body.ro [data-act], body.ro [data-mark], body.ro [data-gdraft], body.ro #skipWeak, body.ro #sendQueue, body.ro .queue-bar, body.ro .confirm { display: none !important; }
 body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane input, body.ro #reviewPane textarea { pointer-events: none; background: var(--wash, transparent); }
 </style>
@@ -492,10 +504,7 @@ body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane inp
         <h1>Main Street <span class="acc">Outreach</span></h1>
         <p class="lead">Small businesses across Connecticut, the rest of New England and New York that could use a hand with AI. Every one here was found, checked and lined up for a conversation.</p>
       </div>
-      <div class="me-card">
-        <img src="soham.jpg" alt="Soham Shah" width="72" height="72">
-        <div><b>Soham Shah</b><span>Accounting '28</span><span>University of Connecticut</span></div>
-      </div>
+      <div class="me-card" id="meCard"></div>
     </div>
     <section class="map-panel" aria-label="Map of every business found in New England and New York">
       <div class="map-wrap">
@@ -624,9 +633,26 @@ const STATE_NAMES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas'
 const stateOf = p => String((p && p.state) || 'CT').toUpperCase();
 const inClassArea = p => CLASS_STATES.includes(stateOf(p));
 const placeLabel = p => stateOf(p) === 'CT' ? (p.town || '') : `${p.town || ''}, ${stateOf(p)}`;
-const DEFAULTS = { daily_cap: 20, followup_after_days: 4, sender_name: 'Soham Shah', cc_email: 'soham.shah@uconn.edu', free_times: 'Weekday afternoons after 2pm' };
-// Every email Soham sends from the desk copies his UConn address.
-function ccList() { const c = String(settings().cc_email || '').trim(); return c ? { cc: [c] } : {}; }
+// The student's own details come from their profile (meta/status.settings,
+// filled in at sign-up). Nothing personal is written into this page.
+const DEFAULTS = { daily_cap: 20, followup_after_days: 4, sender_name: '', sender_major: '', grad_year: '', school_short: 'UConn', school_long: 'University of Connecticut', school_email: '', sender_email: '', linkedin_url: '', background: '', why: '', photo: '', desk_url: '', free_times: 'Weekday afternoons after 2pm' };
+function me() {
+  const s = settings();
+  const name = String(s.sender_name || '').trim();
+  const first = name.split(/\s+/)[0] || '';
+  const major = String(s.sender_major || '').trim();
+  const majorCap = major ? major[0].toUpperCase() + major.slice(1) : '';
+  const linkedin = String(s.linkedin_url || '').trim().replace(/\/+$/, '');
+  const linkedinShort = linkedin.replace(/^https?:\/\/(www\.)?/i, '');
+  const schoolEmail = String(s.school_email || '').trim();
+  const signature = s.signature ? `Thanks,\n${s.signature}` : ['Thanks,', name, [majorCap, s.school_long].filter(Boolean).join(', '), [schoolEmail, linkedinShort].filter(Boolean).join(' · ')].filter(Boolean).join('\n');
+  const notify = (Array.isArray(s.notify_emails) && s.notify_emails.length ? s.notify_emails : [schoolEmail, s.sender_email]).map(x => String(x || '').trim()).filter(Boolean);
+  const cc = String(s.cc_email ?? schoolEmail).trim();
+  const about = [s.background, s.why].map(x => String(x || '').trim()).filter(Boolean).join(' ');
+  return { name, first: first || 'the student', major, majorCap, linkedin, linkedinShort, schoolEmail, signature, notify, cc, about, school: s.school_short || 'UConn' };
+}
+// Every email sent from the desk copies the student's school address.
+function ccList() { const c = me().cc; return c ? { cc: [c] } : {}; }
 
 // Emails go out during business hours (8am to 6pm New York time, weekdays);
 // anything approved after hours waits for the next morning.
@@ -656,14 +682,14 @@ function nextWeekdays(n) {
   }
   return out;
 }
-// Someone wrote back and Soham hasn't answered since.
+// Someone wrote back and the student hasn't answered since.
 const needsAnswer = p => p.status === 'replied' && (!p.answered_at || String(p.answered_at) < String(p.replied_at || ''));
 
 // ---------- state ----------
 const S = {
   db: null, mcp: null, sample: null, readOnly: false,
   prospects: [], meta: {}, loaded: false, dbState: 'connecting',
-  crmAll: null, crmMine: null, crmState: 'connecting', crmError: '', gmailState: 'unknown',
+  crmAll: null, crmMine: null, crmBoard: null, boardWho: '', crmState: 'connecting', crmError: '', gmailState: 'unknown',
   tab: lsGet('outreach-tab') || 'review',
   q: '', state: '', town: '', fit: 0, closed: false,
   reviewMode: lsGet('review-mode') || 'today', rvBucket: '', rvWeb: false, rvOwner: false,
@@ -858,7 +884,7 @@ function freshPart(text) {
   return (cut > 0 ? lines.slice(0, cut) : lines).filter(l => !/^>/.test(l)).join('\n').trim();
 }
 
-// Soham's copy of each conversation, kept on the desk so people he shares it
+// the student's copy of each conversation, kept on the desk so people they shares it
 // with (who can't read his Gmail) see the same thread he does.
 function saveThreadCopy(tid, msgs) {
   if (S.readOnly || !S.db || !Array.isArray(msgs)) return;
@@ -884,9 +910,9 @@ async function loadThread(p, { force = false } = {}) {
 function conversationText(p) {
   const msgs = S.threads[threadIdOf(p)];
   if (Array.isArray(msgs) && msgs.length) {
-    return msgs.map(m => `${fromThem(p, m) ? (p.contact_name || 'Them') : 'Soham'} (${m.date || ''}):\n${freshPart(msgText(m))}`).join('\n\n---\n\n');
+    return msgs.map(m => `${fromThem(p, m) ? (p.contact_name || 'Them') : me().first} (${m.date || ''}):\n${freshPart(msgText(m))}`).join('\n\n---\n\n');
   }
-  return [`Soham:\n${p.body || ''}`, p.followup_body ? `Soham (follow-up):\n${p.followup_body}` : null, p.reply_snippet ? `${p.contact_name || 'Them'}:\n${p.reply_snippet}` : null].filter(Boolean).join('\n\n---\n\n');
+  return [`${me().first}:\n${p.body || ''}`, p.followup_body ? `${me().first} (follow-up):\n${p.followup_body}` : null, p.reply_snippet ? `${p.contact_name || 'Them'}:\n${p.reply_snippet}` : null].filter(Boolean).join('\n\n---\n\n');
 }
 
 // Only facts with a link go to Claude, each with its source, so nothing it
@@ -917,9 +943,10 @@ function businessFacts(p) {
 async function draftReply(p, ta) {
   const s = settings();
   const near = stateOf(p) === 'CT' && p.miles_from_storrs != null ? p.miles_from_storrs <= 30 : stateOf(p) === 'CT';
-  const prompt = `You are drafting an email reply for ${s.sender_name}, an accounting major at UConn, to a small-business owner who wrote back to him.
+  const m = me();
+  const prompt = `You are drafting an email reply for ${m.name}, ${m.major ? `a ${m.major} major` : 'a student'} at ${m.school}, to a small-business owner who wrote back to them.
 
-Who Soham is (he can mention his internships as plain facts, but never set them against the business, like calling it big-company work, which reads as a put-down): he interned in accounting at Henkel this past summer and will be at Andersen next summer. He reached out mainly to learn how small businesses actually run, both to be useful to them and because he wants to start his own business someday. ${inClassArea(p) ? 'He is also in Connect.AI, a UConn course where student teams work with small businesses in Connecticut, New England and New York to find where AI could save them time and build it for free. The optional application is at connect-ai.world/apply (about 3 minutes, free AI-readiness report). Do not claim any partnership with the CT Small Business Development Center or anyone else.' : 'This business is outside the area his course works in, so do not mention Connect.AI or the form.'}
+Who ${m.first} is (they can mention their experience as plain facts, but never set it against the business, like calling it big-company work, which reads as a put-down): ${m.about || 'a college student.'} They reached out mainly to learn how small businesses actually run and to be useful to them. ${inClassArea(p) ? 'They are also in Connect.AI, a UConn course where student teams work with small businesses in Connecticut, New England and New York to find where AI could save them time and build it for free. The optional application is at connect-ai.world/apply (about 3 minutes, free AI-readiness report). Do not claim any partnership with the CT Small Business Development Center or anyone else.' : 'This business is outside the area their course works in, so do not mention Connect.AI or the form.'}
 
 What we know about the business (use only this; never invent anything):
 ${JSON.stringify(businessFacts(p))}
@@ -927,17 +954,17 @@ ${JSON.stringify(businessFacts(p))}
 The conversation so far, oldest first:
 ${conversationText(p)}
 
-When Soham is free: ${s.free_times || DEFAULTS.free_times}.
+When ${m.first} is free: ${s.free_times || DEFAULTS.free_times}.
 The next weekdays are: ${nextWeekdays(6).join('; ')}.
-Ways to talk: phone or Zoom${near ? `, or he can come by in person since he's in Storrs, close to ${p.town}` : ''}.
+Ways to talk: phone or Zoom${near ? `, or they can come by in person since they're in Storrs, close to ${p.town}` : ''}.
 
-Write Soham's reply to their latest message:
-- If they're open to talking, thank them, and offer two or three specific times drawn from when he's free on the dates above (e.g. "Tuesday, Nov 4 at 3pm"), say it'd take 15 to 20 minutes, and ask which works and whether they prefer ${near ? 'phone, Zoom or him stopping by' : 'phone or Zoom'}. If they already suggested a time, just confirm it.
+Write ${m.first}'s reply to their latest message:
+- If they're open to talking, thank them, and offer two or three specific times drawn from when they're free on the dates above (e.g. "Tuesday, Nov 4 at 3pm"), say it'd take 15 to 20 minutes, and ask which works and whether they prefer ${near ? 'phone, Zoom or them stopping by' : 'phone or Zoom'}. If they already suggested a time, just confirm it.
 - If they asked questions, answer them plainly and honestly with only what's above. It's free and there's no contract.${inClassArea(p) ? `
 - Only if they asked about Connect.AI, asked how it works, or said they'd like help: add that the easiest next step is a short form at connect-ai.world/apply (about 3 minutes, and they get a free AI-readiness report), and that the call still comes first. Otherwise don't mention the form.` : ''}
 - If they said not now, thank them warmly, say no problem, and leave the door open in one line. Don't push.
-- If they pointed him to someone else, thank them and ask for the best way to reach that person.
-Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi" and the first name they signed their email with, or the first name in their From line if they didn't sign it; if there's no name at all, "Hi ${shortName(p.name)} team,". Never "Hi there". Use "Dr." and their last name only if they signed as Dr. or with a doctor's degree (DMD, DDS, MD, DO, DC, OD, DVM)${((p.facts || {}).people || []).some(x => x.doctor_url) ? `, or if they are ${((p.facts || {}).people || []).filter(x => x.doctor_url).map(x => x.name).join(' or ')}, whose website shows them as a doctor` : ''}; never guess it from the kind of business. Don't assume any other name. End with "Thanks,\\nSoham". Reply with only the email body.`;
+- If they pointed them to someone else, thank them and ask for the best way to reach that person.
+Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi" and the first name they signed their email with, or the first name in their From line if they didn't sign it; if there's no name at all, "Hi ${shortName(p.name)} team,". Never "Hi there". Use "Dr." and their last name only if they signed as Dr. or with a doctor's degree (DMD, DDS, MD, DO, DC, OD, DVM)${((p.facts || {}).people || []).some(x => x.doctor_url) ? `, or if they are ${((p.facts || {}).people || []).filter(x => x.doctor_url).map(x => x.name).join(' or ')}, whose website shows them as a doctor` : ''}; never guess it from the kind of business. Don't assume any other name. End with "Thanks,\\n${m.first}". Reply with only the email body.`;
   ta.value = '';
   const out = await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
   const text = (out && out.text) || ta.value;
@@ -963,12 +990,12 @@ async function sendReply(p, body) {
   delete S.replyDrafts[p.id];
   loadThread(p, { force: true });
   const who = p.contact_name || shortName(p.name);
-  logToCrm(p, 'email', `Soham answered ${who}:\n\n${body}`, { update: { next_step: `Set up a call with ${who}`, next_step_due: addDays(3) } })
+  logToCrm(p, 'email', `${me().first} answered ${who}:\n\n${body}`, { update: { next_step: `Set up a call with ${who}`, next_step_due: addDays(3) } })
     .then(orgId => (p.crm_org_id ? null : patch(p.id, { crm_org_id: orgId }))).catch(() => {});
 }
 
 async function makePrepSheet(p, pre) {
-  const prompt = `Make a one-page call prep sheet for ${settings().sender_name}, a UConn accounting student, who has a short call coming up with a small-business owner. He wants to learn how the business really runs day to day${inClassArea(p) ? ', and his UConn course (Connect.AI) may build them a free AI tool later, but this call is about listening, not pitching' : ''}.
+  const prompt = `Make a one-page call prep sheet for ${me().name}, a ${me().school} ${me().major || ''} student, who has a short call coming up with a small-business owner. They want to learn how the business really runs day to day${inClassArea(p) ? ', and his UConn course (Connect.AI) may build them a free AI tool later, but this call is about listening, not pitching' : ''}.
 
 What we know (use only this; if something isn't known, say so instead of guessing). Each fact has the link it came from:
 ${JSON.stringify(businessFacts(p))}
@@ -998,7 +1025,7 @@ async function saveGmailDraft(p, vals) {
 // ---------- one-time update of waiting drafts ----------
 // Subjects now name the business and say UConn, and the closing line ends
 // warm instead of on "bother you". Only drafts still worded the old way
-// change; anything Soham edited stays as he wrote it.
+// change; anything the student edited stays as they wrote it.
 const OLD_CLOSE = 'And if now isn\'t a good time, just tell me and I won\'t bother you again.';
 const NEW_CLOSE = 'I appreciate you reading this. If now isn\'t a good time, no worries at all, just let me know.';
 function newSubject(p) {
@@ -1013,10 +1040,9 @@ function newSubject(p) {
 // email). Checked on every load, so drafts rewritten elsewhere get it too.
 const LINKEDIN_LINE = /\n\n(More about me: |If you want to know a bit more about me first, here's my LinkedIn: )https?:\/\/\S+\n\n/;
 // The signature carries his UConn address and LinkedIn instead.
-const SIGNATURE = 'Thanks,\nSoham Shah\nAccounting, University of Connecticut\nsoham.shah@uconn.edu · linkedin.com/in/soham-shah-uconn';
+const SIGNATURE = () => me().signature;
 // Every email goes out with an HTML version, so the LinkedIn address shows as a
 // clean "LinkedIn" link instead of Gmail's long google.com/url redirect.
-const LINKEDIN_URL = 'https://www.linkedin.com/in/soham-shah-uconn';
 // Open tracking: each sent email carries a 1x1 image whose address names that
 // email (settings.tracking_url is the open tracker in tracker/open-tracker.js).
 // Drafts never carry one, since opening your own draft would count.
@@ -1025,13 +1051,17 @@ function newTrackId(p, kind) { return `${String(p.id).slice(0, 60)}.${kind}${Dat
 const trackedPatch = (p, id, kind, at) => (id ? { tracked: [...(p.tracked || []), { id, kind, at }].slice(-20) } : {});
 function mailBodies(body, trackId) {
   const pixel = trackId && trackingUrl() ? `<img src="${trackingUrl()}/o/${encodeURIComponent(trackId)}.gif" width="1" height="1" alt="" style="width:1px;height:1px;border:0;display:block">` : '';
-  const html = esc(body)
-    .replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, `<a href="${LINKEDIN_URL}">LinkedIn</a>`)
-    .replace(/soham\.shah@uconn\.edu/g, '<a href="mailto:soham.shah@uconn.edu">soham.shah@uconn.edu</a>')
-    .replace(/\n/g, '<br>');
-  return { body: body.replace(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/soham-shah-uconn\/?/g, 'linkedin.com/in/soham-shah-uconn'), htmlBody: `<div>${html}</div>${pixel}` };
+  const m = me();
+  const reEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const slug = (m.linkedin.match(/linkedin\.com\/in\/([^/?#]+)/i) || [])[1];
+  const liRe = slug ? new RegExp(`(?:https?:\\/\\/)?(?:www\\.)?linkedin\\.com\\/in\\/${reEsc(slug)}\\/?`, 'g') : null;
+  let html = esc(body);
+  if (liRe) html = html.replace(liRe, `<a href="https://www.linkedin.com/in/${esc(slug)}">LinkedIn</a>`);
+  if (m.schoolEmail) html = html.split(esc(m.schoolEmail)).join(`<a href="mailto:${esc(m.schoolEmail)}">${esc(m.schoolEmail)}</a>`);
+  html = html.replace(/\n/g, '<br>');
+  return { body: liRe ? body.replace(liRe, `linkedin.com/in/${slug}`) : body, htmlBody: `<div>${html}</div>${pixel}` };
 }
-const OLD_SIGNATURES = ['Thanks,\nSoham Shah\nUniversity of Connecticut', 'Thanks,\nSoham Shah\nConnect.AI, University of Connecticut\nconnect-ai.world'];
+const OLD_SIGNATURES = () => me().name ? [`Thanks,\n${me().name}\nUniversity of Connecticut`, `Thanks,\n${me().name}\nConnect.AI, University of Connecticut\nconnect-ai.world`] : [];
 let stripping = false;
 async function stripLinkedIn() {
   if (stripping || !S.db || !S.loaded) return;
@@ -1039,7 +1069,7 @@ async function stripLinkedIn() {
   try {
     for (const p of S.prospects.filter(x => ['ready', 'queued', 'needs_check', 'no_email'].includes(x.status) && x.body)) {
       let body = p.body.replace(LINKEDIN_LINE, '\n\n');
-      for (const old of OLD_SIGNATURES) if (body.endsWith(old)) body = body.slice(0, -old.length) + SIGNATURE;
+      if (me().name) for (const old of OLD_SIGNATURES()) if (body.endsWith(old)) body = body.slice(0, -old.length) + SIGNATURE();
       if (body !== p.body) await patch(p.id, { body }).catch(() => {});
     }
   } finally { stripping = false; }
@@ -1101,7 +1131,7 @@ function emailStatus(p) {
 // Stored notes end with the status line from when they were written; swap in today's.
 function crmNotesNow(p) {
   const notes = p.crm_notes || fallbackNotes(p);
-  return notes.replace(/(Found by Soham's outreach research[^.\n]*\.)[^\n]*$/, `$1 ${emailStatus(p)}`).slice(0, 3900);
+  return notes.replace(/(Found by [^\n]*?outreach research[^.\n]*\.)[^\n]*$/, `$1 ${emailStatus(p)}`).slice(0, 3900);
 }
 function fallbackNotes(p) {
   const f = p.facts || {};
@@ -1113,7 +1143,7 @@ function fallbackNotes(p) {
     p.website ? `Website: ${p.website}` : null,
     line(p.contact_name && `Contact: ${p.contact_name}`, factUrl(p, 'contact')),
     line(p.email && `Email: ${p.email}`, factUrl(p, 'email')),
-    `Found by Soham's outreach research (fit ${p.fit_score ?? '?'}/100). ${emailStatus(p)}`,
+    `Found by ${me().name ? `${me().name}'s` : 'student'} outreach research (fit ${p.fit_score ?? '?'}/100). ${emailStatus(p)}`,
   ].filter(Boolean).join('\n');
 }
 const CRM_LEADS_PER_DAY = 15;
@@ -1121,7 +1151,7 @@ function crmAddedToday() { const k = dayKey(new Date()); return S.prospects.filt
 
 // ---------- leads: every researched business goes into the class CRM ----------
 // As soon as a business has a draft, it's posted to connect-ai.world/crm as a
-// Lead owned by Soham, so the class sees it before any email goes out.
+// Lead owned by the student, so the class sees it before any email goes out.
 let leadSync = false;
 async function syncLeads() {
   if (leadSync || !S.mcp || !S.db || !S.crmAll || !S.crmMine) return;
@@ -1177,7 +1207,7 @@ async function syncNotes() {
       update.state = stateOf(p);
       if (p.town) update.city = p.town;
       const away = !inClassArea(p);
-      if (!worthy && stillLead) { update.stage = 'passed'; update.next_step = null; update.next_step_due = null; update.notes = `${away ? `Outside the class area (${stateOf(p)}): Soham may still reach out on his own, but it's not a Connect.AI lead.` : 'Taken off the outreach list: not enough known about this one to reach out.'}\n\n${update.notes}`.slice(0, 3900); }
+      if (!worthy && stillLead) { update.stage = 'passed'; update.next_step = null; update.next_step_due = null; update.notes = `${away ? `Outside the class area (${stateOf(p)}): ${me().first} may still reach out on their own, but it's not a Connect.AI lead.` : 'Taken off the outreach list: not enough known about this one to reach out.'}\n\n${update.notes}`.slice(0, 3900); }
       await S.mcp.callTool(CRM, 'crm_update_org', update);
       cardsFixed.add(p.crm_org_id);
       if (p.crm_notes_synced !== false) { n++; continue; }
@@ -1239,9 +1269,8 @@ async function handleBounces(threads) {
   }
 }
 
-// When someone writes back, email Soham at both addresses (the reply check
+// When someone writes back, email the student at both addresses (the reply check
 // that runs without this page does the same: lib/outreach/replies.js).
-const NOTIFY_TO = ['soham.shah@uconn.edu', 'shahsoham689@gmail.com'];
 async function notifyReply(p, snippet, threadId, noThanks) {
   const biz = shortName(p.name);
   const who = p.contact_name ? `${p.contact_name} at ${biz}` : biz;
@@ -1257,7 +1286,7 @@ async function notifyReply(p, snippet, threadId, noThanks) {
   } catch (e) { /* keep the snippet */ }
   said = said.slice(0, 1200);
   const gmailUrl = threadId ? `https://mail.google.com/mail/u/0/#all/${threadId}` : null;
-  const desk = 'https://claude.ai/artifact/N7EfQ9VJAebmCponFGYdKW';
+  const desk = settings().desk_url || 'https://claude.ai/code/artifacts';
   const subject = noThanks ? `${who} said no thanks` : `${who} replied to your email`;
   const lead = noThanks ? `${who} (${p.email}) wrote back and isn't interested:` : `${who} (${p.email}) wrote back:`;
   const tail = noThanks ? 'The desk has moved them to "Not now". Nothing else to do.' : "Open the desk's Replies tab to answer them.";
@@ -1269,7 +1298,8 @@ async function notifyReply(p, snippet, threadId, noThanks) {
 <p>${h(tail)}</p>
 <p>${gmailUrl ? `<a href="${esc(gmailUrl)}" style="display:inline-block;padding:10px 18px;border:1px solid #999;color:#333;text-decoration:none;border-radius:6px">Read it in Gmail</a> &nbsp; ` : ''}${noThanks ? '' : `<a href="${desk}" style="display:inline-block;padding:10px 18px;background:#1a7f37;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">Open the desk</a>`}</p>
 </div>`;
-  await S.mcp.callTool(GMAIL, 'send_message', { to: NOTIFY_TO, subject, body, htmlBody });
+  if (!me().notify.length) throw new Error('Add your email to your profile so the desk can tell you about replies.');
+  await S.mcp.callTool(GMAIL, 'send_message', { to: me().notify, subject, body, htmlBody });
   await patch(p.id, { reply_notified_at: nowIso() });
 }
 
@@ -1381,7 +1411,7 @@ function renderNotice() {
   if (queued && !inSendWindow() && S.tab !== 'review') {
     html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>It's outside business hours, so they wait until then. They go out on their own at about 8:15am on weekdays, whether or not this page is open.</p></div></div>`;
   }
-  if (S.readOnly) html = `<div class="banner"><div><b>View only</b><p>This is Soham's outreach desk, shared with you to look at. You see the same businesses, emails and CRM list he does; nothing can be sent or changed from here.</p></div></div>` + html;
+  if (S.readOnly) html = `<div class="banner"><div><b>View only</b><p>This is ${esc(me().name || 'a classmate')}'s outreach desk, shared with you to look at. You see the same businesses, emails and CRM list they do; nothing can be sent or changed from here.</p></div></div>` + html;
   if (S.dbState === 'bad') {
     html = `<div class="banner warn"><div><b>This page can't reach its data.</b><p>Open it on claude.ai while signed in to your account. The businesses, drafts and history live with the page there.</p></div></div>`;
   } else if (S.loaded && !S.prospects.length && !S.meta.progress) {
@@ -1471,9 +1501,10 @@ function renderTabs() {
     ['replies', 'Replies', ps.filter(p => p.status === 'replied' || (p.status === 'not_interested' && p.replied_at)).length],
     ['activity', 'Activity', null],
     ['crm', 'My CRM', S.crmMine ? S.crmMine.length : null],
+    ['board', 'Class board', S.crmBoard ? new Set(S.crmBoard.map(o => (o.owner || {}).name || '')).size : null],
   ];
   $('#tabs').innerHTML = tabs.map(([k, l, n]) => `<button class="tab" role="tab" aria-selected="${S.tab === k}" data-tab="${k}">${l}${n != null ? `<b>${n}</b>` : ''}</button>`).join('');
-  $('#filters').hidden = S.tab === 'activity' || S.tab === 'crm' || S.tab === 'replies';
+  $('#filters').hidden = S.tab === 'activity' || S.tab === 'crm' || S.tab === 'board' || S.tab === 'replies';
   $('#fClosed').closest('label').hidden = S.tab === 'review';
   const states = [...new Set(ps.map(stateOf))].sort((a, b) => (a === 'CT' ? -1 : b === 'CT' ? 1 : a.localeCompare(b)));
   const outside = ps.filter(p => !inClassArea(p)).length;
@@ -1607,7 +1638,7 @@ function subjectStatsHtml() {
   </table></div><p class="help">Reply rates mean more after 20 or so emails per subject line.</p>`;
 }
 
-// A reply the reply check already wrote (with open times from Soham's
+// A reply the reply check already wrote (with open times from the student's
 // calendar) and saved as a Gmail draft: one tap sends it.
 function readyReply(p) {
   if (!needsAnswer(p) || !p.reply_draft_id || !p.reply_draft) return '';
@@ -1628,7 +1659,7 @@ async function sendReadyReply(p) {
     await patch(p.id, { answered_at: at, reply_draft: null, reply_draft_id: null, reply_draft_url: null,
       my_replies: [...(p.my_replies || []), { at, body: p.reply_draft }].slice(-10) }, `Answered ${p.contact_name || p.email} with times for a call`);
     const who = p.contact_name || shortName(p.name);
-    logToCrm(p, 'email', `Soham answered ${who} with times for a call:\n\n${p.reply_draft}`, { update: { stage: 'talks', next_step: `Wait for ${who} to pick a time`, next_step_due: addDays(3) } }).catch(() => {});
+    logToCrm(p, 'email', `${me().first} answered ${who} with times for a call:\n\n${p.reply_draft}`, { update: { stage: 'talks', next_step: `Wait for ${who} to pick a time`, next_step_due: addDays(3) } }).catch(() => {});
     toast(`Sent to ${p.email}.`);
   } finally {
     delete S.working[p.id]; render();
@@ -1678,6 +1709,51 @@ function renderCrm() {
       <td>${esc(o.next_step || '')}</td><td style="font-family:var(--mono); font-size:12px">${esc(o.next_step_due || '')}</td>
       <td class="num">${o.touches ?? 0}</td><td style="color:var(--muted); font-size:12px">${ago(o.last_touch_at)}</td></tr>`).join('')}</tbody>
   </table></div><p class="help" style="margin-top:8px">Live from connect-ai.world/crm, refreshed every few minutes.</p>`;
+}
+
+// ---------- class board ----------
+// Everyone in the class and the businesses they're working with, from the
+// class CRM (each person reads it with their own Connect.AI login). Leads
+// that haven't been emailed yet are left out; this is who's actually talking
+// to whom, so nobody emails a business a classmate already has.
+const BOARD_STAGES = ['contacted', 'talks', 'applied', 'selected', 'active', 'completed'];
+const FURTHER = new Set(['applied', 'selected', 'active', 'completed']);
+function renderBoard() {
+  if (S.crmState === 'bad' && !S.crmBoard) return emptyView('Can\'t reach the class CRM.', esc(S.crmError || 'Check the Connect AI connector in claude.ai → Settings → Connectors.'));
+  if (!S.crmBoard) return emptyView('Loading the class board…', 'Reading connect-ai.world/crm.');
+  if (!S.crmBoard.length) return emptyView('Nobody has emailed a business yet.', 'Once classmates start sending, everyone they\'re talking to shows up here.');
+  const byWho = new Map();
+  for (const o of S.crmBoard) {
+    const who = (o.owner || {}).name || 'Unassigned';
+    if (!byWho.has(who)) byWho.set(who, []);
+    byWho.get(who).push(o);
+  }
+  const mine = me().name;
+  const people = [...byWho.entries()].map(([who, orgs]) => ({
+    who, orgs, you: !!mine && who === mine,
+    contacted: orgs.filter(o => o.stage === 'contacted').length,
+    talks: orgs.filter(o => o.stage === 'talks').length,
+    further: orgs.filter(o => FURTHER.has(o.stage)).length,
+    last: orgs.map(o => o.last_touch_at || o.updated_at || '').sort().pop() || '',
+  })).sort((a, b) => (b.talks + b.further) - (a.talks + a.further) || b.orgs.length - a.orgs.length || a.who.localeCompare(b.who));
+  const pick = S.boardWho && byWho.has(S.boardWho) ? S.boardWho : '';
+  const rows = (pick ? byWho.get(pick) : S.crmBoard).slice().sort((a, b) => BOARD_STAGES.indexOf(b.stage) - BOARD_STAGES.indexOf(a.stage) || String(b.last_touch_at || '').localeCompare(String(a.last_touch_at || '')));
+  const tot = { people: people.length, contacted: people.reduce((n, p) => n + p.contacted, 0), talks: people.reduce((n, p) => n + p.talks, 0), further: people.reduce((n, p) => n + p.further, 0) };
+  return `<div class="cboard">
+    <div class="board-sum"><span><b>${tot.people}</b> classmates</span><span><b>${tot.contacted}</b> emailed, waiting</span><span><b>${tot.talks}</b> in talks</span><span><b>${tot.further}</b> applied or further</span></div>
+    <div class="board-people">
+      <button class="bperson${pick ? '' : ' on'}" data-boardwho=""><b>Everyone</b><span>${S.crmBoard.length} businesses</span></button>
+      ${people.map(p => `<button class="bperson${pick === p.who ? ' on' : ''}" data-boardwho="${esc(p.who)}"><b>${esc(p.who)}${p.you ? ' <em>you</em>' : ''}</b><span>${p.contacted} emailed · ${p.talks} in talks${p.further ? ` · ${p.further} further` : ''}</span><span class="mono">${p.last ? `last touch ${esc(ago(p.last))}` : ''}</span></button>`).join('')}
+    </div>
+    <div class="table-wrap"><table class="list">
+      <thead><tr><th>Business</th><th>Who has it</th><th>Stage</th><th>Town</th><th>Next step</th><th>Last touch</th></tr></thead>
+      <tbody>${rows.map(o => `<tr><td class="nm"><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.name)} ↗</a></td>
+        <td>${esc((o.owner || {}).name || 'Unassigned')}</td>
+        <td><span class="stage ${esc(o.stage)}">${esc(o.stage_label || o.stage)}</span></td><td>${esc([o.city, o.state && o.state !== 'CT' ? o.state : ''].filter(Boolean).join(', '))}</td>
+        <td>${esc(o.next_step || '')}</td><td style="color:var(--muted); font-size:12px">${ago(o.last_touch_at)}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <p class="help" style="margin-top:8px">Live from connect-ai.world/crm, refreshed every few minutes. Businesses still at "Lead" (not emailed yet) aren't shown.</p>
+  </div>`;
 }
 
 // ---------- detail ----------
@@ -2009,6 +2085,7 @@ function renderView() {
   else if (S.tab === 'replies') v.innerHTML = renderReplies();
   else if (S.tab === 'activity') v.innerHTML = renderActivity();
   else if (S.tab === 'crm') v.innerHTML = renderCrm();
+  else if (S.tab === 'board') v.innerHTML = renderBoard();
   else v.innerHTML = renderReview();
   fitTextareas();
 }
@@ -2016,8 +2093,17 @@ function isEditing() {
   const a = document.activeElement;
   return a && /TEXTAREA|INPUT/.test(a.tagName) && a.closest('.detail');
 }
+function renderMe() {
+  const el = $('#meCard'); if (!el) return;
+  const s = settings(); const m = me();
+  if (!m.name) { el.hidden = true; return; }
+  el.hidden = false;
+  const initials = m.name.split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+  const line2 = [m.majorCap, s.grad_year ? `'${String(s.grad_year).slice(-2)}` : ''].filter(Boolean).join(' ');
+  el.innerHTML = `${s.photo ? `<img src="${esc(s.photo)}" alt="${esc(m.name)}" width="72" height="72">` : `<span class="initials" aria-hidden="true">${esc(initials)}</span>`}<div><b>${esc(m.name)}</b>${line2 ? `<span>${esc(line2)}</span>` : ''}<span>${esc(s.school_long || '')}</span></div>`;
+}
 function render() {
-  renderConn(); renderNotice(); renderStats(); renderChart(); renderTabs();
+  renderMe(); renderConn(); renderNotice(); renderStats(); renderChart(); renderTabs();
   radarData(); radarInit();
   // While Claude is writing into a reply or prep sheet, leave the page as it is.
   const writing = Object.keys(S.working).length > 0;
@@ -2304,7 +2390,7 @@ async function onAction(root, act, confirmed) {
       toast('Saved to your Gmail drafts.');
     } else if (act === 'rewrite') {
       const ta = root.querySelector('#dBody');
-      const prompt = `You are editing a short cold email from a UConn student (${settings().sender_name}) to the owner of a small business in ${placeLabel(p) || 'their town'}${stateOf(p) === 'CT' ? ', Connecticut' : ''}. The only goal of this first email is a 15-minute conversation so he can learn how the business runs. ${inClassArea(p) ? 'He is also in Connect.AI, a UConn course where students help small businesses with AI at no cost; mention it in one honest sentence at most, with no link, no form and no "free report", and say the call is really about learning from them. Do not claim any partnership with the CT Small Business Development Center or anyone else.' : 'This business is outside the area the course works in, so do NOT mention Connect.AI at all.'} ${stateOf(p) === 'CT' ? 'He is in Storrs, CT; for nearby businesses he can offer to stop by.' : 'Offer a phone or Zoom call.'}
+      const prompt = `You are editing a short cold email from a ${me().school} student (${me().name}) to the owner of a small business in ${placeLabel(p) || 'their town'}${stateOf(p) === 'CT' ? ', Connecticut' : ''}. The only goal of this first email is a 15-minute conversation so they can learn how the business runs. ${inClassArea(p) ? 'They are also in Connect.AI, a UConn course where students help small businesses with AI at no cost; mention it in one honest sentence at most, with no link, no form and no "free report", and say the call is really about learning from them. Do not claim any partnership with the CT Small Business Development Center or anyone else.' : 'This business is outside the area the course works in, so do NOT mention Connect.AI at all.'} ${stateOf(p) === 'CT' ? 'They are in Storrs, CT; for nearby businesses they can offer to stop by.' : 'Offer a phone or Zoom call.'}
 
 Facts found on the business's own website. Use only these; never invent anything:
 ${JSON.stringify({ business: p.name, town: p.town, category: p.category, contact: vals.contact_name, facts: { founded: (p.facts || {}).founded, family_owned: (p.facts || {}).family_owned, books_by_phone: (p.facts || {}).phone_first, quote_requests: (p.facts || {}).quote_requests, description: (p.facts || {}).description, tools: [...((p.facts || {}).booking_tools || []), ...((p.facts || {}).shop_tools || [])].map(toolName) } })}
@@ -2312,7 +2398,7 @@ ${JSON.stringify({ business: p.name, town: p.town, category: p.category, contact
 Current draft:
 ${ta.value}
 
-Rewrite it so it reads like a real student wrote it by hand, not like AI or a sales email: plain, warm, curious, specific to this business, under 130 words, contractions, short sentences, no em dashes, no colons, no lists, no polished-sounding phrases. Keep any specific detail about the business that's already in it, and don't add new facts. Keep: the greeting; that he's an accounting major at UConn; that he interned at Henkel and will be at Andersen next summer, said plainly (never compare that to their business or call it big-company work); that he wants to start his own business someday, said simply (no stock lines like learning from people instead of a textbook); what he's genuinely curious about in a business like theirs and that he'd love to hear how it got started and what running it is like (never a question about their scheduling, invoices, intake or what takes the most time: that reads like a sales call); the ask for a 15-minute call; "If now isn't a good time, no worries at all."; and the signature. No links at all. No exclamation marks, no marketing words, no flattery beyond one light touch. Reply with only the email body.`;
+Rewrite it so it reads like a real student wrote it by hand, not like AI or a sales email: plain, warm, curious, specific to this business, under 130 words, contractions, short sentences, no em dashes, no colons, no lists, no polished-sounding phrases. Keep any specific detail about the business that's already in it, and don't add new facts. Keep: the greeting; who they are (${me().major ? `a ${me().major} major` : 'a student'} at ${me().school}); ${me().about ? `their background as written ("${me().about.replace(/`/g, '')}"), said plainly (never compare it to their business or call it big-company work);` : ''} why they're reaching out, said simply (no stock lines like learning from people instead of a textbook); what they're genuinely curious about in a business like theirs and that they'd love to hear how it got started and what running it is like (never a question about their scheduling, invoices, intake or what takes the most time: that reads like a sales call); the ask for a 15-minute call; "If now isn't a good time, no worries at all."; and the signature. No links at all. No exclamation marks, no marketing words, no flattery beyond one light touch. Reply with only the email body.`;
       ta.value = '';
       await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
       toast('Rewritten. Check it, then send or approve.');
@@ -2386,6 +2472,8 @@ document.addEventListener('click', async e => {
   if (tab) { S.tab = tab.dataset.tab; lsSet('outreach-tab', S.tab); render(); return; }
   const gd = t.closest('[data-gdraft]');
   if (gd) { const p = S.prospects.find(x => x.id === gd.dataset.gdraft); if (p) sendReadyReply(p).catch(err => toast(err && err.code ? mcpMessage(err, GMAIL) : err.message, { err: true })); return; }
+  const bw = t.closest('[data-boardwho]');
+  if (bw) { S.boardWho = bw.dataset.boardwho; renderView(); return; }
   const opener = t.closest('[data-open]');
   if (opener) { openDrawer(opener.dataset.open); return; }
   const mode = t.closest('[data-rvmode]');
@@ -2464,14 +2552,14 @@ function readOnlyDb(db) {
   } });
   return wrap(db);
 }
-let lastCrmView = '';
+let lastCrmView = '', lastBoardView = '';
 
 // ---------- boot ----------
 render();
 (async () => {
   const user = window.claude ? await window.claude.use('user') : null;
   const owner = user ? await user.isOwner() : false;
-  // Anyone but Soham gets a view-only desk: his data, but no Gmail, no CRM
+  // Anyone but the student gets a view-only desk: their data, but no Gmail, no CRM
   // calls, no Claude, and no writes (the db rules block writes too).
   S.readOnly = !owner;
   document.body.classList.toggle('ro', S.readOnly);
@@ -2500,6 +2588,7 @@ render();
         S.crmMine = d.orgs || []; S.crmAll = S.crmMine; S.crmState = 'ok'; S.crmError = ''; S.gmailState = 'ok';
         render();
       }, () => {});
+      db.doc('meta/crm_board').onSnapshot(snap => { S.crmBoard = snap.exists ? ((snap.data() || {}).orgs || []) : []; render(); }, () => {});
       db.collection('threads').onSnapshot(snap => {
         for (const d of snap.docs) S.threads[d.id] = (d.data() || {}).messages || [];
         render();
@@ -2536,6 +2625,16 @@ render();
   };
   mcp.watchTool(CRM, 'crm_list_orgs', { owner: 'me', include_closed: true, limit: 200 }, crmHandler('mine'), { refetchInterval: 5 * 60 * 1000 });
   mcp.watchTool(CRM, 'crm_list_orgs', { include_closed: true, limit: 200 }, crmHandler('all'), { refetchInterval: 10 * 60 * 1000 });
+  mcp.watchTool(CRM, 'crm_list_orgs', { stage: BOARD_STAGES, limit: 200 }, ev => {
+    if (ev.type === 'error') return;
+    S.crmBoard = (ev.result.payload || {}).orgs || [];
+    if (S.db) {
+      const board = S.crmBoard.map(o => ({ url: o.url, name: o.name, stage: o.stage, stage_label: o.stage_label, city: o.city, state: o.state, next_step: o.next_step, last_touch_at: o.last_touch_at, updated_at: o.updated_at, owner: { name: (o.owner || {}).name || '' } }));
+      const sig = JSON.stringify(board);
+      if (sig !== lastBoardView) { lastBoardView = sig; S.db.doc('meta/crm_board').set({ orgs: board, saved_at: nowIso() }).catch(() => {}); }
+    }
+    render();
+  }, { refetchInterval: 10 * 60 * 1000 });
 })();
 })();
 </script>
