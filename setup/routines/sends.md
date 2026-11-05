@@ -19,10 +19,10 @@ PART A: approved first emails (up to first_quota)
 6. For each queued doc, highest fit_score first, one at a time:
    a. Check it first: the greeting name must match the person the email goes to, the body must not say "Hi there", and the email address and street address must not match one already emailed (status sent/followed_up/replied/bounced; if it does, set status "skipped" with skip_reason). If the greeting fails, set status "needs_check" with check_reason and skip it.
    b. Claim it: ArtifactData update {status: "sending"} with if_version = its version. If refused, re-get it; skip unless it's still "queued" (then claim with the new version).
-   c. Build the bodies: node scripts/mail-bodies.js <its saved JSON file> --settings ./settings.json.
+   c. Build the bodies: node scripts/mail-bodies.js <its saved JSON file> ./settings.json.
    d. Gmail send_message: to [email], cc [{{CC}}] (leave cc out if that's empty), subject, body and htmlBody from step c.
    e. Update the doc (pinned to the claim's version): status "sent", sent_at now (ISO), thread_id and message_id from the Gmail result, updated_at now, and append to log {at: now, what: "Emailed <contact_name> at <email>"} (or "Emailed <email>").
-   f. Class CRM (Connect AI), if crm_org_id is set: node scripts/crm-entry.js <its saved JSON file> --sent-at <sent_at>. Then crm_log_touchpoint {org: crm_org_id, ...touchpoint} (if the contact name is refused, retry without contact), and crm_update_org {org: crm_org_id, ...update}. If add_contact is set and crm_get_org shows no contacts, crm_add_contact {org: crm_org_id, ...add_contact}. Then update the doc crm_stage "contacted".
+   f. Class CRM (Connect AI), if crm_org_id is set: node scripts/crm-entry.js <its saved JSON file> --sent-at <sent_at> --settings ./settings.json. Then crm_log_touchpoint {org: crm_org_id, ...touchpoint} (if the contact name is refused, retry without contact), and crm_update_org {org: crm_org_id, ...update}. If add_contact is set and crm_get_org shows no contacts, crm_add_contact {org: crm_org_id, ...add_contact}. Then update the doc crm_stage "contacted".
    g. If the Gmail send fails, set the doc back to "queued" with a log line naming the error; keep going.
 
 PART B: automatic follow-ups (up to followup_quota; one per business, after 4 business days with no reply)

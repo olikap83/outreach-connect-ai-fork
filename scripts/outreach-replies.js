@@ -3,16 +3,18 @@
 //   node scripts/outreach-replies.js queries --docs <dir of prospect JSON files>
 //     → prints the Gmail searches to run (one per line)
 //
-//   node scripts/outreach-replies.js plan --docs <dir> --threads <file> --out <dir>
+//   node scripts/outreach-replies.js plan --docs <dir> --threads <file> --out <dir> [--settings <settings JSON file>]
 //     <file> holds the search results: the threads arrays from every search,
 //     either one JSON array or several, one per line.
 //     → writes <out>/updates/<id>.json (desk update for each business),
 //       <out>/plan.json ({ updates: [{id, file, crm_org_id}], notify: [...] })
-//       and prints a short summary.
+//       and prints a short summary. The "someone wrote back" emails go to
+//       settings.notify_emails (or your school + Gmail addresses).
 
 const fs = require('fs');
 const path = require('path');
 const { planReplies } = require('../lib/outreach/replies');
+const { loadSettings } = require('../lib/outreach/settings');
 
 const arg = name => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : null; };
 
@@ -42,14 +44,14 @@ function main() {
   if (mode !== 'plan') throw new Error('Use "queries" or "plan".');
   const out = arg('out') || 'out/replies';
   fs.mkdirSync(path.join(out, 'updates'), { recursive: true });
-  const { updates, notify } = planReplies(docs, readThreads(arg('threads')));
+  const { updates, notify } = planReplies(docs, readThreads(arg('threads')), undefined, loadSettings(arg('settings')));
   const list = updates.map(u => {
     const file = path.resolve(out, 'updates', `${u.id}.json`);
     fs.writeFileSync(file, JSON.stringify(u.data));
     return { id: u.id, file, crm_org_id: u.crm_org_id || null };
   });
   fs.writeFileSync(path.join(out, 'plan.json'), JSON.stringify({ updates: list, notify }, null, 2));
-  console.log(`${notify.length} to tell Soham about, ${list.length} desk update(s). Wrote ${path.join(out, 'plan.json')}`);
+  console.log(`${notify.length} to tell you about, ${list.length} desk update(s). Wrote ${path.join(out, 'plan.json')}`);
 }
 
 if (require.main === module) { try { main(); } catch (e) { console.error(e.message); process.exit(1); } }

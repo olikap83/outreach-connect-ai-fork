@@ -1,7 +1,6 @@
 // Packs the research code into one JSON file ({ path: contents }) that is
-// published alongside the Outreach Desk page. The daily research run can't
-// clone this private repo, but it can read the page's files, so it unpacks
-// this instead. Run it after changing the code, then republish the desk
+// published alongside the Outreach Desk page. The scheduled runs read the page's files
+// and unpack this, so they run the same code the desk was published with. Run it after changing the code, then republish the desk
 // with the bundle as `research-code.json`.
 //
 //   node scripts/bundle-for-desk.js > /tmp/research-code.json
@@ -22,6 +21,8 @@ function add(rel) {
   }
 }
 include.forEach(add);
+// The student's own profile (not in git) rides along with their desk's copy of the code.
+if (fs.existsSync(path.join(root, 'profile.json'))) add('profile.json');
 
 const { execSync } = require('child_process');
 let commit = null;

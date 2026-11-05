@@ -1,16 +1,17 @@
 // Follow-ups that go out on their own: one short "just bumping this" in the
 // same Gmail thread for anyone who hasn't written back within
 // followup_after_days business days (default 4). Used by the weekday
-// morning send, so Soham doesn't have to remember them.
+// morning send, so you don't have to remember them. Your school address
+// (settings.school_email) is cc'd when it's set.
 //
-//   node scripts/outreach-followups.js --docs <dir of prospect JSON files> --out <dir> [--days 4] [--max 20]
+//   node scripts/outreach-followups.js --docs <dir of prospect JSON files> --out <dir> [--days 4] [--max 20] [--settings <settings JSON file>]
 //     → writes <out>/plan.json: [{ id, to, cc, subject, body, htmlBody, thread_id, after_file, crm }]
 //       and <out>/after/<id>.json, the desk update to write once the email is sent.
 
 const fs = require('fs');
 const path = require('path');
 const { composeFollowup } = require('../lib/outreach/compose');
-const { mergeSettings } = require('../lib/outreach/settings');
+const { mergeSettings, loadSettings, profileOf } = require('../lib/outreach/settings');
 const { businessDaysSince } = require('../lib/outreach/util');
 const { mailBodies } = require('./mail-bodies');
 const { crmNotesNow } = require('../lib/outreach/crmnotes');
@@ -28,6 +29,7 @@ function dueFollowups(docs, { days = 4, now = new Date() } = {}) {
 
 function planFollowups(docs, { days = 4, max = 20, now = new Date(), settings = mergeSettings({}) } = {}) {
   const at = now.toISOString();
+  const cc = profileOf(settings).school_email ? [profileOf(settings).school_email] : [];
   return dueFollowups(docs, { days, now }).slice(0, max).map(p => {
     const { subject, body } = composeFollowup(p, settings, p.subject);
     const after = {
@@ -35,9 +37,9 @@ function planFollowups(docs, { days = 4, max = 20, now = new Date(), settings = 
       log: [...(p.log || []), { at, what: `Followed up with ${p.email} (no reply after ${days} business days)` }].slice(-40),
     };
     return {
-      id: p.id, to: [p.email], cc: ['soham.shah@uconn.edu'], subject, ...mailBodies(body), thread_id: p.thread_id, after,
+      id: p.id, to: [p.email], cc, subject, ...mailBodies(body, settings), thread_id: p.thread_id, after,
       crm: p.crm_org_id ? { org: p.crm_org_id, body: `Follow-up email sent to ${p.email}.\n\n${body}`,
-        update: { next_step: 'No reply to the follow-up yet: try calling or stopping by', next_step_due: addDays(now, 7), notes: crmNotesNow({ ...p, ...after }) } } : null,
+        update: { next_step: 'No reply to the follow-up yet: try calling or stopping by', next_step_due: addDays(now, 7), notes: crmNotesNow({ ...p, ...after }, settings) } } : null,
     };
   });
 }
@@ -47,7 +49,7 @@ function main() {
   const out = arg('out', 'out/followups');
   const docs = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
     .map(f => { const j = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); return { id: f.replace(/\.json$/, ''), ...(j.data || j) }; });
-  const plan = planFollowups(docs, { days: Number(arg('days', 4)), max: Number(arg('max', 20)) });
+  const plan = planFollowups(docs, { days: Number(arg('days', 4)), max: Number(arg('max', 20)), settings: loadSettings(arg('settings')) });
   fs.mkdirSync(path.join(out, 'after'), { recursive: true });
   const list = plan.map(({ after, ...rest }) => {
     const file = path.resolve(out, 'after', `${rest.id}.json`);

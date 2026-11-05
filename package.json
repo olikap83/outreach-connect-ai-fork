@@ -2,7 +2,7 @@
   "name": "connect-ai-outreach-desk",
   "private": true,
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "OUTREACH_NO_PROFILE=1 node --test test/*.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

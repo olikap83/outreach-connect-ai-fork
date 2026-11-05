@@ -190,7 +190,17 @@ test('fit score rewards reachable, nearby, manual-heavy small businesses', () =>
 
 // ---------- composing ----------
 
-const settings = mergeSettings({});
+// One student's profile, the way a classmate fills in their settings.
+const SOHAM = {
+  sender_name: 'Soham Shah',
+  sender_major: 'accounting',
+  school_email: 'soham.shah@uconn.edu',
+  sender_email: 'shahsoham689@gmail.com',
+  linkedin_url: 'https://www.linkedin.com/in/soham-shah-uconn/',
+  background: "I interned in accounting at Henkel this past summer and I'll be at Andersen next summer.",
+  why: "Eventually I want to start my own business, so I've been trying to talk with people who have.",
+};
+const settings = mergeSettings(SOHAM);
 const dentist = { id: 'abc', name: 'Willow Creek Family Dentistry', town: 'Mansfield', bucket: 'health', category: 'Dentist', contact_name: 'Karen Whitfield', contact_title: 'Owner', email: 'karen@willowcreekdental.com', miles_from_storrs: 3,
   facts: { founded: 1998, family_owned: true, phone_first: true, booking_tools: [],
     people: [{ name: 'Karen Whitfield', role: 'owner', how: 'site text', url: 'https://willowcreekdental.com/about', doctor_url: 'https://willowcreekdental.com/about' }] } };
@@ -653,7 +663,7 @@ test('reply check: people count, auto-responders do not, and Soham gets an email
     { id: 't2', messages: [{ id: 'm2', sender: 'Karen <kts.santiago@gmail.com>', subject: 'Re: UConn student question about Buzz Beads', snippet: 'Thanks for reaching out! Tuesday works.' }] },
     { id: 't3', messages: [{ id: 'm3', sender: 'katie@katielouise.co', subject: 'Re: UConn student', snippet: 'No thanks, we are all set.' }] },
   ];
-  const { updates, notify } = planReplies(docs, threads, '2026-10-30T15:00:00.000Z');
+  const { updates, notify } = planReplies(docs, threads, '2026-10-30T15:00:00.000Z', SOHAM);
   const by = id => updates.find(u => u.id === id).data;
   assert.equal(by('rab').status, undefined, 'auto-reply leaves the status alone');
   assert.ok(by('rab').auto_reply_at);
@@ -684,7 +694,7 @@ test('follow-ups: one, in the same thread, after 4 business days with no reply',
     { ...base, id: 'replied', name: 'Replied', status: 'replied', sent_at: '2026-10-20T12:20:00Z' },
     { ...base, id: 'done', name: 'Done', status: 'followed_up', sent_at: '2026-10-20T12:20:00Z', followup_at: '2026-10-26T12:00:00Z' },
   ];
-  const plan = planFollowups(docs, { now });
+  const plan = planFollowups(docs, { now, settings: mergeSettings(SOHAM) });
   assert.deepEqual(plan.map(p => p.id), ['due']);
   const f = plan[0];
   assert.equal(f.subject, 'Re: UConn student question about Buzz Beads');
@@ -795,7 +805,7 @@ test("open times come from Soham's calendar, skip busy blocks, and the reply doe
   assert.ok(!JSON.stringify(busy).includes('Private'), 'no event names');
   const slots = openSlots(busy, { now }).map(slotText);
   assert.deepEqual(slots, ['Wednesday, Nov 4 at 4pm', 'Thursday, Nov 5 at 4pm']);
-  const r = meetingReply({ name: 'Levareit LLC', body: 'Hi Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now });
+  const r = meetingReply({ name: 'Levareit LLC', body: 'Hi Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now, settings: SOHAM });
   assert.match(r.body, /^Hi Rene,/);
   assert.match(r.body, /- Wednesday, Nov 4 at 4pm\n- Thursday, Nov 5 at 4pm/);
   assert.equal(r.slot_text.length, 3);
@@ -808,11 +818,103 @@ test("open times come from Soham's calendar, skip busy blocks, and the reply doe
 test('the reply-ready email shows the draft and carries an approve link tied to that one draft', () => {
   const { replyNotice, CODE } = require('../scripts/reply-notice');
   const p = { name: 'Levareit LLC', contact_name: 'Rene Burce', email: 'reneburce@yahoo.com', reply_draft: 'Hi Rene,\n\nHere are a few times...' };
-  const n = replyNotice(p, 'Hi Soham, sure, we can connect via Teams.', { draftId: 'r1', draftUrl: 'https://mail.google.com/x', code: 'A7K2Q9' });
+  const n = replyNotice(p, 'Hi Soham, sure, we can connect via Teams.', { draftId: 'r1', draftUrl: 'https://mail.google.com/x', code: 'A7K2Q9', settings: SOHAM });
   assert.equal(n.subject, 'Rene Burce at Levareit wants to talk. Your reply is ready');
   assert.match(n.body, /sure, we can connect via Teams/);
   assert.match(n.body, /Here are a few times/);
   assert.match(n.htmlBody, /mailto:shahsoham689@gmail\.com\?subject=Approve%20reply%20to%20Rene%20Burce%20%5BA7K2Q9%5D/);
   assert.equal(CODE.exec('Approve reply to Rene Burce [A7K2Q9]')[1], 'A7K2Q9');
   assert.deepEqual(n.to, ['soham.shah@uconn.edu', 'shahsoham689@gmail.com']);
+});
+
+// ---------- each student's own profile ----------
+
+const MAYA = {
+  sender_name: 'Maya Lin', sender_major: 'finance',
+  school_email: 'maya.lin@uconn.edu', sender_email: 'mayalin.outreach@gmail.com',
+  linkedin_url: 'https://linkedin.com/in/maya-lin',
+  background: '', why: "I'd like to run a business of my own one day.",
+};
+const NOT_SOHAM = /soham|henkel|andersen|shahsoham/i;
+
+test("Soham's profile builds the same signature he had written by hand", () => {
+  const { profileOf } = require('../lib/outreach/settings');
+  const p = profileOf(SOHAM);
+  assert.equal(p.signature, 'Soham Shah\nAccounting, University of Connecticut\nsoham.shah@uconn.edu · linkedin.com/in/soham-shah-uconn');
+  assert.equal(p.first_name, 'Soham');
+  assert.deepEqual(p.notify_emails, ['soham.shah@uconn.edu', 'shahsoham689@gmail.com']);
+  assert.deepEqual(profileOf({ ...SOHAM, notify_emails: ['me@x.com'] }).notify_emails, ['me@x.com']);
+  assert.equal(profileOf({ ...SOHAM, signature: 'Just me' }).signature, 'Just me');
+});
+
+test("another student's profile leaves no trace of Soham anywhere", () => {
+  const { profileOf } = require('../lib/outreach/settings');
+  const { notifyTo, planReplies } = require('../lib/outreach/replies');
+  const { buildCrmNotes, crmNotesNow } = require('../lib/outreach/crmnotes');
+  const { planFollowups } = require('../scripts/outreach-followups');
+  const { meetingReply } = require('../scripts/meeting-reply');
+  const { replyNotice } = require('../scripts/reply-notice');
+  const { mailBodies } = require('../scripts/mail-bodies');
+  const maya = mergeSettings(MAYA);
+  assert.equal(profileOf(maya).signature, 'Maya Lin\nFinance, University of Connecticut\nmaya.lin@uconn.edu · linkedin.com/in/maya-lin');
+  assert.deepEqual(notifyTo(maya), ['maya.lin@uconn.edu', 'mayalin.outreach@gmail.com']);
+
+  for (let i = 0; i < 9; i++) {
+    const { subject, body } = composeInitial({ ...dentist, id: `maya-${i}`, name: `Shop ${i}` }, maya);
+    assert.doesNotMatch(subject + body, NOT_SOHAM);
+    assert.match(subject, /UConn student/);
+    assert.match(body, /Maya/);
+    assert.match(body, /finance/);
+    assert.match(body, /run a business of my own one day/);
+    assert.match(body, /Thanks,\nMaya Lin\nFinance, University of Connecticut\nmaya\.lin@uconn\.edu · linkedin\.com\/in\/maya-lin$/);
+    assert.doesNotMatch(body, / {2}|\n{3}|undefined|null| \./);
+  }
+  assert.match(composeFollowup(dentist, maya, 'Hi').body, /Thanks,\nMaya$/);
+
+  const notes = buildCrmNotes({ name: 'Shop', town: 'Mansfield', fit_score: 60 }, maya);
+  assert.match(notes, /Found by Maya Lin's outreach research \(fit 60\/100\)\./);
+  assert.match(crmNotesNow({ crm_notes: notes, email: 'a@b.com', sent_at: '2026-11-02T14:00:00Z', status: 'sent' }, maya), /Found by Maya Lin's outreach research \(fit 60\/100\)\. Intro email sent Nov 2/);
+  assert.match(buildCrmNotes({ name: 'Shop', town: 'Mansfield' }), /Found by outreach research\./);
+
+  const now = new Date('2026-11-03T13:15:00Z');
+  const [f] = planFollowups([{ id: 'd', name: 'Buzz Beads', email: 'x@y.com', thread_id: 't', subject: 'S', body: 'Hi Karen,\n\nhi', status: 'sent', sent_at: '2026-10-28T12:20:00Z', log: [] }], { now, settings: maya });
+  assert.deepEqual(f.cc, ['maya.lin@uconn.edu']);
+  assert.doesNotMatch(JSON.stringify(f), NOT_SOHAM);
+  assert.deepEqual(planFollowups([{ id: 'd', name: 'B', email: 'x@y.com', thread_id: 't', subject: 'S', status: 'sent', sent_at: '2026-10-28T12:20:00Z', log: [] }], { now, settings: mergeSettings({}) })[0].cc, [], 'no school email, no cc');
+
+  const busy = [];
+  const r = meetingReply({ name: 'Levareit LLC', body: 'Hi Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now, settings: maya });
+  assert.match(r.body, /Thanks,\nMaya$/);
+  assert.match(meetingReply({ name: 'X' }, null, { now }).skip, /^Your calendar/);
+
+  const n = replyNotice({ name: 'Levareit LLC', contact_name: 'Rene Burce', email: 'r@y.com', reply_draft: 'Hi Rene' }, 'Sure', { draftUrl: 'u', code: 'A7K2Q9', settings: maya });
+  assert.match(n.htmlBody, /mailto:mayalin\.outreach@gmail\.com\?/);
+  assert.deepEqual(n.to, ['maya.lin@uconn.edu', 'mayalin.outreach@gmail.com']);
+
+  const { notify } = planReplies([{ id: 'b', name: 'Buzz', email: 'k@b.com', status: 'sent', log: [] }],
+    [{ id: 't', messages: [{ id: 'm', sender: 'k@b.com', subject: 'Re: hi', snippet: 'Tuesday works.' }] }], '2026-10-30T15:00:00Z', maya);
+  assert.deepEqual(notify[0].to, ['maya.lin@uconn.edu', 'mayalin.outreach@gmail.com']);
+  assert.doesNotMatch(JSON.stringify(notify), NOT_SOHAM);
+
+  const mb = mailBodies('Thanks,\nMaya Lin\nmaya.lin@uconn.edu · https://www.linkedin.com/in/maya-lin/', maya);
+  assert.match(mb.body, /maya\.lin@uconn\.edu · linkedin\.com\/in\/maya-lin$/);
+  assert.match(mb.htmlBody, /<a href="mailto:maya\.lin@uconn\.edu">maya\.lin@uconn\.edu<\/a> · <a href="https:\/\/www\.linkedin\.com\/in\/maya-lin">LinkedIn<\/a>/);
+  assert.equal(mailBodies('plain text', {}).htmlBody, '<div>plain text</div>');
+});
+
+test('an empty background (or an empty profile) is skipped cleanly', () => {
+  const blankAll = mergeSettings({});
+  for (let i = 0; i < 9; i++) {
+    const p = { ...dentist, id: `blank-${i}`, name: `Place ${i}` };
+    const noBg = composeInitial(p, mergeSettings({ ...SOHAM, background: '' })).body;
+    assert.doesNotMatch(noBg, /Henkel|Andersen/);
+    assert.match(noBg, /start my own business/);
+    assert.doesNotMatch(noBg, / {2}|\n{3}| \./);
+    const empty = composeInitial(p, blankAll);
+    assert.doesNotMatch(empty.subject + empty.body, NOT_SOHAM);
+    assert.doesNotMatch(empty.body, / {2}|\n{3}|undefined|null| \.|I'm ,|My name's ,/);
+    assert.match(empty.body, /student at UConn|I'm a student/);
+    assert.match(empty.body, /\n\nThanks,$/);
+    assert.match(empty.subject, /UConn student/);
+  }
 });

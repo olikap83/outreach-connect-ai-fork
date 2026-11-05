@@ -7,7 +7,7 @@
 // Boston, New York and New England stay in (the class's area), anywhere
 // else stays on the desk only and leaves the class CRM.
 //
-//   node scripts/outreach-statecheck.js --in desk-dir --out out
+//   node scripts/outreach-statecheck.js --in desk-dir --out out [--settings <settings JSON file>]
 //
 // desk-dir holds one <id>.json per desk document (ArtifactData list with
 // out_dir). Writes out/statecheck.json: [{ id, state, address, data }] for
@@ -18,7 +18,7 @@ const path = require('node:path');
 const { registryColumns, socrata, soqlString, rowToRegistry, REGISTRY_MASTER } = require('../lib/outreach/sources');
 const { buildCrmNotes, hasSubstance } = require('../lib/outreach/crmnotes');
 const { composeInitial } = require('../lib/outreach/compose');
-const { DEFAULT_SETTINGS } = require('../lib/outreach/settings');
+const { loadSettings } = require('../lib/outreach/settings');
 const { nameKey, inClassArea } = require('../lib/outreach/util');
 
 function arg(name, def) {
@@ -29,6 +29,7 @@ function arg(name, def) {
 async function main() {
   const dir = arg('in');
   const outDir = arg('out', 'out');
+  const settings = loadSettings(arg('settings'));
   fs.mkdirSync(outDir, { recursive: true });
   const docs = fs.readdirSync(dir).filter(f => f.endsWith('.json')).map(f => ({ id: f.replace(/\.json$/, ''), ...JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) }));
   const c = await registryColumns();
@@ -52,11 +53,11 @@ async function main() {
     const state = String(reg.state).trim().toUpperCase().replace(/^MASSACHUSETTS$/, 'MA').replace(/^RHODE ISLAND$/, 'RI').replace(/^NEW YORK$/, 'NY').replace(/^TEXAS$/, 'TX');
     const where = `${[reg.street, reg.city].filter(Boolean).join(', ')}, ${state}`;
     const fixed = { ...d, state, address: [reg.street, reg.city].filter(Boolean).join(', ') };
-    const draft = d.email && ['ready', 'queued'].includes(d.status) ? composeInitial(fixed, DEFAULT_SETTINGS) : null;
+    const draft = d.email && ['ready', 'queued'].includes(d.status) ? composeInitial(fixed, settings) : null;
     const data = {
       state, address: fixed.address,
       crm_ok: hasSubstance(fixed) && inClassArea(fixed),
-      crm_notes: buildCrmNotes(fixed), crm_notes_synced: false,
+      crm_notes: buildCrmNotes(fixed, settings), crm_notes_synced: false,
       ...(draft ? { subject: draft.subject, body: draft.body } : {}),
       updated_at: new Date().toISOString(),
     };

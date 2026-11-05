@@ -1,4 +1,4 @@
-// Turns Soham's published Outlook calendar into busy times for the next three
+// Turns your published Outlook calendar into busy times for the next three
 // weeks, for the desk's meta/calendar doc. Run by the 7:23am pre-send check
 // (its environment can reach outlook.office365.com; the reply check's can't).
 // Only start and end times are written, never event names.

@@ -3,7 +3,7 @@
 // A name we can't point back to a source is dropped; if it was the contact,
 // the draft's greeting falls back to the people on the filing, or the team.
 //
-//   node scripts/outreach-sources.js --docs <dir of prospect JSON files> --out out [--restore names.json] [--only ids.json]
+//   node scripts/outreach-sources.js --docs <dir of prospect JSON files> --out out [--restore names.json] [--only ids.json] [--settings <settings JSON file>]
 //
 // Writes out/sources.json: [{ id, data }] updates to apply.
 
@@ -12,11 +12,13 @@ const path = require('path');
 const { fetchPage, extractPage, phoneOnPages, factSources, keepSourced, doctorEvidence } = require('../lib/outreach/enrich');
 const { scoreProspect } = require('../lib/outreach/score');
 const { buildCrmNotes } = require('../lib/outreach/crmnotes');
+const { loadSettings } = require('../lib/outreach/settings');
 const { registryLookup, registryPrincipals, runOverpass } = require('../lib/outreach/sources');
 const { greeting } = require('../lib/outreach/compose');
 const { mapLimit, nameKey, stateOf } = require('../lib/outreach/util');
 
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : dflt; };
+const SETTINGS = loadSettings(arg('settings'));
 const UNSENT = new Set(['ready', 'queued', 'needs_check', 'no_email', 'skipped']);
 
 // "Lamothe, Michael J" and "Michael Lamothe" are the same person.
@@ -174,7 +176,7 @@ async function source(doc, restore) {
   const scored = scoreProspect(next);
   if (scored.fit_score !== doc.fit_score || JSON.stringify(scored.fit_reasons) !== JSON.stringify(doc.fit_reasons)) Object.assign(data, scored);
   if (doc.crm_org_id) {
-    const notes = buildCrmNotes({ ...next, ...scored });
+    const notes = buildCrmNotes({ ...next, ...scored }, SETTINGS);
     if (notes !== doc.crm_notes) Object.assign(data, { crm_notes: notes, crm_notes_synced: false });
   }
   if (UNSENT.has(doc.status) && /^Hi [^\n]*,\n/.test(doc.body || '')) {

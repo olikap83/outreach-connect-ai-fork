@@ -4,7 +4,7 @@
 // Keeps each business's chosen email and contact as they are; only adds
 // what's learned about the business itself.
 //
-//   node scripts/outreach-describe.js --in desk-dir --out out [--start 0 --count 20]
+//   node scripts/outreach-describe.js --in desk-dir --out out [--start 0 --count 20] [--settings <settings JSON file>]
 //
 // desk-dir holds one <id>.json per desk document, as ArtifactData `list`
 // with out_dir saves them. Writes out/describe-<start>.json: an array of
@@ -14,12 +14,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { enrichProspect } = require('../lib/outreach/enrich');
 const { buildCrmNotes, hasSubstance } = require('../lib/outreach/crmnotes');
+const { loadSettings } = require('../lib/outreach/settings');
 const { mapLimit } = require('../lib/outreach/util');
 
 function arg(name, def) {
   const i = process.argv.indexOf(`--${name}`);
   return i === -1 ? def : process.argv[i + 1];
 }
+
+const SETTINGS = loadSettings(arg('settings'));
 
 const KEEP_FACTS = ['website_unverified', 'about', 'description', 'naics', 'business_type', 'team_size_text', 'founded', 'years_claimed', 'registered_year',
   'family_owned', 'locally_owned', 'phone_first', 'quote_requests', 'paper_forms', 'hiring', 'catering', 'booking_tools', 'shop_tools',
@@ -57,7 +60,7 @@ async function main() {
       facts.enrich_notes = [...(facts.enrich_notes || []), `Re-research failed: ${err.message}`];
     }
     const merged = { ...p, website, domain, facts };
-    const data = { website, domain, website_verified: verified && !!website, facts, crm_ok: hasSubstance(merged), crm_notes: buildCrmNotes(merged), crm_notes_synced: false, updated_at: new Date().toISOString() };
+    const data = { website, domain, website_verified: verified && !!website, facts, crm_ok: hasSubstance(merged), crm_notes: buildCrmNotes(merged, SETTINGS), crm_notes_synced: false, updated_at: new Date().toISOString() };
     console.log(`  [${++i}/${slice.length}] ${doc.name}: ${website ? domain : 'no website'}${facts.about || facts.description ? ', described' : ''}${data.crm_ok ? '' : ', NOT for CRM'}`);
     return { id, version, data };
   }));

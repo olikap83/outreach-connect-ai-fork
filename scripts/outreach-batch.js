@@ -15,7 +15,7 @@
 //   names = everything already in the class CRM + already on the desk, so
 //   nobody gets researched (or emailed) twice.
 // Nothing is sent and nothing outside this machine is written: sending
-// happens only when Soham approves on the desk.
+// happens only when you approve on the desk.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -41,7 +41,7 @@ const TOWNS = [
   // OpenStreetMap for real local businesses. (Whole-state registry lists,
   // "*, TX", still work with --places but turned up mostly big multi-state
   // companies with back-office emails.) Outside the class's area these stay
-  // on Soham's desk and never go to the class CRM.
+  // on your own desk and never go to the class CRM.
   'Birmingham, AL', 'Anchorage, AK', 'Phoenix, AZ', 'Little Rock, AR', 'Los Angeles, CA', 'San Francisco, CA', 'Denver, CO',
   'Wilmington, DE', 'Washington, DC', 'Miami, FL', 'Tampa, FL', 'Atlanta, GA', 'Honolulu, HI', 'Boise, ID', 'Chicago, IL',
   'Indianapolis, IN', 'Des Moines, IA', 'Wichita, KS', 'Louisville, KY', 'New Orleans, LA', 'Baltimore, MD', 'Detroit, MI',
@@ -63,7 +63,17 @@ async function findCandidates({ known, outDir, maxTowns, max, settings }) {
   const seen = new Set((known.names || []).map(nameKey));
   const done = known.towns_done || {};
   // --places 'Boston, MA|*, TX|*, CA' searches exactly those places (| separated).
-  const towns = arg('places') ? arg('places').split('|').map(x => x.trim()).filter(Boolean) : arg('town') ? [arg('town')] : TOWNS.slice().sort((a, b) => String(done[a] || '').localeCompare(String(done[b] || ''))).slice(0, maxTowns);
+  // Only the states the student picked at sign-up (a town with no ", XX" is in CT).
+  const states = Array.isArray(settings && settings.states) && settings.states.length ? settings.states.map(x => String(x).toUpperCase()) : null;
+  const townState = t => (/, ([A-Z]{2})$/.exec(t) || [])[1] || 'CT';
+  const pool = states ? TOWNS.filter(t => states.includes(townState(t))) : TOWNS;
+  // Towns never searched come first, closest first, but each student's order
+  // is nudged by their name so classmates starting the same week don't all
+  // search the same towns on the same morning.
+  const seed = String((settings && settings.sender_name) || '');
+  const jitter = t => { let h = 2166136261; for (const c of seed + '|' + t) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) % 6; };
+  const rank = new Map(pool.map((t, i) => [t, i + (seed ? jitter(t) : 0)]));
+  const towns = arg('places') ? arg('places').split('|').map(x => x.trim()).filter(Boolean) : arg('town') ? [arg('town')] : pool.slice().sort((a, b) => String(done[a] || '').localeCompare(String(done[b] || '')) || rank.get(a) - rank.get(b)).slice(0, maxTowns);
   const summary = { at: new Date().toISOString(), towns: {}, errors: [] };
   let found = [];
   // --pause <seconds> between places: the free OpenStreetMap mirrors return
@@ -162,7 +172,7 @@ async function toDoc(p, settings) {
     // The CT filing this business's details came from, so the desk can link to it.
     registry_id: merged.registry?.id || null,
     crm_ok: hasSubstance(merged) && inClassArea(merged),
-    crm_notes: buildCrmNotes(merged),
+    crm_notes: buildCrmNotes(merged, settings),
     card_line: cardLine(merged),
     status: !merged.email ? 'no_email' : problems.length ? 'needs_check' : 'ready',
     check_problems: problems,

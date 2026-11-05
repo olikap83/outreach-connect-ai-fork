@@ -1,4 +1,4 @@
-// The last check before an email goes out on its own, without Soham reading
+// The last check before an email goes out on its own, without you reading
 // it first. For each draft it re-reads the business's website (and the CT
 // filing when that's where the business came from) and proves, with a link,
 // everything the email relies on:
@@ -11,11 +11,11 @@
 //   - the business itself: still small, still in the right place
 //
 // What passes is queued with its proof (preflight.checks, each with a link);
-// what doesn't goes to "Needs a look" with the reason. Drafts Soham edited by
-// hand keep his wording: if a detail in them no longer checks out, they wait
-// for him instead of being rewritten.
+// what doesn't goes to "Needs a look" with the reason. Drafts you edited by
+// hand keep your wording: if a detail in them no longer checks out, they wait
+// for you instead of being rewritten. Drafts are written from your settings.
 //
-//   node scripts/outreach-preflight.js --docs <dir of prospect JSON files> --out <dir> [--max 30]
+//   node scripts/outreach-preflight.js --docs <dir of prospect JSON files> --out <dir> [--max 30] [--settings <settings JSON file>]
 //     → <out>/plan.json: [{ id, file, result: "queued"|"needs_check", reason }]
 //       and <out>/updates/<id>.json, the desk update for each.
 
@@ -26,7 +26,7 @@ const { registryLookup } = require('../lib/outreach/sources');
 const { readinessProblems } = require('../lib/outreach/verify');
 const { composeInitial, greeting } = require('../lib/outreach/compose');
 const { sourceUrl, samePerson, confirmName } = require('../lib/outreach/factsources');
-const { mergeSettings } = require('../lib/outreach/settings');
+const { loadSettings } = require('../lib/outreach/settings');
 const { mapLimit, stateOf, stateCode } = require('../lib/outreach/util');
 
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : dflt; };
@@ -108,7 +108,7 @@ async function preflight(doc, settings) {
   const handEdited = (doc.log || []).some(l => HAND_EDITED.test(l.what || ''));
   let { subject, body } = { subject: doc.subject, body: doc.body };
   if (handEdited) {
-    // His wording stays. Any detail it mentions has to check out again.
+    // Your wording stays. Any detail it mentions has to check out again.
     const old = doc.facts || {};
     for (const key of DETAIL_KEYS) {
       if (!old[key] || !mentions(doc.body || '', key, old)) continue;
@@ -126,7 +126,7 @@ async function preflight(doc, settings) {
     }
   }
   if (/hi there/i.test(body) || !/^Hi [^\n]+,/.test(body)) problems.push('The greeting is missing or generic.');
-  // Soham's rule: never set them against bigger companies or competitors.
+  // The rule: never set them against bigger companies or competitors.
   if (PUT_DOWN.test(body)) problems.push('The email compares them to big chains or competitors, which reads as a put-down.');
   // A name in the greeting has to be someone we can link to: the proven
   // contact, or a person on the state filing.
@@ -156,7 +156,7 @@ async function main() {
   const dir = arg('docs');
   const out = arg('out', 'out/preflight');
   const max = Number(arg('max', 30));
-  const settings = mergeSettings({});
+  const settings = loadSettings(arg('settings'));
   const docs = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
     .map(f => { const j = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); return { id: f.replace(/\.json$/, ''), ...(j.data || j) }; })
     .filter(d => d.status === 'ready' && d.email)
