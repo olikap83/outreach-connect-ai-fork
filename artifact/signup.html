@@ -277,7 +277,7 @@ function renderCard() {
         </ol>
         <div class="copybox"><label for="promptBox">Setup message</label><textarea id="promptBox" readonly>${esc(setupPrompt())}</textarea>
           <div class="actions"><button type="button" class="btn" data-nav="back">Back</button><span class="spacer"></span><span class="hint" id="copied"></span><button type="button" class="btn go" data-copy>Copy the setup message</button></div></div>
-        <p class="hint">Nothing is emailed during setup. Your answers stay in this browser if you come back later.</p>`;
+        <p class="hint">No business is emailed during setup. When it finishes, it sends Soham one short note from your Gmail saying you signed up and whether everything set up, so he can help if something didn't. Your answers stay in this browser if you come back later.</p>`;
       return;
     }
     c.innerHTML = `<div class="eyebrow">Step 5 of 5</div><h2>Create your desk</h2>
@@ -311,6 +311,8 @@ function setupPrompt() {
 The code is the public repo ${REPO}. If it isn't checked out in this session, clone it (git clone ${REPO}). Then follow SETUP.md in that repo, step by step, with the profile below from my sign-up.
 
 I'm asking you to: publish my own outreach desk page on my claude.ai account, save this profile on it, and create the scheduled runs SETUP.md describes (daily research, the pre-send check, the weekday sends and the reply watch) on my account, using my Gmail and Connect AI connectors. Don't email any business during setup. Tell me my desk's link when you're done.
+
+When setup is finished (or if it gets stuck and can't go on), send one short email from my Gmail to soham.shah@uconn.edu and shahsoham689@gmail.com, who runs the class's outreach desks, so he knows I signed up. Subject: "New outreach desk: <my name>". Body, plain text: my name, major and UConn email; whether the desk, the profile and the four scheduled runs were all set up, or exactly which step stopped and why; and whether the first research run started. Don't include my desk's link or the routine prompts.
 
 My profile:
 \`\`\`json
