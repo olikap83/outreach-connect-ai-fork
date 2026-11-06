@@ -1007,10 +1007,15 @@ async function mailCall(tool, a = {}) {
   const content = x => x.htmlBody ? { body: outlookHtml(x.htmlBody), bodyType: 'html' } : { body: x.body || ' ', bodyType: 'text' };
   a = withSchoolCc(a);
   if (tool === 'send_message' && a.draftId) {
-    // A draft the reply check wrote: make sure the school address is on it before it goes.
-    if (a.cc.length) await call('outlook_update_draft', { messageId: a.draftId, cc: a.cc });
-    await call('outlook_send_draft', { messageId: a.draftId });
-    return { payload: { id: a.draftId } };
+    // A draft already in Outlook (written by the reply check, or left over from a send that
+    // didn't go through): bring it up to date, make sure the school address is on it, send it.
+    const fix = { ...(a.to ? { to: a.to } : {}), ...(a.cc.length ? { cc: a.cc } : {}), ...(a.subject ? { subject: a.subject } : {}), ...(a.body || a.htmlBody ? content(a) : {}) };
+    if (Object.keys(fix).length) await call('outlook_update_draft', { messageId: a.draftId, ...fix });
+    try { await call('outlook_send_draft', { messageId: a.draftId }); } catch (e) { if (e && typeof e === 'object') e.draftId = a.draftId; throw e; }
+    if (a.noFind || !a.to) return { payload: { id: a.draftId } };
+    const sent = await findSent(a.to[0], a.subject);
+    const id = (sent && sent.id) || a.draftId;
+    return { payload: { id, threadId: id, webLink: (sent && sent.webLink) || null } };
   }
   if (tool === 'send_message' || tool === 'reply') {
     const base = tool === 'reply' ? a.messageId : a.replyThreadId;
@@ -1024,7 +1029,9 @@ async function mailCall(tool, a = {}) {
       draft = idOf(await call('outlook_create_draft', { to: a.to, ...(a.cc && a.cc.length ? { cc: a.cc } : {}), subject: a.subject, ...content(a) }));
       if (!draft) throw new Error('Outlook didn\'t return the draft.');
     }
-    await call('outlook_send_draft', { messageId: draft });
+    // If Outlook won't send it, say which draft was left behind so the next try reuses it
+    // instead of piling up copies in Drafts.
+    try { await call('outlook_send_draft', { messageId: draft }); } catch (e) { if (e && typeof e === 'object') e.draftId = draft; throw e; }
     if (a.noFind) return { payload: { id: draft } };
     const sent = await findSent((a.to || [])[0], a.subject);
     const id = (sent && sent.id) || draft;
@@ -1133,11 +1140,19 @@ async function sendInitial(p, vals) {
   if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(vals.email)) throw new Error('That email address doesn\'t look right.');
   if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails. Sending more from a personal Outlook account gets it flagged as spam.`);
   const trackId = trackingUrl() ? newTrackId(p, 'i') : null;
-  const res = await mailCall('send_message', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body, trackId) });
+  let res;
+  try {
+    res = await mailCall('send_message', { to: [vals.email], ...ccList(), subject: vals.subject, ...mailBodies(vals.body, trackId), ...(p.pending_draft_id ? { draftId: p.pending_draft_id } : {}) });
+  } catch (e) {
+    // Write down what Outlook said, so it shows on the desk and not only in a popup.
+    const why = e && e.code ? mcpMessage(e, MAIL) : String((e && e.message) || e);
+    await patch(p.id, { send_error: why, ...(e && e.draftId ? { pending_draft_id: e.draftId } : {}) }, `Outlook didn't send it: ${why}`).catch(() => {});
+    throw e;
+  }
   const pl = res.payload || {};
   const sentAt = nowIso();
   await patch(p.id, {
-    status: 'sent', sent_at: sentAt, ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body,
+    status: 'sent', sent_at: sentAt, send_error: null, pending_draft_id: null, ...emailFields(p, vals.email), contact_name: vals.contact_name, subject: vals.subject, body: vals.body,
     thread_id: pl.threadId || null, message_id: pl.id || null, ...trackedPatch(p, trackId, 'intro', sentAt),
   }, `Emailed ${vals.contact_name ? vals.contact_name + ' at ' : ''}${vals.email}`);
   S.gmailState = 'ok';
@@ -2379,6 +2394,7 @@ function detailHtml(id) {
       <div class="d-main">
         ${inCrm ? `<div class="note red">Already in the class CRM${inCrm.owner ? ` (owner: ${esc(inCrm.owner.name)})` : ''}, stage ${esc(inCrm.stage_label || inCrm.stage)}. Someone may already be talking to them.</div>` : ''}
         ${p.crm_error ? `<div class="note red">${esc(p.crm_error)}</div>` : ''}
+        ${p.send_error && editable ? `<div class="note red">Last send didn't go through. ${esc(p.send_error)}${p.pending_draft_id ? ' The email is waiting in your Outlook Drafts; the next send uses that same draft.' : ''}</div>` : ''}
         ${p.status === 'needs_check' ? `<div class="note">Kept out of your review list because the research wasn't sure about this one:<br>${(p.check_problems || []).map(x => `• ${esc(x)}`).join('<br>') || '• No reason recorded.'}</div>` : ''}
         ${p.email_source === 'guess' && editable ? '<div class="note">This address is a guess (first name @ their domain). Check it before sending; a bounce hurts how your other emails land.</div>' : ''}
         ${editable ? `<div class="section">
