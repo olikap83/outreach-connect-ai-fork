@@ -585,6 +585,15 @@ body.ro .fclean{display:none;}
 .detail .badge, .rv-head .badge{font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:12.5px; font-weight:700; padding:4px 10px;}
 .field label{display:flex; flex-wrap:wrap; align-items:center; gap:6px;}
 .field label .badge{font-size:11.5px !important; font-weight:600; white-space:normal; line-height:1.3;}
+.toasts{left:auto; right:16px; transform:none; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); align-items:flex-end; width:min(340px, calc(100vw - 32px));}
+.toast{position:relative; display:flex; align-items:flex-start; gap:8px; width:auto; max-width:100%; font-size:13px; line-height:1.4; padding:9px 30px 9px 12px; border-radius:10px;}
+.toast .tmsg{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; min-width:0;}
+.toast .tundo{margin-left:0; flex-shrink:0;}
+.toast .tx{position:absolute; top:4px; right:4px; width:22px; height:22px; margin:0; padding:0; border:none; border-radius:6px; background:transparent; color:inherit; font-size:16px; line-height:1; cursor:pointer; opacity:0; transition:opacity .12s, background .12s;}
+.toast:hover .tx, .toast:focus-within .tx{opacity:.85;}
+.toast .tx:hover{opacity:1; background:rgba(255,255,255,.18);}
+.toast .tx:focus-visible{opacity:1; outline:2px solid currentColor;}
+@media (hover:none){ .toast .tx{opacity:.85;} }
 body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane input, body.ro #reviewPane textarea { pointer-events: none; background: var(--wash, transparent); }
 </style>
 
@@ -845,17 +854,29 @@ function addDays(n) { const d = new Date(); d.setDate(d.getDate() + n); return d
 
 // ---------- toasts ----------
 function toast(msg, { err = false, undo = null } = {}) {
+  // Short and tucked in the corner: drop any raw JSON the connector tacked on.
+  const full = String(msg || '');
+  const short = full.replace(/\s*[{\[][\s\S]*$/, '').trim() || full;
   const el = document.createElement('div');
   el.className = 'toast' + (err ? ' err' : '');
-  el.textContent = msg;
+  el.setAttribute('role', err ? 'alert' : 'status');
+  if (short !== full) el.title = full;
+  const t = document.createElement('span'); t.className = 'tmsg'; t.textContent = short; el.appendChild(t);
   if (undo) {
     const b = document.createElement('button');
-    b.textContent = 'Undo';
+    b.className = 'tundo'; b.textContent = 'Undo';
     b.addEventListener('click', () => { undo(); el.remove(); });
     el.appendChild(b);
   }
+  const x = document.createElement('button');
+  x.className = 'tx'; x.setAttribute('aria-label', 'Dismiss'); x.textContent = '×';
+  x.addEventListener('click', () => el.remove());
+  el.appendChild(x);
   $('#toasts').appendChild(el);
-  setTimeout(() => el.remove(), err ? 8000 : undo ? 7000 : 3500);
+  let timer = setTimeout(() => el.remove(), err ? 8000 : undo ? 7000 : 3500);
+  // Stay put while the mouse is on it, so there's time to read it or hit the ×.
+  el.addEventListener('mouseenter', () => clearTimeout(timer));
+  el.addEventListener('mouseleave', () => { timer = setTimeout(() => el.remove(), 3000); });
 }
 
 // Connector failures each have a different fix; say which.
@@ -1073,6 +1094,11 @@ async function logToCrm(p, kind, body, extra = {}) {
       ...(extra.stage === 'lead' ? {} : { next_step_due: addDays(6) }),
       notes: crmNotesNow(p),
       ...(p.contact_name ? { contact: { full_name: p.contact_name, ...(p.email ? { email: p.email } : {}), ...(p.contact_title ? { title: p.contact_title } : {}), is_primary: true } } : {}),
+    }).catch(e => {
+      // Already in the CRM under a slightly different name than our match caught: use that one, no error.
+      const m = /already in the CRM[\s\S]*?"id"\s*:\s*"([0-9a-f-]{36})"/i.exec(String((e && e.message) || e));
+      if (m) return { payload: { id: m[1] } };
+      throw e;
     });
     const pl = res.payload || {};
     orgId = pl.id || (pl.org && pl.org.id) || (pl.organization && pl.organization.id) || (pl.existing && pl.existing.id) || null;
