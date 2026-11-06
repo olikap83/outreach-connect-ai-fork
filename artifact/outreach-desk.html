@@ -1361,7 +1361,7 @@ function mailBodies(body, trackId) {
   if (liRe) html = html.replace(liRe, `<a href="https://www.linkedin.com/in/${esc(slug)}">LinkedIn</a>`);
   if (m.schoolEmail) html = html.split(esc(m.schoolEmail)).join(`<a href="mailto:${esc(m.schoolEmail)}">${esc(m.schoolEmail)}</a>`);
   // "LinkedIn" written as a word (in the signature) links to the profile.
-  if (m.linkedin) html = html.replace(/(?<![>\w/.])LinkedIn(?!<\/a>)/g, `<a href="${esc(/^https?:/i.test(m.linkedin) ? m.linkedin : `https://${m.linkedin}`)}">LinkedIn</a>`);
+  if (m.linkedin) html = html.replace(/(?<![>\w/.])LinkedIn(?!<\/a>)/gi, `<a href="${esc(/^https?:/i.test(m.linkedin) ? m.linkedin : `https://${m.linkedin}`)}">LinkedIn</a>`);
   html = html.replace(/\n/g, '<br>');
   return { body: liRe ? body.replace(liRe, `linkedin.com/in/${slug}`) : body, htmlBody: `<div>${html}</div>${pixel}` };
 }

@@ -22,7 +22,7 @@ function mailBodies(body, settings = {}) {
   if (linkedin) html = html.replace(linkedin, `<a href="https://www.linkedin.com${esc(path)}">LinkedIn</a>`);
   if (email) html = html.replace(new RegExp(reEsc(email), 'gi'), m => `<a href="mailto:${m}">${m}</a>`);
   // "LinkedIn" written as a word (in the signature) links to the profile.
-  if (prof.linkedin_url) html = html.replace(/(?<![>\w/.])LinkedIn(?!<\/a>)/g, `<a href="${esc(/^https?:/i.test(prof.linkedin_url) ? prof.linkedin_url : `https://${prof.linkedin_url}`)}">LinkedIn</a>`);
+  if (prof.linkedin_url) html = html.replace(/(?<![>\w/.])LinkedIn(?!<\/a>)/gi, `<a href="${esc(/^https?:/i.test(prof.linkedin_url) ? prof.linkedin_url : `https://${prof.linkedin_url}`)}">LinkedIn</a>`);
   html = html.replace(/\n/g, '<br>');
   // The plain-text copy keeps the short "linkedin.com/in/..." form: a full
   // https:// address there gets shown as a long redirect link, which looks like spam.
