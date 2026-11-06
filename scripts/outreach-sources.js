@@ -179,9 +179,9 @@ async function source(doc, restore) {
     const notes = buildCrmNotes({ ...next, ...scored }, SETTINGS);
     if (notes !== doc.crm_notes) Object.assign(data, { crm_notes: notes, crm_notes_synced: false });
   }
-  if (UNSENT.has(doc.status) && /^Hi [^\n]*,\n/.test(doc.body || '')) {
+  if (UNSENT.has(doc.status) && /^(?:Hi|Hello) [^\n]*,\n/.test(doc.body || '')) {
     const hi = greeting(next);
-    const body = doc.body.replace(/^Hi [^\n]*,\n/, `${hi}\n`);
+    const body = doc.body.replace(/^(?:Hi|Hello) [^\n]*,\n/, `${hi}\n`);
     if (body !== doc.body) data.body = body;
   }
   const changed = data.facts || data.fit_score != null || data.crm_notes || data.registry_id || data.body || 'contact_name' in data || data.email_url || data.phone_url || data.source_ref || thrownOut.length;

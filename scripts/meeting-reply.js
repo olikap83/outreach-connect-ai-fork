@@ -12,7 +12,7 @@ const { shortName } = require('../lib/outreach/crmnotes');
 const { profileOf, loadSettings } = require('../lib/outreach/settings');
 
 function firstName(p) {
-  const greet = (/^Hi ([^\n,]+),/.exec(p.body || '') || [])[1] || '';
+  const greet = (/^(?:Hi|Hello) ([^\n,]+),/.exec(p.body || '') || [])[1] || '';
   if (!greet || / team$/i.test(greet)) return null;
   return greet.replace(/^Dr\.\s+/, 'Dr. ');
 }
@@ -28,7 +28,7 @@ function meetingReply(p, cal, { now = new Date(), settings = {} } = {}) {
   const biz = shortName(p.name);
   const texts = slots.map(slotText);
   const body = [
-    name ? `Hi ${name},` : 'Hi,',
+    name ? `Hello ${name},` : 'Hello,',
     `Thanks so much for getting back to me! Here are a few times that work on my end:\n\n${texts.map(t => `- ${t}`).join('\n')}\n\nIf none of those fit, just let me know what works better for you. Teams, Zoom or phone all work for me, and I'm happy to send the invite.`,
     `Really looking forward to hearing how ${biz} got started.`,
     me ? `Thanks,\n${me}` : 'Thanks,',

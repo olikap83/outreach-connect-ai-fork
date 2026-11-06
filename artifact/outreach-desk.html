@@ -1009,8 +1009,8 @@ async function sendInitial(p, vals) {
 
 async function sendFollowup(p) {
   if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails.`);
-  const greet = (/^Hi [^\n]+,/.exec(p.body || '') || [`Hi ${shortName(p.name)} team,`])[0];
-  const body = `${greet}\n\nJust bumping this in case it got buried. If you have 10 minutes sometime in the next couple of weeks, I'd still really like to hear how you got started.\n\nIf now isn't a good time, no worries at all.\n\nThanks,\n${settings().sender_name.split(' ')[0]}`;
+  const greet = (/^(?:Hi|Hello) [^\n]+,/.exec(p.body || '') || [`Hello ${shortName(p.name)} team,`])[0];
+  const body = `${greet}\n\nJust bumping this in case it got buried. If you have 10 minutes sometime in the next couple of weeks, I'd still really like to hear how you got started.\n\nIf now isn't a good time, no worries at all.\n\n${SIGNATURE()}`;
   const subject = /^re:/i.test(p.subject || '') ? p.subject : `Re: ${p.subject || p.name}`;
   const trackId = trackingUrl() ? newTrackId(p, 'f') : null;
   await mailCall('send_message', { to: [p.email], ...ccList(), subject, ...mailBodies(body, trackId), ...(p.thread_id ? { replyThreadId: p.thread_id } : {}) });
@@ -1115,7 +1115,7 @@ Write ${m.first}'s reply to their latest message:
 - Only if they asked about Connect.AI, asked how it works, or said they'd like help: add that the easiest next step is a short form at connect-ai.world/apply (about 3 minutes, and they get a free AI-readiness report), and that the call still comes first. Otherwise don't mention the form.` : ''}
 - If they said not now, thank them warmly, say no problem, and leave the door open in one line. Don't push.
 - If they pointed them to someone else, thank them and ask for the best way to reach that person.
-Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hi" and the first name they signed their email with, or the first name in their From line if they didn't sign it; if there's no name at all, "Hi ${shortName(p.name)} team,". Never "Hi there". Use "Dr." and their last name only if they signed as Dr. or with a doctor's degree (DMD, DDS, MD, DO, DC, OD, DVM)${((p.facts || {}).people || []).some(x => x.doctor_url) ? `, or if they are ${((p.facts || {}).people || []).filter(x => x.doctor_url).map(x => x.name).join(' or ')}, whose website shows them as a doctor` : ''}; never guess it from the kind of business. Don't assume any other name. End with "Thanks,\\n${m.first}". Reply with only the email body.`;
+Keep it short (under 120 words), plain and warm, like a real student wrote it. No marketing words, no exclamation marks, no flattery. Start with "Hello" and the first name they signed their email with, or the first name in their From line if they didn't sign it; if there's no name at all, "Hello ${shortName(p.name)} team,". Never "Hi there" or "Hello there". Use "Dr." and their last name only if they signed as Dr. or with a doctor's degree (DMD, DDS, MD, DO, DC, OD, DVM)${((p.facts || {}).people || []).some(x => x.doctor_url) ? `, or if they are ${((p.facts || {}).people || []).filter(x => x.doctor_url).map(x => x.name).join(' or ')}, whose website shows them as a doctor` : ''}; never guess it from the kind of business. Don't assume any other name. End with exactly this signature: ${JSON.stringify(SIGNATURE())}. Reply with only the email body.`;
   ta.value = '';
   const out = await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
   const text = (out && out.text) || ta.value;
@@ -1192,6 +1192,15 @@ function newSubject(p) {
 const LINKEDIN_LINE = /\n\n(More about me: |If you want to know a bit more about me first, here's my LinkedIn: )https?:\/\/\S+\n\n/;
 // The signature carries his UConn address and LinkedIn instead.
 const SIGNATURE = () => me().signature;
+// The student's opening paragraph: settings.intro, else their "why" without its closing question.
+function introOf() {
+  const s = settings();
+  if (String(s.intro || '').trim()) return String(s.intro).trim();
+  const why = String(s.why || '').trim();
+  const parts = why.match(/[^.?!]+[.?!]+["\u2019']?\s*/g) || (why ? [why] : []);
+  while (parts.length > 1 && /\?["\u2019']?\s*$/.test(parts[parts.length - 1])) parts.pop();
+  return parts.join('').trim();
+}
 // Every email goes out with an HTML version, so the LinkedIn address shows as a
 // clean "LinkedIn" link instead of Gmail's long google.com/url redirect.
 // Open tracking: each sent email carries a 1x1 image whose address names that
@@ -1209,6 +1218,8 @@ function mailBodies(body, trackId) {
   let html = esc(body);
   if (liRe) html = html.replace(liRe, `<a href="https://www.linkedin.com/in/${esc(slug)}">LinkedIn</a>`);
   if (m.schoolEmail) html = html.split(esc(m.schoolEmail)).join(`<a href="mailto:${esc(m.schoolEmail)}">${esc(m.schoolEmail)}</a>`);
+  // "LinkedIn" written as a word (in the signature) links to the profile.
+  if (m.linkedin) html = html.replace(/(?<![>\w/.])LinkedIn(?!<\/a>)/g, `<a href="${esc(/^https?:/i.test(m.linkedin) ? m.linkedin : `https://${m.linkedin}`)}">LinkedIn</a>`);
   html = html.replace(/\n/g, '<br>');
   return { body: liRe ? body.replace(liRe, `linkedin.com/in/${slug}`) : body, htmlBody: `<div>${html}</div>${pixel}` };
 }
@@ -2547,15 +2558,30 @@ async function onAction(root, act, confirmed) {
       toast('Saved to your Outlook drafts.');
     } else if (act === 'rewrite') {
       const ta = root.querySelector('#dBody');
-      const prompt = `You are editing a short cold email from a ${me().school} student (${me().name}) to the owner of a small business in ${placeLabel(p) || 'their town'}${stateOf(p) === 'CT' ? ', Connecticut' : ''}. The only goal of this first email is a 15-minute conversation so they can learn how the business runs. ${inClassArea(p) ? 'They are also in Connect.AI, a UConn course where students help small businesses with AI at no cost; mention it in one honest sentence at most, with no link, no form and no "free report", and say the call is really about learning from them. Do not claim any partnership with the CT Small Business Development Center or anyone else.' : 'This business is outside the area the course works in, so do NOT mention Connect.AI at all.'} ${stateOf(p) === 'CT' ? 'They are in Storrs, CT; for nearby businesses they can offer to stop by.' : 'Offer a phone or Zoom call.'}
+      const prompt = `You are editing a short cold email from ${me().name}, a ${me().school} student, to a small business in ${placeLabel(p) || 'their town'}. Every first email follows ONE fixed template, and only the business-specific parts may change.
 
-Facts found on the business's own website. Use only these; never invent anything:
-${JSON.stringify({ business: p.name, town: p.town, category: p.category, contact: vals.contact_name, facts: { founded: (p.facts || {}).founded, family_owned: (p.facts || {}).family_owned, books_by_phone: (p.facts || {}).phone_first, quote_requests: (p.facts || {}).quote_requests, description: (p.facts || {}).description, tools: [...((p.facts || {}).booking_tools || []), ...((p.facts || {}).shop_tools || [])].map(toolName) } })}
+The template, exactly (keep every line not in <angle brackets> word for word, including the greeting style "Hello <name>,"):
+---
+Hello <their first name, or "<Business> team" if no name is known>,
 
-Current draft:
+${introOf()}
+
+I've always been interested in <what is interesting about how this kind of business runs>. <optional: one real detail from the facts below, e.g. "I saw it's locally owned, and that's part of why I'm writing."> I'd love to hear how you got <Business> going and what you wish you'd known at the start.
+
+Would you have 15 minutes for a call sometime?
+
+If now isn't a good time, no worries at all.
+
+${SIGNATURE()}
+---
+
+Facts about the business (use ONLY these; never invent anything):
+${JSON.stringify({ business: shortName(p.name), town: p.town, category: p.category, contact: vals.contact_name, facts: { founded: (p.facts || {}).founded, family_owned: (p.facts || {}).family_owned, locally_owned: (p.facts || {}).locally_owned, books_by_phone: (p.facts || {}).phone_first, description: (p.facts || {}).description } })}
+
+Current draft (keep its greeting name and any real detail that is already in it):
 ${ta.value}
 
-Rewrite it so it reads like a real student wrote it by hand, not like AI or a sales email: plain, warm, curious, specific to this business, under 130 words, contractions, short sentences, no em dashes, no colons, no lists, no polished-sounding phrases. Keep any specific detail about the business that's already in it, and don't add new facts. Keep: the greeting; who they are (${me().major ? `a ${me().major} major` : 'a student'} at ${me().school}); ${me().about ? `their background as written ("${me().about.replace(/`/g, '')}"), said plainly (never compare it to their business or call it big-company work);` : ''} why they're reaching out, said simply (no stock lines like learning from people instead of a textbook); what they're genuinely curious about in a business like theirs and that they'd love to hear how it got started and what running it is like (never a question about their scheduling, invoices, intake or what takes the most time: that reads like a sales call); the ask for a 15-minute call; "If now isn't a good time, no worries at all."; and the signature. No links at all. No exclamation marks, no marketing words, no flattery beyond one light touch. Reply with only the email body.`;
+Return the email in the template above with only the <angle bracket> parts filled in for this business: plain, warm, no exclamation marks, no marketing words, no links. Reply with only the email body.`;
       ta.value = '';
       await S.sample(prompt, { onText: ({ text }) => { ta.value = text; fitTextareas(); }, modelTier: 'default', cache: false });
       toast('Rewritten. Check it, then send or approve.');

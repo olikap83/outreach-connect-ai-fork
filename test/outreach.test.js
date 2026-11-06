@@ -208,25 +208,22 @@ const dentist = { id: 'abc', name: 'Willow Creek Family Dentistry', town: 'Mansf
 test('initial email is personal, honest, short, and has an easy no', () => {
   const { subject, body } = composeInitial(dentist, settings);
   assert.ok(subject.length < 60);
-  assert.match(body, /^Hi Dr. Whitfield,/);
+  assert.match(body, /^Hello Dr. Whitfield,/);
   assert.match(body, /Willow Creek Family Dentistry/);
   assert.doesNotMatch(body, /Connect\.AI/, "no class pitch in a first email");
   assert.doesNotMatch(body, /connect-ai\.world\/apply|free AI-readiness|build it for free/);
   assert.doesNotMatch(body, /Small Business Development Center/);
-  assert.match(body, /accounting major/);
   assert.doesNotMatch(body.split('Thanks,')[0], /https?:|linkedin/i);
   assert.match(body, /soham\.shah@uconn\.edu · linkedin\.com\/in\/soham-shah-uconn$/);
-  assert.match(body, /Henkel/, 'mentions his internship');
   assert.doesNotMatch(body, /been at it|been around since|doing this for/i, 'says plainly how long they have been in business');
   assert.doesNotMatch(body, /big[- ]compan|textbook|actually built/i, 'no big-company comparison or stock lines');
   assert.doesNotMatch(body, /hiring/i, 'never claims they are hiring');
   assert.match(body, /start (my own|something of my own)|run my own business/);
-  assert.match(body, /15 minutes/);
-  assert.match(body, /stop by|come by/);
-  assert.match(body, /no worries at all/);
+  assert.match(body, /\n\nWould you have 15 minutes for a call sometime\?\n\nIf now isn't a good time, no worries at all\.\n\nThanks,\n/, 'the template ask and close');
+  assert.match(body, /I'd love to hear how you got Willow Creek Family Dentistry going and what you wish you'd known at the start\./);
   assert.match(subject, /UConn/);
   assert.match(subject, /Willow Creek Family Dentistry/);
-  assert.match(body, /(interested in|curious about) how small practices run as businesses/);
+  assert.match(body, /I've always been interested in how small practices run as businesses/);
   assert.doesNotMatch(body, /How (do|does) your|what takes (up )?(the )?most/, 'no sales-call questions');
   assert.doesNotMatch(body, /while looking at|businesses around/);
   assert.doesNotMatch(body, /\{|\}|undefined|null/);
@@ -234,15 +231,19 @@ test('initial email is personal, honest, short, and has an easy no', () => {
   assert.ok(words < 190, `email is ${words} words`);
 });
 
-test('wording varies between businesses', () => {
-  const variants = new Set();
-  for (let i = 0; i < 12; i++) variants.add(composeInitial({ ...dentist, id: `id-${i}`, name: `Biz ${i}` }, settings).body.split('\n\n')[1].replace(/Biz \d+/, 'X'));
-  assert.ok(variants.size >= 3, `only ${variants.size} opener variants`);
+test('every first email follows the same template; only the business parts change', () => {
+  const bodies = [0, 1, 2, 3, 4, 5].map(i => composeInitial({ ...dentist, id: `id-${i}`, name: `Biz ${i}` }, settings).body);
+  // Greeting and the one detail from their site differ; the intro, the ask, the close and the signature never do.
+  const fixed = b => { const p = b.split('\n\n'); return [p[1], ...p.slice(3)].join('\n\n'); };
+  assert.equal(new Set(bodies.map(fixed)).size, 1, 'same template text for every business');
+  for (const b of bodies) assert.match(b.split('\n\n')[2], /^I've always been interested in .+ I'd love to hear how you got Biz \d going and what you wish you'd known at the start\.$/);
+  const trades = composeInitial({ id: 't1', name: 'Critton Property Maintenance', bucket: 'trades', email: 'a@b.com', facts: { locally_owned: true, sources: { locally_owned: 'https://x.com' } } }, settings).body;
+  assert.match(trades, /I've always been interested in how trades businesses run, since so much of the work happens out on job sites instead of in an office\. I saw it's locally owned, and that's part of why I'm writing\. I'd love to hear how you got Critton Property Maintenance going/);
 });
 
-test('no name found → the team, never "Hi there"; far away → no offer to drop by', () => {
+test('no name found → the team, never "Hello there"; far away → no offer to drop by', () => {
   const { body } = composeInitial({ ...dentist, contact_name: null, miles_from_storrs: 60, facts: {} }, settings);
-  assert.match(body, /^Hi Willow Creek Family Dentistry team,/);
+  assert.match(body, /^Hello Willow Creek Family Dentistry team,/);
   assert.doesNotMatch(body, /in person/);
 });
 
@@ -326,7 +327,7 @@ test('end to end: source → enrich → draft → approve → send → follow up
   assert.ok(p.fit_score >= 80);
   const draft = (await store.listMessages(p.id))[0];
   assert.equal(draft.status, 'draft');
-  assert.match(draft.body, /^Hi (Karen|Dr\. Whitfield),/);
+  assert.match(draft.body, /^Hello (Karen|Dr\. Whitfield),/);
 
   // 2. approve → next tick sends it
   assert.equal(await store.claim(p.id, 'ready', 'queued'), true);
@@ -490,7 +491,7 @@ test('class area: CT, Boston, New York and New England; others stay on the desk'
   const tx = composeInitial({ id: 't', name: 'Sellmark', town: 'Mansfield', state: 'TX', bucket: 'manufacturing', email: 'a@b.com' }, settings).body;
   assert.doesNotMatch(tx, /Connect\.AI|stop by/);
   const ma = composeInitial({ id: 'm', name: 'Boardwalk Storage', town: 'Mansfield', state: 'MA', bucket: 'trades', email: 'a@b.com' }, settings).body;
-  assert.match(ma, /Phone or Zoom|call or do Zoom/);
+  assert.match(ma, /Would you have 15 minutes for a call sometime\?/);
   assert.doesNotMatch(ma, /stop by/);
 });
 
@@ -533,13 +534,13 @@ test('map businesses: no college departments, no CT filings from other towns, cl
   assert.equal(cleanPersonName('Mark Murphy Mark'), 'Mark Murphy');
 });
 
-test('CT businesses from the registry still get the come-by-in-person line', () => {
+test('CT businesses near and far get the same template ask', () => {
   const { composeInitial } = require('../lib/outreach/compose');
   const vernon = composeInitial({ id: 'v', name: 'Forte Accounting, LLC', town: 'Vernon', bucket: 'professional', email: 'a@b.com' }, settings).body;
-  assert.match(vernon, /stop by|come by/);
+  assert.match(vernon, /Would you have 15 minutes for a call sometime\?/);
   const far = composeInitial({ id: 'f', name: 'Far Shop', town: 'Greenwich', bucket: 'retail', email: 'a@b.com' }, settings).body;
   assert.doesNotMatch(far, /stop by/);
-  assert.match(far, /Phone or Zoom|call or do Zoom/);
+  assert.match(far, /Would you have 15 minutes for a call sometime\?/);
 });
 
 test("a website for a different business with a shared common word doesn't count", () => {
@@ -572,17 +573,17 @@ test('greets by name only when the name is confirmed, not just from the state fi
   const base = { id: 'ac', name: 'Air Control Mechanical LLC', town: 'Ellington', bucket: 'trades', contact_name: 'Antonio Melendez', registry_id: 'r1' };
   const filingOnly = { ...base, email: 'office@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }, { name: 'Jordan Vallee', how: 'state filing' }] } };
   // On the filing but not tied to office@: not used.
-  assert.match(composeInitial(filingOnly, settings).body, /^Hi Air Control Mechanical team,/);
+  assert.match(composeInitial(filingOnly, settings).body, /^Hello Air Control Mechanical team,/);
   // The filing also lists this email, and it has two people: both are greeted.
-  assert.match(composeInitial({ ...filingOnly, email_source: 'registry' }, settings).body, /^Hi Antonio and Jordan,/);
-  assert.match(composeInitial({ ...filingOnly, email: 'jessicam@aircontrolmech.com' }, settings).body, /^Hi Air Control Mechanical team,/);
-  assert.match(composeInitial({ ...filingOnly, facts: { people: [] } }, settings).body, /^Hi Air Control Mechanical team,/);
-  assert.match(composeInitial({ ...filingOnly, email_source: 'registry', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } }, settings).body, /^Hi Antonio,/);
-  assert.match(composeInitial({ ...filingOnly, facts: { people: [{ name: 'A B', how: 'state filing' }, { name: 'C D', how: 'state filing' }, { name: 'E F', how: 'state filing' }] } }, settings).body, /^Hi Air Control Mechanical team,/);
+  assert.match(composeInitial({ ...filingOnly, email_source: 'registry' }, settings).body, /^Hello Antonio and Jordan,/);
+  assert.match(composeInitial({ ...filingOnly, email: 'jessicam@aircontrolmech.com' }, settings).body, /^Hello Air Control Mechanical team,/);
+  assert.match(composeInitial({ ...filingOnly, facts: { people: [] } }, settings).body, /^Hello Air Control Mechanical team,/);
+  assert.match(composeInitial({ ...filingOnly, email_source: 'registry', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } }, settings).body, /^Hello Antonio,/);
+  assert.match(composeInitial({ ...filingOnly, facts: { people: [{ name: 'A B', how: 'state filing' }, { name: 'C D', how: 'state filing' }, { name: 'E F', how: 'state filing' }] } }, settings).body, /^Hello Air Control Mechanical team,/);
   const onSite = { ...filingOnly, facts: { people: [{ name: 'Antonio Melendez', how: 'site text', url: 'https://aircontrolmech.com/about' }] } };
-  assert.match(composeInitial(onSite, settings).body, /^Hi Antonio,/);
+  assert.match(composeInitial(onSite, settings).body, /^Hello Antonio,/);
   const ownEmail = { ...base, email: 'amelendez@aircontrolmech.com', facts: { people: [{ name: 'Antonio Melendez', how: 'state filing' }] } };
-  assert.match(composeInitial(ownEmail, settings).body, /^Hi Antonio,/);
+  assert.match(composeInitial(ownEmail, settings).body, /^Hello Antonio,/);
 });
 
 test('larger companies are caught by what their own site says', () => {
@@ -620,11 +621,11 @@ test('Dr. is used only when a source shows the person is a doctor; otherwise a p
   const { doctorEvidence } = require('../lib/outreach/enrich');
   const filed = (...people) => ({ people: people.map(x => ({ how: 'state filing', role: 'principal', business_id: 'x', ...(typeof x === 'string' ? { name: x } : x) })) });
   const ortho = { name: 'Mansfield Orthodontics PLLC', category: 'Dentist', email: 'info@mansfieldorthodonticsct.com' };
-  assert.equal(greeting({ ...ortho, facts: filed('Susan Davis') }), 'Hi Mansfield Orthodontics team,', 'no source says she is the doctor');
-  assert.equal(greeting({ ...ortho, facts: filed({ name: 'Susan Davis', doctor_url: 'https://mansfieldorthodonticsct.com/about' }) }), 'Hi Dr. Davis,');
-  assert.equal(greeting({ name: 'Ralph J Laguardia M.D.', email: 'r@gmail.com', facts: filed('Ralph Laguardia') }), 'Hi Dr. Laguardia,', 'the registered business name says M.D.');
-  assert.equal(greeting({ name: 'Eastside Family Dental', email: 'office@eastside.com', facts: filed({ name: 'Ann Lee', doctor_url: 'u' }, { name: 'Raj Patel', doctor_url: 'u' }) }), 'Hi Dr. Lee and Dr. Patel,');
-  assert.equal(greeting({ name: 'Air Control Mechanical LLC', email: 'office@aircontrolmech.com', email_source: 'registry', facts: filed('Antonio Melendez', 'Jordan Vallee') }), 'Hi Antonio and Jordan,', 'everyone else keeps first names');
+  assert.equal(greeting({ ...ortho, facts: filed('Susan Davis') }), 'Hello Mansfield Orthodontics team,', 'no source says she is the doctor');
+  assert.equal(greeting({ ...ortho, facts: filed({ name: 'Susan Davis', doctor_url: 'https://mansfieldorthodonticsct.com/about' }) }), 'Hello Dr. Davis,');
+  assert.equal(greeting({ name: 'Ralph J Laguardia M.D.', email: 'r@gmail.com', facts: filed('Ralph Laguardia') }), 'Hello Dr. Laguardia,', 'the registered business name says M.D.');
+  assert.equal(greeting({ name: 'Eastside Family Dental', email: 'office@eastside.com', facts: filed({ name: 'Ann Lee', doctor_url: 'u' }, { name: 'Raj Patel', doctor_url: 'u' }) }), 'Hello Dr. Lee and Dr. Patel,');
+  assert.equal(greeting({ name: 'Air Control Mechanical LLC', email: 'office@aircontrolmech.com', email_source: 'registry', facts: filed('Antonio Melendez', 'Jordan Vallee') }), 'Hello Antonio and Jordan,', 'everyone else keeps first names');
   const page = text => [{ url: 'https://x.com/team', text }];
   assert.equal(doctorEvidence('Susan Davis', page('Meet Dr. Susan Davis, our orthodontist')), 'https://x.com/team');
   assert.equal(doctorEvidence('Susan Davis', page('Susan M. Davis, D.M.D.')), 'https://x.com/team');
@@ -689,7 +690,7 @@ test('follow-ups: one, in the same thread, after 4 business days with no reply',
   const now = new Date('2026-11-03T13:15:00Z'); // Tuesday
   const base = { email: 'x@y.com', thread_id: 't', subject: 'UConn student question about Buzz Beads', body: 'Dr. Smith,\n\nhi', log: [] };
   const docs = [
-    { ...base, id: 'due', name: 'Buzz Beads, LLC', status: 'sent', sent_at: '2026-10-28T12:20:00Z', body: 'Hi Karen,\n\nI\'m Soham', crm_org_id: 'o1' },
+    { ...base, id: 'due', name: 'Buzz Beads, LLC', status: 'sent', sent_at: '2026-10-28T12:20:00Z', body: 'Hello Karen,\n\nI\'m Soham', crm_org_id: 'o1' },
     { ...base, id: 'fresh', name: 'Fresh', status: 'sent', sent_at: '2026-10-30T12:20:00Z' },
     { ...base, id: 'replied', name: 'Replied', status: 'replied', sent_at: '2026-10-20T12:20:00Z' },
     { ...base, id: 'done', name: 'Done', status: 'followed_up', sent_at: '2026-10-20T12:20:00Z', followup_at: '2026-10-26T12:00:00Z' },
@@ -699,7 +700,7 @@ test('follow-ups: one, in the same thread, after 4 business days with no reply',
   const f = plan[0];
   assert.equal(f.subject, 'Re: UConn student question about Buzz Beads');
   assert.equal(f.thread_id, 't');
-  assert.match(f.body, /^Hi Karen,\n\nJust bumping this/);
+  assert.match(f.body, /^Hello Karen,\n\nJust bumping this/);
   assert.doesNotMatch(f.body, /;/);
   assert.equal(f.after.status, 'followed_up');
   assert.equal(f.crm.update.next_step_due, '2026-11-10');
@@ -715,15 +716,15 @@ test('pre-send check: names must fit the address, and nothing passes without loa
   const realFetch = global.fetch;
   global.fetch = async () => { throw new Error('blocked'); };
   try {
-    await assert.rejects(preflight({ id: 'x', name: 'X Co', town: 'Mansfield', state: 'CT', source: 'osm', website: 'https://x.example', email: 'info@x.example', email_source: 'website', status: 'ready', body: 'Hi X team,\n\nhi', log: [] }, {}), /couldn't load/);
+    await assert.rejects(preflight({ id: 'x', name: 'X Co', town: 'Mansfield', state: 'CT', source: 'osm', website: 'https://x.example', email: 'info@x.example', email_source: 'website', status: 'ready', body: 'Hello X team,\n\nhi', log: [] }, {}), /couldn't load/);
   } finally { global.fetch = realFetch; }
 });
 
 test('greeting uses the short name the business goes by, never a random word', () => {
   const { greeting } = require('../lib/outreach/compose');
   const g = (n, c) => greeting({ name: n, contact_name: c, email: 'a@gmail.com', email_source: 'registry', facts: { people: [{ name: c, how: 'state filing', business_id: 'x' }] }, registry_id: 'x' });
-  assert.equal(g('Doug Victor Electric LLC', 'Douglas Victor'), 'Hi Doug,');
-  assert.equal(g('Man Cave Barbershop', 'Manuel Ortiz'), 'Hi Manuel,');
+  assert.equal(g('Doug Victor Electric LLC', 'Douglas Victor'), 'Hello Doug,');
+  assert.equal(g('Man Cave Barbershop', 'Manuel Ortiz'), 'Hello Manuel,');
 });
 
 test('a name from the state filing is used only when it can be tied to the email address', () => {
@@ -765,14 +766,14 @@ test('emails are spread across the day, a share per hourly run', () => {
 test('CRM notes say the email went out, and the timeline gets the whole email', () => {
   const { crmNotesNow, emailStatus } = require('../lib/outreach/crmnotes');
   const { crmEntry } = require('../scripts/crm-entry');
-  const p = { name: 'Car Corner LLC', email: 'carcorner@aol.com', subject: 'UConn student question about Car Corner', body: 'Hi Car Corner team,\n\nHello.',
+  const p = { name: 'Car Corner LLC', email: 'carcorner@aol.com', subject: 'UConn student question about Car Corner', body: 'Hello Car Corner team,\n\nHello.',
     crm_notes: "What they do: used cars (source: x)\nFound by Soham's outreach research (fit 70/100). Intro email drafted; not sent yet." };
   assert.match(emailStatus({ ...p, sent_at: '2026-11-02T14:00:00Z', status: 'sent' }), /Intro email sent Nov 2 to carcorner@aol.com\. No reply yet\./);
   const notes = crmNotesNow({ ...p, sent_at: '2026-11-02T14:00:00Z', followup_at: '2026-11-06T15:00:00Z', status: 'followed_up' });
   assert.doesNotMatch(notes, /not sent yet/);
   assert.match(notes, /fit 70\/100\)\. Intro email sent Nov 2 to carcorner@aol\.com\. Followed up Nov 6\. No reply yet\.$/);
   const e = crmEntry(p, { sentAt: '2026-11-02T14:00:00Z' });
-  assert.match(e.touchpoint.body, /Subject: UConn student question about Car Corner\n\nHi Car Corner team,/);
+  assert.match(e.touchpoint.body, /Subject: UConn student question about Car Corner\n\nHello Car Corner team,/);
   assert.equal(e.add_contact.full_name, 'Car Corner (main email)');
   assert.equal(e.add_contact.email, 'carcorner@aol.com');
   assert.equal(crmEntry(p, { hasContacts: true }).add_contact, null);
@@ -805,20 +806,20 @@ test("open times come from Soham's calendar, skip busy blocks, and the reply doe
   assert.ok(!JSON.stringify(busy).includes('Private'), 'no event names');
   const slots = openSlots(busy, { now }).map(slotText);
   assert.deepEqual(slots, ['Wednesday, Nov 4 at 4pm', 'Thursday, Nov 5 at 4pm']);
-  const r = meetingReply({ name: 'Levareit LLC', body: 'Hi Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now, settings: SOHAM });
-  assert.match(r.body, /^Hi Rene,/);
+  const r = meetingReply({ name: 'Levareit LLC', body: 'Hello Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now, settings: SOHAM });
+  assert.match(r.body, /^Hello Rene,/);
   assert.match(r.body, /- Wednesday, Nov 4 at 4pm\n- Thursday, Nov 5 at 4pm/);
   assert.equal(r.slot_text.length, 3);
   assert.match(r.slot_text.join(' '), /at (6|6:30|7)pm/);
   assert.doesNotMatch(r.body, /Connect\.AI/);
   assert.match(r.body, /Levareit got started/);
-  assert.ok(meetingReply({ name: 'X', body: 'Hi X,' }, { busy, fetched_at: '2026-10-01T00:00:00Z' }, { now }).skip);
+  assert.ok(meetingReply({ name: 'X', body: 'Hello X,' }, { busy, fetched_at: '2026-10-01T00:00:00Z' }, { now }).skip);
 });
 
 test('the reply-ready email shows the draft and carries an approve link tied to that one draft', () => {
   const { replyNotice, CODE } = require('../scripts/reply-notice');
-  const p = { name: 'Levareit LLC', contact_name: 'Rene Burce', email: 'reneburce@yahoo.com', reply_draft: 'Hi Rene,\n\nHere are a few times...' };
-  const n = replyNotice(p, 'Hi Soham, sure, we can connect via Teams.', { draftId: 'r1', draftUrl: 'https://mail.google.com/x', code: 'A7K2Q9', settings: SOHAM });
+  const p = { name: 'Levareit LLC', contact_name: 'Rene Burce', email: 'reneburce@yahoo.com', reply_draft: 'Hello Rene,\n\nHere are a few times...' };
+  const n = replyNotice(p, 'Hello Soham, sure, we can connect via Teams.', { draftId: 'r1', draftUrl: 'https://mail.google.com/x', code: 'A7K2Q9', settings: SOHAM });
   assert.equal(n.subject, 'Rene Burce at Levareit wants to talk. Your reply is ready');
   assert.match(n.body, /sure, we can connect via Teams/);
   assert.match(n.body, /Here are a few times/);
@@ -864,12 +865,12 @@ test("another student's profile leaves no trace of Soham anywhere", () => {
     assert.doesNotMatch(subject + body, NOT_SOHAM);
     assert.match(subject, /UConn student/);
     assert.match(body, /Maya/);
-    assert.match(body, /finance/);
+    assert.match(body, /Finance, University of Connecticut/);
     assert.match(body, /run a business of my own one day/);
     assert.match(body, /Thanks,\nMaya Lin\nFinance, University of Connecticut\nmaya\.lin@uconn\.edu · linkedin\.com\/in\/maya-lin$/);
     assert.doesNotMatch(body, / {2}|\n{3}|undefined|null| \./);
   }
-  assert.match(composeFollowup(dentist, maya, 'Hi').body, /Thanks,\nMaya$/);
+  assert.match(composeFollowup(dentist, maya, 'Hi').body, /Thanks,\nMaya Lin\nFinance, University of Connecticut/);
 
   const notes = buildCrmNotes({ name: 'Shop', town: 'Mansfield', fit_score: 60 }, maya);
   assert.match(notes, /Found by Maya Lin's outreach research \(fit 60\/100\)\./);
@@ -877,17 +878,17 @@ test("another student's profile leaves no trace of Soham anywhere", () => {
   assert.match(buildCrmNotes({ name: 'Shop', town: 'Mansfield' }), /Found by outreach research\./);
 
   const now = new Date('2026-11-03T13:15:00Z');
-  const [f] = planFollowups([{ id: 'd', name: 'Buzz Beads', email: 'x@y.com', thread_id: 't', subject: 'S', body: 'Hi Karen,\n\nhi', status: 'sent', sent_at: '2026-10-28T12:20:00Z', log: [] }], { now, settings: maya });
+  const [f] = planFollowups([{ id: 'd', name: 'Buzz Beads', email: 'x@y.com', thread_id: 't', subject: 'S', body: 'Hello Karen,\n\nhi', status: 'sent', sent_at: '2026-10-28T12:20:00Z', log: [] }], { now, settings: maya });
   assert.deepEqual(f.cc, ['maya.lin@uconn.edu']);
   assert.doesNotMatch(JSON.stringify(f), NOT_SOHAM);
   assert.deepEqual(planFollowups([{ id: 'd', name: 'B', email: 'x@y.com', thread_id: 't', subject: 'S', status: 'sent', sent_at: '2026-10-28T12:20:00Z', log: [] }], { now, settings: mergeSettings({}) })[0].cc, [], 'no school email, no cc');
 
   const busy = [];
-  const r = meetingReply({ name: 'Levareit LLC', body: 'Hi Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now, settings: maya });
+  const r = meetingReply({ name: 'Levareit LLC', body: 'Hello Rene,\n\n...' }, { busy, fetched_at: now.toISOString() }, { now, settings: maya });
   assert.match(r.body, /Thanks,\nMaya$/);
   assert.match(meetingReply({ name: 'X' }, null, { now }).skip, /^Your calendar/);
 
-  const n = replyNotice({ name: 'Levareit LLC', contact_name: 'Rene Burce', email: 'r@y.com', reply_draft: 'Hi Rene' }, 'Sure', { draftUrl: 'u', code: 'A7K2Q9', settings: maya });
+  const n = replyNotice({ name: 'Levareit LLC', contact_name: 'Rene Burce', email: 'r@y.com', reply_draft: 'Hello Rene' }, 'Sure', { draftUrl: 'u', code: 'A7K2Q9', settings: maya });
   assert.match(n.htmlBody, /mailto:mayalin\.outreach@gmail\.com\?/);
   assert.deepEqual(n.to, ['maya.lin@uconn.edu', 'mayalin.outreach@gmail.com']);
 

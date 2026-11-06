@@ -31,7 +31,7 @@ const { mapLimit, stateOf, stateCode } = require('../lib/outreach/util');
 
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : dflt; };
 const PUT_DOWN = /\b(big chains|big-box|dealerships|stay competitive|compete with|against the (big|larger)|big-company)\b/i;
-const HAND_EDITED = /^(Edited the draft|Saved as a Gmail draft)/;
+const HAND_EDITED = /^(Edited the draft|Saved as an? (Gmail|Outlook) draft)/;
 const GENERIC_LOCAL = /^(info|office|contact|hello|hi|admin|sales|support|team|shop|store|mail|email|inquiries|inquiry|booking|bookings|appointments|service|frontdesk|reception|orders|help|marketing|general|main|business|manager|owner)\d*$/;
 
 // "Hi Steve" to barry@...: the address points at someone else.
@@ -114,7 +114,7 @@ async function preflight(doc, settings) {
       if (!old[key] || !mentions(doc.body || '', key, old)) continue;
       if (f[key] !== old[key] || !sourceUrl(next, key)) problems.push(`Your edited draft mentions "${key.replace('_', ' ')}", which wasn't found again on their site.`);
     }
-    const greet = (/^Hi ([^\n,]+),/.exec(doc.body || '') || [])[1] || '';
+    const greet = (/^(?:Hi|Hello) ([^\n,]+),/.exec(doc.body || '') || [])[1] || '';
     if (greet && !/team$/i.test(greet) && !contact) problems.push(`Your edited draft says "Hi ${greet}", but that name wasn't found again or doesn't match ${doc.email}.`);
   } else {
     ({ subject, body } = composeInitial(next, settings));
@@ -125,12 +125,12 @@ async function preflight(doc, settings) {
       if (url) checks.push({ what: key === 'founded' ? `In business since ${next.facts.founded}` : key.replace('_', ' '), url });
     }
   }
-  if (/hi there/i.test(body) || !/^Hi [^\n]+,/.test(body)) problems.push('The greeting is missing or generic.');
+  if (/hi there/i.test(body) || !/^(?:Hi|Hello) [^\n]+,/.test(body)) problems.push('The greeting is missing or generic.');
   // The rule: never set them against bigger companies or competitors.
   if (PUT_DOWN.test(body)) problems.push('The email compares them to big chains or competitors, which reads as a put-down.');
   // A name in the greeting has to be someone we can link to: the proven
   // contact, or a person on the state filing.
-  const greetName = ((/^Hi ([^\n,]+),/.exec(body) || [])[1] || '').replace(/^Dr\.\s+/, '');
+  const greetName = ((/^(?:Hi|Hello) ([^\n,]+),/.exec(body) || [])[1] || '').replace(/^Dr\.\s+/, '');
   if (greetName && !/ team$/.test(greetName) && !contact) {
     const filed = ((next.facts || {}).people || []).find(x => x.how === 'state filing' && String(x.name || '').toLowerCase().split(/\s+/).some(w => w.startsWith(greetName.toLowerCase().slice(0, 3))));
     const ok = filed ? confirmName(next, filed.name) : null;

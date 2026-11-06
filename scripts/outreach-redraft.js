@@ -12,7 +12,7 @@ const { loadSettings } = require('../lib/outreach/settings');
 const { cleanPersonName } = require('../lib/outreach/enrich');
 
 const arg = (name, dflt) => { const i = process.argv.indexOf(`--${name}`); return i > 0 ? process.argv[i + 1] : dflt; };
-const EDITED = /^(Edited the draft|Saved as a Gmail draft|Rewr)/;
+const EDITED = /^(Edited the draft|Saved as an? (Gmail|Outlook) draft|Rewr)/;
 
 const dir = arg('docs');
 const outDir = arg('out', 'out');
@@ -21,7 +21,13 @@ const settings = loadSettings(arg('settings'));
 // else was written by hand.
 const reEsc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const school = settings.school_short || settings.school_long || '';
-const GENERATED = new RegExp(`${settings.sender_major ? `${reEsc(settings.sender_major)} major` : 'a student'}${school ? ` at ${reEsc(school)}` : ''}`, 'i');
+const major = settings.sender_major ? reEsc(settings.sender_major) : '';
+const intro = String(settings.intro || '').trim().slice(0, 60);
+// Older generated drafts named the major ("<major> major at <school>" or "I study <major>");
+// template drafts open with the student's intro paragraph.
+const GENERATED = new RegExp([
+  major ? `${major} major` : 'a student', major ? `I study ${major}` : null, intro ? reEsc(intro) : null,
+].filter(Boolean).join('|'), 'i');
 fs.mkdirSync(outDir, { recursive: true });
 const updates = [];
 let skipped = 0;
