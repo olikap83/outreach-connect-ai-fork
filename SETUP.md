@@ -94,7 +94,7 @@ Then create four routines with `create_trigger`. For every one: `create_new_sess
 |---|---|---|
 | Outreach desk: daily research | `research.md` | `CRON_TZ=America/New_York M+30 6 * * 1-5` (6:32 to 6:58am) |
 | Outreach desk: pre-send check | `presend.md` | `CRON_TZ=America/New_York M 7 * * 1-5` |
-| Outreach desk: weekday sends | `sends.md` | `CRON_TZ=America/New_York M+30 8-15 * * 1-5` |
+| Outreach desk: weekday sends | `sends.md` | `CRON_TZ=America/New_York 7 11-14 * * 1-5` (11:07am to 2:07pm) |
 | Outreach desk: reply watch | `replies.md` | `CRON_TZ=America/New_York M+20 8-22 * * *` |
 
 Set `notifications: {"push": true}` on the research run only.
@@ -111,7 +111,7 @@ Finish with a short message in plain words:
 
 - Their desk link (DESK_URL). Open it once and allow Gmail, Connect AI and Claude when it asks.
 - The first research run is going now. Businesses show up under **Review** over the next half hour, each with a draft.
-- Nothing goes out until they approve drafts (or, from tomorrow, until the morning check proves each one against the business's own website). Approved emails go out between about 8am and 3pm on weekdays, a few minutes apart, from their Gmail, copying their UConn address.
+- Nothing goes out until they approve drafts (or, from tomorrow, until the morning check proves each one against the business's own website). Approved emails go out between 11am and 3pm on weekdays, a few minutes apart, from their Gmail, copying their UConn address.
 - When an owner writes back, they get an email with a ready reply and an "Approve and send" button.
 - The **Class board** tab shows who in the class is talking to which business.
 - Their usage: the research run and the hourly checks use their own Claude usage.

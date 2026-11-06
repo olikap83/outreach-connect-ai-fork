@@ -784,9 +784,9 @@ function me() {
 // Every email sent from the desk copies the student's school address.
 function ccList() { const c = me().cc; return c ? { cc: [c] } : {}; }
 
-// Emails go out during business hours (8am to 6pm New York time, weekdays);
+// Emails go out 11am to 3pm New York time, weekdays;
 // anything approved after hours waits for the next morning.
-const SEND_FROM = 8, SEND_UNTIL = 18;
+const SEND_FROM = 11, SEND_UNTIL = 15;
 const WEEKEND = new Set(['Sat', 'Sun']);
 const DAY_NAMES = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' };
 function nyClock(d = new Date()) {
@@ -796,11 +796,11 @@ function nyClock(d = new Date()) {
 function inSendWindow() { const c = nyClock(); return !WEEKEND.has(c.wd) && c.hour >= SEND_FROM && c.hour < SEND_UNTIL; }
 function nextSendWindow() {
   const c = nyClock();
-  if (!WEEKEND.has(c.wd) && c.hour < SEND_FROM) return 'at 8:15am this morning';
+  if (!WEEKEND.has(c.wd) && c.hour < SEND_FROM) return 'at 11am today';
   const order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   let i = order.indexOf(c.wd), n = 0;
   do { i = (i + 1) % 7; n++; } while (WEEKEND.has(order[i]));
-  return n === 1 ? 'at 8:15am tomorrow' : `${DAY_NAMES[order[i]]} at 8:15am`;
+  return n === 1 ? 'at 11am tomorrow' : `${DAY_NAMES[order[i]]} at 11am`;
 }
 // The next few weekdays, for proposing call times: "Thursday, Oct 30".
 function nextWeekdays(n) {
@@ -1752,7 +1752,7 @@ function renderNotice() {
   }
   const queued = S.prospects.filter(p => p.status === 'queued').length;
   if (queued && !inSendWindow() && S.tab !== 'review') {
-    html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>It's outside business hours, so they wait until then. They go out on their own at about 8:15am on weekdays, whether or not this page is open.</p></div></div>`;
+    html += `<div class="banner"><div><b>${queued} approved email${queued === 1 ? '' : 's'} will go out ${esc(nextSendWindow())}</b><p>It's outside the sending hours, so they wait until then. They go out on their own between 11am and 3pm on weekdays, whether or not this page is open.</p></div></div>`;
   }
   if (S.readOnly) html = `<div class="banner"><div><b>View only</b><p>This is ${esc(me().name || 'a classmate')}'s outreach desk, shared with you to look at. You see the same businesses, emails and CRM list they do; nothing can be sent or changed from here.</p></div></div>` + html;
   if (S.dbState === 'bad') {
@@ -1882,7 +1882,7 @@ function renderReview() {
   const n = queued.length, s = n === 1 ? '' : 's';
   const qbar = !n ? '' : S.sendingQueue
     ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Outlook. Keep this page open until it finishes.</span></div>`
-    : `<div class="queue-bar"><span class="qdot" aria-hidden="true"></span><span><button class="linkish" data-rvmode="approved">${n} approved</button> · going out a few each hour, 8am–3pm weekdays <span class="qwhy" title="Spacing them out keeps Outlook from treating them as spam. They send whether this page is open or not.">ⓘ</span></span></div>`;
+    : `<div class="queue-bar"><span class="qdot" aria-hidden="true"></span><span><button class="linkish" data-rvmode="approved">${n} approved</button> · going out a few each hour, 11am–3pm weekdays <span class="qwhy" title="Spacing them out keeps Outlook from treating them as spam. They send whether this page is open or not.">ⓘ</span></span></div>`;
 
   const done = handledToday();
   const counts = {};

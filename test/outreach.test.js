@@ -749,15 +749,15 @@ test('a name is never used when the address is clearly someone else\'s', () => {
 
 test('emails are spread across the day, a share per hourly run', () => {
   const { sendSlot } = require('../scripts/send-slot');
-  const at = h => new Date(`2026-11-09T${String(h + 5).padStart(2, '0')}:17:00Z`); // EST
-  const first = sendSlot({ limit: 40, sentToday: 0, followupsDue: 9, now: at(8), random: () => 0.5 });
-  assert.equal(first.slots_left, 8);
-  assert.equal(first.first_quota, 5);
-  assert.equal(first.followup_quota, 2);
-  assert.equal(first.gaps_min.length, 6);
+  const at = h => new Date(`2026-11-09T${String(h + 5).padStart(2, '0')}:07:00Z`); // EST
+  const first = sendSlot({ limit: 40, sentToday: 0, followupsDue: 9, now: at(11), random: () => 0.5 });
+  assert.equal(first.slots_left, 4);
+  assert.equal(first.first_quota, 10);
+  assert.equal(first.followup_quota, 3);
+  assert.equal(first.gaps_min.length, 12);
   assert.ok(first.gaps_min.every(g => g >= 3 && g <= 8));
   assert.ok(first.first_run && !first.last_run);
-  const last = sendSlot({ limit: 40, sentToday: 37, followupsDue: 1, now: at(15) });
+  const last = sendSlot({ limit: 40, sentToday: 37, followupsDue: 1, now: at(14) });
   assert.equal(last.first_quota, 3);
   assert.ok(last.last_run);
   assert.equal(sendSlot({ limit: 30, sentToday: 30, now: at(12) }).first_quota, 0);
