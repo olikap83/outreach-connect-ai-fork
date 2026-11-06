@@ -490,6 +490,101 @@ footer{font-size:11px;}
 .bperson:focus-visible{outline:2px solid var(--navy); outline-offset:2px;}
 /* View-only (anyone but the student): same data, no buttons that change anything. */
 body.ro [data-act], body.ro [data-mark], body.ro [data-gdraft], body.ro #skipWeak, body.ro #sendQueue, body.ro .queue-bar, body.ro .confirm { display: none !important; }
+
+/* ---------- calm review (cleaner, roomier) ---------- */
+.filters{gap:10px; align-items:center; flex-wrap:nowrap; position:relative;}
+.filters input[type=search]{flex:1 1 auto; border-radius:12px; border-color:var(--line);}
+.fbox{position:relative; flex:0 0 auto;}
+.fbtn{display:inline-flex; align-items:center; gap:8px; min-height:46px; padding:0 16px; border:1px solid var(--line); border-radius:12px; background:var(--paper); color:var(--ink-2); font-size:15px; cursor:pointer; transition:border-color .15s, background .15s;}
+.fbtn:hover{border-color:var(--line-strong);}
+.fbtn:focus-visible{outline:2px solid var(--signal); outline-offset:2px;}
+.fbtn.on{border-color:var(--signal); color:var(--ink);}
+.fbtn b{display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--signal); color:var(--paper); font-size:12px; font-weight:700;}
+.fbtn .chev{transition:transform .18s;}
+.fbtn[aria-expanded="true"] .chev{transform:rotate(180deg);}
+.fpanel{position:absolute; right:0; top:calc(100% + 8px); z-index:30; width:min(520px, calc(100vw - 32px)); background:var(--paper); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:18px; display:flex; flex-direction:column; gap:16px; animation:fpIn .16s ease-out;}
+.fpanel[hidden]{display:none;}
+@keyframes fpIn{from{opacity:0; transform:translateY(-4px);}to{opacity:1; transform:none;}}
+@media (prefers-reduced-motion: reduce){ .fpanel{animation:none;} .fbtn .chev{transition:none;} }
+.fgroup{display:flex; flex-direction:column; gap:8px;}
+.flabel{font-size:13px; font-weight:700; color:var(--muted);}
+.frow{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+.frow select{flex:1 1 150px;}
+#fReview{display:flex; flex-direction:column; gap:16px;}
+#fReview:empty{display:none;}
+.ffoot{display:flex; justify-content:space-between; gap:8px; padding-top:14px; border-top:1px solid var(--line);}
+.fchip{display:inline-flex; align-items:center; gap:6px; min-height:36px; border-radius:10px; font-size:14px;}
+.kdot{width:8px; height:8px; border-radius:50%; display:inline-block; flex-shrink:0;}
+
+.queue-bar{display:flex; align-items:center; gap:10px; font-size:14.5px; color:var(--ink-2); background:var(--wash); border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin:0 0 14px;}
+.queue-bar b{color:var(--ink);}
+.qdot{width:8px; height:8px; border-radius:50%; background:var(--warn); flex-shrink:0;}
+.qwhy{cursor:help; color:var(--muted);}
+
+.rv-head{flex-direction:row; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px;}
+.seg{border-color:var(--line); border-radius:12px; background:var(--wash); padding:3px; gap:2px;}
+.seg button{border-radius:9px; background:transparent; font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:14.5px; padding:8px 16px; min-height:38px;}
+.seg button[aria-pressed="true"]{background:var(--paper); color:var(--ink); font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,.2);}
+.today{flex:0 1 340px; justify-content:flex-end; color:var(--muted);}
+.today b{color:var(--ink);}
+.today .bar{max-width:140px; height:6px;}
+
+.review{grid-template-columns:340px minmax(0,1fr); gap:24px;}
+.review-list{gap:10px; padding:2px 6px 2px 2px;}
+.review-hint{font-size:13px; color:var(--muted); margin:0 2px 4px;}
+.band{font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:13px; font-weight:700; color:var(--muted); margin:14px 4px 2px;}
+.card{border-radius:14px; padding:14px 16px; background:var(--paper); border-color:var(--line);}
+.card:hover{transform:none; border-color:var(--line-strong);}
+.card .nm{font-family:var(--sans); font-size:16px; font-weight:700; line-height:1.3;}
+.card .mt{display:flex; align-items:center; gap:7px; font-family:var(--sans); font-size:13px; letter-spacing:0; text-transform:none; color:var(--muted); margin-top:5px;}
+.card .ft{margin-top:10px;}
+.card .who{font-family:var(--sans); font-size:13px;}
+
+.detail{border-radius:18px; border-color:var(--line);}
+.d-head{padding:24px 26px 20px; align-items:flex-start;}
+.d-head > div:first-child{flex:1 1 auto; min-width:0;}
+.d-meta,.d-head h2{overflow-wrap:anywhere;}
+.d-meta{font-size:13.5px; color:var(--muted); line-height:1.5;}
+.d-meta a{color:var(--muted); text-decoration:none;}
+.d-meta a:hover{color:var(--ink); text-decoration:underline;}
+.d-head h2{font-family:var(--sans); font-size:28px; font-weight:700; letter-spacing:-.01em; margin:6px 0 10px;}
+.d-status{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; font-size:14px; color:var(--muted);}
+.d-phone a{color:var(--muted);}
+.d-head .links{gap:8px; margin-top:0; font-size:14px; align-items:center;}
+.lchip{display:inline-flex; align-items:center; min-height:34px; padding:0 12px; border:1px solid var(--line); border-radius:10px; color:var(--ink-2) !important; text-decoration:none !important; background:var(--paper); cursor:pointer; list-style:none;}
+.lchip:hover{border-color:var(--line-strong); background:var(--wash);}
+.more-links{position:relative;}
+.more-links summary::-webkit-details-marker{display:none;}
+.more-pop{position:absolute; right:0; top:calc(100% + 6px); z-index:20; min-width:240px; background:var(--paper); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:6px; display:flex; flex-direction:column;}
+.more-pop a{padding:9px 12px; border-radius:8px; color:var(--ink-2); text-decoration:none;}
+.more-pop a:hover{background:var(--wash);}
+.fitbig{display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:88px; padding:12px 14px; border-radius:14px; background:var(--wash-2); text-align:center;}
+.fitbig .v{font-family:var(--sans); font-weight:700; font-size:32px; line-height:1;}
+.fitbig .l{font-size:12px; color:var(--muted); margin-top:4px;}
+.fitbig.hi{background:var(--ok-soft);} .fitbig.hi .v{color:var(--ok);}
+.fitbig.md{background:var(--warn-soft);} .fitbig.md .v{color:var(--warn);}
+.d-main,.d-side{padding:22px 26px 26px;}
+.section > .eyebrow, .d-side .eyebrow{font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:14px; font-weight:700; color:var(--ink); margin-bottom:10px;}
+.section + .section{margin-top:24px;}
+.field{gap:6px; margin-bottom:14px;}
+.field label{font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:13px; font-weight:700; color:var(--muted);}
+.field input,.field textarea{border-color:var(--line); border-radius:12px; background:var(--wash);}
+.field input:focus,.field textarea:focus{outline:none; border-color:var(--signal); box-shadow:0 0 0 3px var(--signal-soft);}
+@media (max-width:640px){
+  .filters{flex-wrap:wrap;}
+  .fpanel{position:fixed; left:16px; right:16px; top:auto; bottom:16px; width:auto; max-height:75vh; overflow:auto;}
+  .review{grid-template-columns:minmax(0,1fr);}
+  .d-head{padding:18px 18px 16px; gap:10px;}
+  .d-head h2{font-size:23px;}
+  .fitbig{min-width:64px; padding:8px 10px;} .fitbig .v{font-size:24px;}
+  .d-main,.d-side{padding:18px;}
+}
+.fbtn b[hidden]{display:none;}
+body.ro .fclean{display:none;}
+.fpanel .btn, .rv-head .btn{font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:14px; min-height:38px; border-radius:10px;}
+.detail .badge, .rv-head .badge{font-family:var(--sans); text-transform:none; letter-spacing:0; font-size:12.5px; font-weight:700; padding:4px 10px;}
+.field label{display:flex; flex-wrap:wrap; align-items:center; gap:6px;}
+.field label .badge{font-size:11.5px !important; font-weight:600; white-space:normal; line-height:1.3;}
 body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane input, body.ro #reviewPane textarea { pointer-events: none; background: var(--wash, transparent); }
 </style>
 
@@ -554,12 +649,33 @@ body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane inp
   </div>
   <div class="filters" id="filters">
     <input type="search" id="q" placeholder="Search businesses, people, towns, emails…" aria-label="Search">
-    <select id="fState" aria-label="State"><option value="">Every state</option></select>
-    <select id="fTown" aria-label="Town"><option value="">Every town</option></select>
-    <select id="fFit" aria-label="Fit">
-      <option value="0">Any fit</option><option value="50">Fit 50+</option><option value="65">Fit 65+</option><option value="80">Fit 80+</option>
-    </select>
-    <label class="check"><input type="checkbox" id="fClosed"> Show closed</label>
+    <div class="fbox">
+      <button type="button" class="fbtn" id="fBtn" aria-expanded="false" aria-controls="fPanel">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>
+        Filter<b id="fCount" hidden></b>
+        <svg class="chev" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="fpanel" id="fPanel" role="region" aria-label="Filters" hidden>
+        <div class="fgroup">
+          <span class="flabel">Where</span>
+          <div class="frow">
+            <select id="fState" aria-label="State"><option value="">Every state</option></select>
+            <select id="fTown" aria-label="Town"><option value="">Every town</option></select>
+          </div>
+        </div>
+        <div class="fgroup">
+          <span class="flabel">Fit score</span>
+          <div class="frow">
+            <select id="fFit" aria-label="Fit">
+              <option value="0">Any fit</option><option value="50">Fit 50+</option><option value="65">Fit 65+</option><option value="80">Fit 80+</option>
+            </select>
+            <label class="check"><input type="checkbox" id="fClosed"> Show closed</label>
+          </div>
+        </div>
+        <div id="fReview"></div>
+        <div class="ffoot"><button type="button" class="btn ghost sm" id="fClear">Clear all</button><button type="button" class="btn sm" id="fDone">Done</button></div>
+      </div>
+    </div>
   </div>
 
   <main class="view" id="view"></main>
@@ -1525,6 +1641,21 @@ function filtered({ includeClosed = S.closed } = {}) {
   });
 }
 const fitClass = n => (n >= 70 ? 'hi' : n >= 50 ? 'md' : 'lo');
+const BUCKET_COLOR = { health: '#EC4899', trades: '#F59E0B', professional: '#3B82F6', food: '#10B981', booking: '#8B5CF6', auto: '#EF4444', manufacturing: '#14B8A6', retail: '#F97316', other: '#94A3B8' };
+function bucketColor(b) { return BUCKET_COLOR[b] || BUCKET_COLOR.other; }
+function updateFilterCount() {
+  const n = (S.state ? 1 : 0) + (S.town ? 1 : 0) + (S.fit ? 1 : 0) + (S.closed && S.tab !== 'review' ? 1 : 0)
+    + (S.tab === 'review' ? (S.rvBucket ? 1 : 0) + (S.rvWeb ? 1 : 0) + (S.rvOwner ? 1 : 0) : 0);
+  const c = document.getElementById('fCount'); if (!c) return;
+  c.hidden = !n; c.textContent = n || '';
+  document.getElementById('fBtn').classList.toggle('on', !!n);
+}
+function setFilterOpen(open) {
+  const p = document.getElementById('fPanel'), b = document.getElementById('fBtn');
+  if (!p) return;
+  p.hidden = !open; b.setAttribute('aria-expanded', String(open));
+  if (open) renderView();
+}
 const BUCKET_LABEL = { health: 'Health', trades: 'Trades', professional: 'Professional', food: 'Food', booking: 'Appointments', auto: 'Auto', manufacturing: 'Manufacturing', retail: 'Retail', other: 'Other' };
 const DAILY_GOAL = 15;
 function ownersOwnEmail(p) {
@@ -1693,7 +1824,7 @@ function cardHtml(p, sel = false) {
   const fit = p.fit_score != null ? `<span class="fit ${fitClass(p.fit_score)}">${p.fit_score}</span>` : '';
   return `<button class="card${sel ? ' sel' : ''}" data-id="${esc(p.id)}">
     <div class="nm">${esc(p.name)}</div>
-    <div class="mt">${esc([p.category, placeLabel(p)].filter(Boolean).join(' · '))}${inClassArea(p) ? '' : ' · <span title="Outside the class area: stays on this desk, not in the class CRM">desk only</span>'}</div>
+    <div class="mt"><i class="kdot" style="background:${bucketColor(p.bucket || 'other')}" aria-hidden="true"></i>${esc([p.category, placeLabel(p)].filter(Boolean).join(' · '))}${inClassArea(p) ? '' : ' · <span title="Outside the class area: stays on this desk, not in the class CRM">desk only</span>'}</div>
     <div class="ft"><span class="who">${esc(who)}</span>${openedText(p) ? `<span class="opened" title="${esc(openedText(p))}">Opened${realOpens(p).length > 1 ? ` ${realOpens(p).length}×` : ''}</span>` : ''}${fit}</div>
   </button>`;
 }
@@ -1707,7 +1838,7 @@ function renderReview() {
   const n = queued.length, s = n === 1 ? '' : 's';
   const qbar = !n ? '' : S.sendingQueue
     ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Outlook. Keep this page open until it finishes.</span></div>`
-    : `<div class="queue-bar"><span class="badge warn">${n} approved</span><span class="help" style="margin:0">These go out on their own a few at a time, every hour from 8:17am to 3:17pm on weekdays, page open or not. Spacing them out keeps Outlook from treating them as spam.</span></div>`;
+    : `<div class="queue-bar"><span class="qdot" aria-hidden="true"></span><span><b>${n} approved</b> · going out a few each hour, 8am–3pm weekdays <span class="qwhy" title="Spacing them out keeps Outlook from treating them as spam. They send whether this page is open or not.">ⓘ</span></span></div>`;
 
   const done = handledToday();
   const counts = {};
@@ -1715,23 +1846,31 @@ function renderReview() {
   const webN = all.filter(p => p.website).length, ownerN = all.filter(ownersOwnEmail).length;
   const weak = all.filter(p => (p.fit_score ?? 0) < 40);
   const head = `<div class="rv-head">
-    <div class="rv-top">
-      <div class="seg" role="group" aria-label="Which drafts to show">
-        <button data-rvmode="today" aria-pressed="${S.reviewMode === 'today'}">Today's ${DAILY_GOAL}</button>
-        <button data-rvmode="all" aria-pressed="${S.reviewMode === 'all'}">All ${all.length}</button>
-      </div>
-      <div class="today"><span>Today: <b>${done}</b> of ${DAILY_GOAL} handled</span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${DAILY_GOAL}" aria-valuenow="${Math.min(done, DAILY_GOAL)}" aria-label="Drafts handled today"><i style="width:${Math.min(100, Math.round((done / DAILY_GOAL) * 100))}%"></i></div></div>
-      ${S.reviewMode === 'all' && weak.length ? `<button class="btn ghost sm" id="skipWeak">Skip ${weak.length} with fit under 40</button>` : ''}
+    <div class="seg" role="group" aria-label="Which drafts to show">
+      <button data-rvmode="today" aria-pressed="${S.reviewMode === 'today'}">Today's ${DAILY_GOAL}</button>
+      <button data-rvmode="all" aria-pressed="${S.reviewMode === 'all'}">All ${all.length}</button>
     </div>
-    <div class="fchips" role="group" aria-label="Narrow the list">
-      <button class="fchip" data-rvbucket="" aria-pressed="${!S.rvBucket}">Every kind<b>${all.length}</b></button>
-      ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([b, n]) => `<button class="fchip" data-rvbucket="${b}" aria-pressed="${S.rvBucket === b}">${esc(BUCKET_LABEL[b] || b)}<b>${n}</b></button>`).join('')}
-      <button class="fchip" data-rvweb aria-pressed="${S.rvWeb}">Has a website<b>${webN}</b></button>
-      <button class="fchip" data-rvowner aria-pressed="${S.rvOwner}">Owner's own email<b>${ownerN}</b></button>
-    </div>
+    <div class="today"><span><b>${done}</b> of ${DAILY_GOAL} handled today</span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${DAILY_GOAL}" aria-valuenow="${Math.min(done, DAILY_GOAL)}" aria-label="Drafts handled today"><i style="width:${Math.min(100, Math.round((done / DAILY_GOAL) * 100))}%"></i></div></div>
   </div>`;
+  const fr = document.getElementById('fReview');
+  if (fr) fr.innerHTML = `<div class="fgroup">
+      <span class="flabel">Kind of business</span>
+      <div class="fchips" role="group" aria-label="Kind of business">
+        <button class="fchip" data-rvbucket="" aria-pressed="${!S.rvBucket}">Every kind<b>${all.length}</b></button>
+        ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([b, n]) => `<button class="fchip" data-rvbucket="${b}" aria-pressed="${S.rvBucket === b}"><i class="kdot" style="background:${bucketColor(b)}"></i>${esc(BUCKET_LABEL[b] || b)}<b>${n}</b></button>`).join('')}
+      </div>
+    </div>
+    <div class="fgroup">
+      <span class="flabel">Contact</span>
+      <div class="fchips">
+        <button class="fchip" data-rvweb aria-pressed="${S.rvWeb}">Has a website<b>${webN}</b></button>
+        <button class="fchip" data-rvowner aria-pressed="${S.rvOwner}">Owner's own email<b>${ownerN}</b></button>
+      </div>
+    </div>
+    ${weak.length ? `<div class="fgroup fclean"><span class="flabel">Clean up</span><div><button class="btn ghost sm" id="skipWeak">Skip ${weak.length} with fit under 40</button></div></div>` : ''}`;
+  updateFilterCount();
 
-  if (!items.length) return qbar + head + emptyView(all.length ? 'Nothing matches those filters.' : 'Nothing waiting for review.', all.length ? 'Clear a filter above to see more.' : (S.prospects.length ? 'Every draft has been handled. New ones arrive after the next research run.' : 'Drafts show up here as Claude researches businesses.'));
+  if (!items.length) return qbar + head + emptyView(all.length ? 'Nothing matches those filters.' : 'Nothing waiting for review.', all.length ? 'Open Filter and clear one to see more.' : (S.prospects.length ? 'Every draft has been handled. New ones arrive after the next research run.' : 'Drafts show up here as Claude researches businesses.'));
   if (!items.some(p => p.id === S.reviewId)) S.reviewId = items[0].id;
 
   let list = '';
@@ -2182,27 +2321,28 @@ function detailHtml(id) {
   return `<article class="detail" data-detail="${esc(p.id)}">
     <div class="d-head">
       <div style="min-width:0">
-        <div class="eyebrow">${[
+        <div class="d-meta">${[
           p.category && factUrl(p, 'category') ? srcA(factUrl(p, 'category'), esc(p.category)) : null,
           placeLabel(p) && factUrl(p, 'address') ? srcA(factUrl(p, 'address'), esc([p.address, placeLabel(p)].filter(Boolean).join(', '))) : null,
           inClassArea(p) ? null : 'outside class area · desk only',
           p.miles_from_storrs != null && milesUrl(p) ? srcA(milesUrl(p), `${Math.round(p.miles_from_storrs)} mi from Storrs`) : null,
         ].filter(Boolean).join(' · ')}</div>
         <h2>${esc(p.name)}</h2>
+        <div class="d-status"><span class="badge ${st.badge}">${esc(st.label)}</span>${phoneSource(p) ? `<span class="d-phone">${esc(p.phone)} <a href="${esc(phoneSource(p).href)}" target="_blank" rel="noopener">(${phoneSource(p).label} ↗)</a></span>` : ''}</div>
         <div class="links">
-          <span class="badge ${st.badge}">${esc(st.label)}</span>
-          ${p.website ? `<a href="${esc(p.website)}" target="_blank" rel="noopener">${esc(p.domain || 'Website')} ↗</a>` : ''}
-          <a href="${google}" target="_blank" rel="noopener">Google ↗</a>
-          <a href="${linkedin}" target="_blank" rel="noopener">${p.contact_name ? `Find ${esc(p.contact_name.split(' ')[0])} on LinkedIn` : 'Search LinkedIn'} ↗</a>
-          ${gmailUrl ? `<a href="${esc(gmailUrl)}" target="_blank" rel="noopener">Open in Outlook ↗</a>` : ''}
-          ${p.gmail_draft_url ? `<a href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Outlook draft ↗</a>` : ''}
-          ${crmUrl ? `<a href="${crmUrl}" target="_blank" rel="noopener">In class CRM ↗</a>` : ''}
-          ${fromFiling(p) ? `<a href="${filingUrl(p)}" target="_blank" rel="noopener" title="The business's Connecticut registration: address, email, date (public data)">CT filing ↗</a>${p.registry_id ? `<a href="${personFilingUrl('', p)}" target="_blank" rel="noopener" title="Everyone listed on this business's Connecticut filing (public data)">People on the filing ↗</a>` : ''}<a href="${CT_SEARCH}" target="_blank" rel="noopener" title="Connecticut's business search: type the business name">CT business search ↗</a>` : ''}
-          ${phoneSource(p) ? `<span style="color:var(--muted)">${esc(p.phone)} <a href="${esc(phoneSource(p).href)}" target="_blank" rel="noopener">(${phoneSource(p).label} ↗)</a></span>` : ''}
-          ${STATE_SEARCH[stateOf(p)] ? `<a href="${STATE_SEARCH[stateOf(p)][1]}" target="_blank" rel="noopener" title="This state's business registry: type the business name to see who's listed on its filing">${STATE_SEARCH[stateOf(p)][0]} ↗</a>` : ''}
+          ${p.website ? `<a class="lchip" href="${esc(p.website)}" target="_blank" rel="noopener">${esc(p.domain || 'Website')} ↗</a>` : ''}
+          <a class="lchip" href="${google}" target="_blank" rel="noopener">Google ↗</a>
+          <a class="lchip" href="${linkedin}" target="_blank" rel="noopener">${p.contact_name ? `${esc(p.contact_name.split(' ')[0])} on LinkedIn` : 'LinkedIn'} ↗</a>
+          ${gmailUrl ? `<a class="lchip" href="${esc(gmailUrl)}" target="_blank" rel="noopener">Open in Outlook ↗</a>` : ''}
+          ${p.gmail_draft_url ? `<a class="lchip" href="${esc(p.gmail_draft_url)}" target="_blank" rel="noopener">Outlook draft ↗</a>` : ''}
+          ${crmUrl ? `<a class="lchip" href="${crmUrl}" target="_blank" rel="noopener">In class CRM ↗</a>` : ''}
+          ${fromFiling(p) || STATE_SEARCH[stateOf(p)] ? `<details class="more-links"><summary class="lchip">More</summary><div class="more-pop">
+            ${fromFiling(p) ? `<a href="${filingUrl(p)}" target="_blank" rel="noopener" title="The business's Connecticut registration: address, email, date (public data)">CT filing ↗</a>${p.registry_id ? `<a href="${personFilingUrl('', p)}" target="_blank" rel="noopener" title="Everyone listed on this business's Connecticut filing (public data)">People on the filing ↗</a>` : ''}<a href="${CT_SEARCH}" target="_blank" rel="noopener" title="Connecticut's business search: type the business name">CT business search ↗</a>` : ''}
+            ${STATE_SEARCH[stateOf(p)] ? `<a href="${STATE_SEARCH[stateOf(p)][1]}" target="_blank" rel="noopener" title="This state's business registry: type the business name to see who's listed on its filing">${STATE_SEARCH[stateOf(p)][0]} ↗</a>` : ''}
+          </div></details>` : ''}
         </div>
       </div>
-      ${p.fit_score != null ? `<div class="fitbig"><div class="v">${p.fit_score}</div><div class="bar"><i style="width:${Math.max(0, Math.min(100, p.fit_score))}%"></i></div><div class="eyebrow">Fit score</div></div>` : ''}
+      ${p.fit_score != null ? `<div class="fitbig ${fitClass(p.fit_score)}"><div class="v">${p.fit_score}</div><div class="l">Fit score</div></div>` : ''}
     </div>
     <div class="d-body">
       <div class="d-main">
@@ -2255,6 +2395,8 @@ function renderView() {
   else if (S.tab === 'crm') v.innerHTML = renderCrm();
   else if (S.tab === 'board') v.innerHTML = renderBoard();
   else v.innerHTML = renderReview();
+  if (S.tab !== 'review') { const fr = document.getElementById('fReview'); if (fr) fr.innerHTML = ''; }
+  updateFilterCount();
   fitTextareas();
 }
 function isEditing() {
@@ -2721,6 +2863,18 @@ $('#fTown').addEventListener('change', e => { S.town = e.target.value; renderVie
 $('#fState').addEventListener('change', e => { S.state = e.target.value; S.town = ''; R_STATE.sig = ''; radarData(); renderTabs(); renderView(); });
 $('#fFit').addEventListener('change', e => { S.fit = Number(e.target.value); renderView(); });
 $('#fClosed').addEventListener('change', e => { S.closed = e.target.checked; renderView(); });
+$('#fBtn').addEventListener('click', e => { e.stopPropagation(); setFilterOpen($('#fPanel').hidden); });
+$('#fDone').addEventListener('click', () => { setFilterOpen(false); $('#fBtn').focus(); });
+$('#fClear').addEventListener('click', () => {
+  S.state = ''; S.town = ''; S.fit = 0; S.closed = false; S.rvBucket = ''; S.rvWeb = false; S.rvOwner = false;
+  $('#fFit').value = '0'; $('#fClosed').checked = false; R_STATE.sig = ''; radarData(); renderTabs(); renderView();
+});
+document.addEventListener('click', e => {
+  const p = $('#fPanel');
+  if (p && !p.hidden && !e.target.closest('.fbox') && document.contains(e.target)) setFilterOpen(false);
+  document.querySelectorAll('details.more-links[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; });
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#fPanel').hidden) { setFilterOpen(false); $('#fBtn').focus(); } }, true);
 
 // A db that reads like the real one but refuses every write.
 function readOnlyDb(db) {
