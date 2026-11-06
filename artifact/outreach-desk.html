@@ -594,6 +594,7 @@ body.ro .fclean{display:none;}
 .toast .tx:hover{opacity:1; background:rgba(255,255,255,.18);}
 .toast .tx:focus-visible{opacity:1; outline:2px solid currentColor;}
 @media (hover:none){ .toast .tx{opacity:.85;} }
+.linkish{border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--ink); text-decoration:underline; text-underline-offset:3px; cursor:pointer;}
 body.ro #drawerBody input, body.ro #drawerBody textarea, body.ro #reviewPane input, body.ro #reviewPane textarea { pointer-events: none; background: var(--wash, transparent); }
 </style>
 
@@ -1696,7 +1697,9 @@ function readyAll() { return filtered({ includeClosed: false }).filter(p => p.st
 function chipFiltered(list) {
   return list.filter(p => (!S.rvBucket || (p.bucket || 'other') === S.rvBucket) && (!S.rvWeb || p.website) && (!S.rvOwner || ownersOwnEmail(p)));
 }
+function approvedAll() { return filtered({ includeClosed: false }).filter(p => p.status === 'queued').sort((a, b) => (b.fit_score ?? 0) - (a.fit_score ?? 0)); }
 function reviewItems() {
+  if (S.reviewMode === 'approved') return chipFiltered(approvedAll());
   const list = chipFiltered(readyAll());
   return S.reviewMode === 'today' ? list.slice(0, DAILY_GOAL) : list;
 }
@@ -1864,7 +1867,7 @@ function renderReview() {
   const n = queued.length, s = n === 1 ? '' : 's';
   const qbar = !n ? '' : S.sendingQueue
     ? `<div class="queue-bar"><button class="btn solid" id="sendQueue" disabled>Sending…</button><span class="help" style="margin:0">Sending one every few seconds from your Outlook. Keep this page open until it finishes.</span></div>`
-    : `<div class="queue-bar"><span class="qdot" aria-hidden="true"></span><span><b>${n} approved</b> · going out a few each hour, 8am–3pm weekdays <span class="qwhy" title="Spacing them out keeps Outlook from treating them as spam. They send whether this page is open or not.">ⓘ</span></span></div>`;
+    : `<div class="queue-bar"><span class="qdot" aria-hidden="true"></span><span><button class="linkish" data-rvmode="approved">${n} approved</button> · going out a few each hour, 8am–3pm weekdays <span class="qwhy" title="Spacing them out keeps Outlook from treating them as spam. They send whether this page is open or not.">ⓘ</span></span></div>`;
 
   const done = handledToday();
   const counts = {};
@@ -1875,6 +1878,7 @@ function renderReview() {
     <div class="seg" role="group" aria-label="Which drafts to show">
       <button data-rvmode="today" aria-pressed="${S.reviewMode === 'today'}">Today's ${DAILY_GOAL}</button>
       <button data-rvmode="all" aria-pressed="${S.reviewMode === 'all'}">All ${all.length}</button>
+      <button data-rvmode="approved" aria-pressed="${S.reviewMode === 'approved'}">Approved ${queued.length}</button>
     </div>
     <div class="today"><span><b>${done}</b> of ${DAILY_GOAL} handled today</span><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${DAILY_GOAL}" aria-valuenow="${Math.min(done, DAILY_GOAL)}" aria-label="Drafts handled today"><i style="width:${Math.min(100, Math.round((done / DAILY_GOAL) * 100))}%"></i></div></div>
   </div>`;
@@ -1896,6 +1900,7 @@ function renderReview() {
     ${weak.length ? `<div class="fgroup fclean"><span class="flabel">Clean up</span><div><button class="btn ghost sm" id="skipWeak">Skip ${weak.length} with fit under 40</button></div></div>` : ''}`;
   updateFilterCount();
 
+  if (!items.length && S.reviewMode === 'approved') return qbar + head + emptyView('No approved emails waiting.', 'When you approve a draft it shows up here until it goes out.');
   if (!items.length) return qbar + head + emptyView(all.length ? 'Nothing matches those filters.' : 'Nothing waiting for review.', all.length ? 'Open Filter and clear one to see more.' : (S.prospects.length ? 'Every draft has been handled. New ones arrive after the next research run.' : 'Drafts show up here as Claude researches businesses.'));
   if (!items.some(p => p.id === S.reviewId)) S.reviewId = items[0].id;
 
@@ -1907,7 +1912,7 @@ function renderReview() {
       if (group.length) list += `<div class="band"><span>${label}</span><span>${group.length}</span></div>` + group.map(p => cardHtml(p, p.id === S.reviewId)).join('');
     }
   } else {
-    list = items.map(p => cardHtml(p, p.id === S.reviewId)).join('') + (all.length > items.length ? `<div class="more">${all.length - items.length} more waiting · <button class="btn ghost sm" data-rvmode="all">See all</button></div>` : '');
+    list = items.map(p => cardHtml(p, p.id === S.reviewId)).join('') + (S.reviewMode === 'today' && all.length > items.length ? `<div class="more">${all.length - items.length} more waiting · <button class="btn ghost sm" data-rvmode="all">See all</button></div>` : '');
   }
   return `${qbar}${head}<div class="review">
     <div class="review-list" id="reviewList">
