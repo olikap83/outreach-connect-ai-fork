@@ -1081,6 +1081,52 @@ function crmMatch(name) {
   const k = nameKey(name);
   return (S.crmAll || []).find(o => nameKey(o.name) === k) || null;
 }
+// The CRM hands back at most 200 organizations per call, and the class has more than that.
+// Read it in slices (by stage, then by owner when a stage is still too big) so nothing is missed.
+const CRM_STAGES = ['lead', 'contacted', 'talks', 'applied', 'selected', 'active', 'completed', 'passed'];
+async function crmFetchAll() {
+  const call = args => S.mcp.callTool(CRM, 'crm_list_orgs', { include_closed: true, limit: 200, ...args }).then(r => r.payload || {});
+  const byId = new Map();
+  const add = r => (r.orgs || []).forEach(o => byId.set(o.id, o));
+  const full = r => (r.total || 0) <= (r.orgs || []).length;
+  const first = await call({}); add(first);
+  if (full(first)) return [...byId.values()];
+  for (const stage of CRM_STAGES) {
+    const r = await call({ stage }); add(r);
+    if (full(r)) continue;
+    const owners = new Set(['me', 'none', ...[...byId.values()].map(o => (o.owner || {}).name).filter(Boolean)]);
+    for (const owner of owners) add(await call({ stage, owner }));
+  }
+  return [...byId.values()];
+}
+// One business, looked up by name right before anything is created or sent: the safety net
+// for anything the full list missed.
+async function crmLookup(name) {
+  if (!S.mcp) return null;
+  const keys = new Set([nameKey(name), nameKey(shortName(name))]);
+  const q = nameKey(shortName(name)).split(' ').filter(w => w.length > 1).slice(0, 3).join(' ');
+  if (!q) return null;
+  const r = await S.mcp.callTool(CRM, 'crm_list_orgs', { q, include_closed: true, limit: 50 });
+  return ((r.payload || {}).orgs || []).find(o => keys.has(nameKey(o.name))) || null;
+}
+// Someone else in the class already has it: never email it, never take it over.
+function takenBy(o) {
+  if (!o) return null;
+  if ((S.crmMine || []).some(m => m.id === o.id)) return null;
+  const owner = (o.owner || {}).name || '';
+  if (owner && owner === me().name) return null;
+  return owner || 'someone else in the class';
+}
+async function classmateHas(p) {
+  let o = crmMatch(p.name) || crmMatch(shortName(p.name));
+  if (!o && p.crm_org_id) o = (S.crmAll || []).find(x => x.id === p.crm_org_id) || null;
+  if (!o) o = await crmLookup(p.name).catch(() => null);
+  const who = takenBy(o);
+  return who ? { who, stage: o.stage_label || o.stage || '' } : null;
+}
+async function skipTaken(p, t) {
+  await patch(p.id, { status: 'skipped', skip_reason: `Already in the class CRM (owner: ${t.who})`, crm_org_id: null }, `Skipped: already in the class CRM (owner: ${t.who}${t.stage ? `, ${t.stage}` : ''})`);
+}
 
 async function logToCrm(p, kind, body, extra = {}) {
   if (!S.mcp) throw new Error('Connectors aren\'t available in this view.');
@@ -1105,8 +1151,12 @@ async function logToCrm(p, kind, body, extra = {}) {
     }).catch(e => {
       // Already in the CRM under a slightly different name than our match caught: use that one, no error.
       const m = /already in the CRM[\s\S]*?"id"\s*:\s*"([0-9a-f-]{36})"/i.exec(String((e && e.message) || e));
-      if (m) return { payload: { id: m[1] } };
-      throw e;
+      if (!m) throw e;
+      return crmLookup(p.name).then(o => {
+        const who = takenBy(o);
+        if (who) { const err = new Error(`${p.name} is already in the class CRM (owner: ${who}).`); err.taken = { who, stage: o.stage_label || o.stage || '' }; throw err; }
+        return { payload: { id: m[1] } };
+      });
     });
     const pl = res.payload || {};
     orgId = pl.id || (pl.org && pl.org.id) || (pl.organization && pl.organization.id) || (pl.existing && pl.existing.id) || null;
@@ -1137,6 +1187,8 @@ function readEditor(root) {
 
 async function sendInitial(p, vals) {
   if (!S.mcp) throw new Error('Outlook isn\'t available in this view.');
+  const taken = await classmateHas(p);
+  if (taken) { await skipTaken(p, taken); throw new Error(`Not sent: ${p.name} is already in the class CRM (owner: ${taken.who}), so a classmate has it. Skipped it.`); }
   if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(vals.email)) throw new Error('That email address doesn\'t look right.');
   if (sentToday() >= settings().daily_cap) throw new Error(`You've hit today's limit of ${settings().daily_cap} emails. Sending more from a personal Outlook account gets it flagged as spam.`);
   const trackId = trackingUrl() ? newTrackId(p, 'i') : null;
@@ -1485,12 +1537,12 @@ async function syncLeads() {
   let added = 0;
   try {
     for (const p of todo) {
+      const taken = await classmateHas(p);
+      if (taken) { await skipTaken(p, taken); continue; }
       const existing = crmMatch(p.name) || crmMatch(shortName(p.name));
-      if (existing && !S.crmMine.some(o => o.id === existing.id)) {
-        await patch(p.id, { status: 'skipped' }, `Skipped: already in the class CRM${existing.owner ? ` (owner: ${existing.owner.name})` : ''}`);
-        continue;
-      }
-      const orgId = existing ? existing.id : await logToCrm(p, null, '', { stage: 'lead' });
+      let orgId;
+      try { orgId = existing ? existing.id : await logToCrm(p, null, '', { stage: 'lead' }); }
+      catch (e) { if (e && e.taken) { await skipTaken(p, e.taken); continue; } throw e; }
       await patch(p.id, { crm_org_id: orgId, crm_stage: existing ? (existing.stage || 'lead') : 'lead', ...(existing ? {} : { crm_added_at: nowIso(), crm_notes_synced: true }) }, existing ? 'Linked to its class CRM record' : 'Added to the class CRM as a Lead (owner: you)');
       if (!existing) added++;
     }
@@ -2717,6 +2769,8 @@ async function onAction(root, act, confirmed) {
   try {
     if (act === 'approve') {
       if (!vals.email) throw new Error('Add an email address first.');
+      const taken = await classmateHas(p);
+      if (taken) { await skipTaken(p, taken); toast(`${p.name} is already in the class CRM (owner: ${taken.who}), so it was skipped.`, { err: true }); if (next) S.reviewId = next; return; }
       await patch(id, { ...vals, status: 'queued' }, 'Approved');
       toast(`${p.name} approved.`);
       if (next) S.reviewId = next;
@@ -3008,7 +3062,10 @@ render();
     render();
   };
   mcp.watchTool(CRM, 'crm_list_orgs', { owner: 'me', include_closed: true, limit: 200 }, crmHandler('mine'), { refetchInterval: 5 * 60 * 1000 });
-  mcp.watchTool(CRM, 'crm_list_orgs', { include_closed: true, limit: 200 }, crmHandler('all'), { refetchInterval: 10 * 60 * 1000 });
+  const pollAll = () => crmFetchAll()
+    .then(orgs => crmHandler('all')({ type: 'result', result: { payload: { orgs } } }))
+    .catch(e => crmHandler('all')({ type: 'error', error: e || {} }));
+  pollAll(); setInterval(pollAll, 10 * 60 * 1000);
   mcp.watchTool(CRM, 'crm_list_orgs', { stage: BOARD_STAGES, limit: 200 }, ev => {
     if (ev.type === 'error') return;
     S.crmBoard = (ev.result.payload || {}).orgs || [];
